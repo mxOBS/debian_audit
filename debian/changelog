@@ -1,0 +1,20 @@
+audit (1.5.3-1) unstable; urgency=low
+
+  * New upstream version
+    - Includes all debian/patches.
+  * Drop Build-Depends: linux-headers-2.6
+
+ -- Philipp Matthias Hahn <pmhahn@debian.org>  Wed, 02 May 2007 09:10:06 +0200
+
+audit (1.5.1-2) unstable; urgency=low
+
+  * Apply patch from upstream to fix SEGFAULT on reload.
+
+ -- Philipp Matthias Hahn <pmhahn@debian.org>  Fri, 23 Mar 2007 22:16:24 +0100
+
+audit (1.5.1-1) unstable; urgency=low
+
+  * Initial release (Closes: #311214)
+
+ -- Philipp Matthias Hahn <pmhahn@debian.org>  Wed, 21 Mar 2007 09:47:19 +0100
+

@@ -1,0 +1,50 @@
+Source: audit
+Priority: extra
+Maintainer: Philipp Matthias Hahn <pmhahn@debian.org>
+Build-Depends: debhelper (>= 5.0.37.2),
+ python-all-dev (>= 2.3.5-11), python-support (>= 0.5.3), swig,
+ automake1.9, autoconf (>= 2.59), libtool, autotools-dev, quilt
+Build-Conflicts: autoconf2.13, automake1.4
+XS-Python-Version: all
+Standards-Version: 3.7.2
+Section: libs
+
+Package: auditd
+Section: admin
+Architecture: any
+Depends: ${shlibs:Depends}, lsb-base (>= 3.0-6)
+Description: User space tools for security auditing
+ The audit package contains the user space utilities for
+ storing and searching the audit records generate by
+ the audit subsystem in the Linux 2.6 kernel.
+ .
+ Also contains the audit dispatcher "audisp".
+ .
+ Homepage: http://people.redhat.com/sgrubb/audit/
+
+Package: libaudit0
+Section: libs
+Architecture: any
+Depends: ${shlibs:Depends}
+Description: Dynamic library for security auditing
+ The audit-libs package contains the dynamic libraries needed for
+ applications to use the audit framework.
+
+Package: libaudit-dev
+Section: libdevel
+Architecture: any
+Depends: libaudit0 (= ${Source-Version})
+Description: Header files and static library for security auditing
+ The audit-libs-devel package contains the static libraries and header
+ files needed for developing applications that need to use the audit
+ framework libraries.
+
+Package: python-audit
+Section: python
+Architecture: any
+Depends: ${shlibs:Depends}, ${python:Depends}
+Provides: ${python:Provides}
+XB-Python-Version: ${python:Versions}
+Description: Python bindings for security auditing
+ The audit-libs-python package contains the bindings so that libaudit
+ and libauparse can be used by python.

@@ -1,0 +1,50 @@
+Add missing files noticed by "make dist" and "make distcheck"
+Index: audit-1.5.1/auparse/Makefile.am
+===================================================================
+--- audit-1.5.1.orig/auparse/Makefile.am	2007-04-05 10:49:38.000000000 +0200
++++ audit-1.5.1/auparse/Makefile.am	2007-04-05 10:49:42.000000000 +0200
+@@ -23,14 +23,13 @@
+ #SUBDIRS = test
+ CONFIG_CLEAN_FILES = Makefile.in *.loT *.rej *.orig
+ AM_CFLAGS = -fPIC -DPIC -D_GNU_SOURCE
+-INCLUDES = -I. -I.. -I../src -I../lib
++AM_CPPFLAGS = -I$(top_srcdir)/src -I$(top_srcdir)/lib
++noinst_HEADERS = captab.h clone-flagtab.h ellist.h famtab.h fcntl-cmdtab.h flagtab.h internal.h interpret.h ipctab.h nvlist.h nvpair.h open-flagtab.h private.h rlist.h rnode.h socktab.h typetab.h
+ LIBS =
+ lib_LTLIBRARIES = libauparse.la
+ include_HEADERS = auparse.h auparse-defs.h
+ libauparse_la_SOURCES = rlist.c nvpair.c interpret.c nvlist.c ellist.c \
+-	auparse.c auditd-config.c message.c \
+-	captab.h famtab.h flagtab.h ipctab.h socktab.h typetab.h \
+-	open-flagtab.h clone-flagtab.h fcntl-cmdtab.h 
++	auparse.c auditd-config.c message.c
+ libauparse_la_LIBADD =
+ libauparse_la_DEPENDENCIES = $(libauparse_la_SOURCES) ../config.h
+ libauparse_la_LDFLAGS = -Wl,-z,relro
+Index: audit-1.5.1/configure.ac
+===================================================================
+--- audit-1.5.1.orig/configure.ac	2007-04-05 10:49:42.000000000 +0200
++++ audit-1.5.1/configure.ac	2007-04-05 10:49:42.000000000 +0200
+@@ -37,7 +37,7 @@
+ 
+ AC_CANONICAL_TARGET
+ AM_INIT_AUTOMAKE
+-AM_PROG_LIBTOOL
++AC_PROG_LIBTOOL
+ AC_SUBST(LIBTOOL_DEPS)
+ AM_PATH_PYTHON
+ 
+Index: audit-1.5.1/init.d/Makefile.am
+===================================================================
+--- audit-1.5.1.orig/init.d/Makefile.am	2007-04-05 10:49:38.000000000 +0200
++++ audit-1.5.1/init.d/Makefile.am	2007-04-05 10:49:42.000000000 +0200
+@@ -21,8 +21,8 @@
+ #
+ 
+ CONFIG_CLEAN_FILES = Makefile.in *.rej *.orig
+-EXTRA_DIST = auditd.init  auditd.sysconfig auditd.conf audit.rules auditd.cron
+ libconfig = libaudit.conf
++EXTRA_DIST = auditd.init  auditd.sysconfig auditd.conf audit.rules auditd.cron $(libconfig)
+ initdir=$(sysconfdir)/rc.d/init.d
+ sysconfigdir=$(sysconfdir)/sysconfig
+ 
