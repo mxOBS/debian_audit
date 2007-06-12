@@ -93,7 +93,7 @@ binary-arch: build install
 	dh_install --sourcedir=debian/tmp --list-missing
 	#dh_installlogrotate #auditd has a equivalent built-in feature
 	dh_installinit -- start 12 2 3 4 5 . stop 88 0 1 6 .
-	dh_installman
+	dh_installman -pauditd debian/audispd.8
 	dh_link
 	dh_strip
 	dh_compress

@@ -33,7 +33,7 @@ Description: Dynamic library for security auditing
 Package: libaudit-dev
 Section: libdevel
 Architecture: any
-Depends: libaudit0 (= ${Source-Version})
+Depends: libaudit0 (= ${binary:Version})
 Description: Header files and static library for security auditing
  The audit-libs-devel package contains the static libraries and header
  files needed for developing applications that need to use the audit

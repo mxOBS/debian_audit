@@ -77,7 +77,8 @@ do_stop()
 	rm -f /var/run/audit_events
 	# Remove watches so shutdown works cleanly
 	case "$AUDITD_CLEAN_STOP" in
-		no|NO) /sbin/auditctl -D >/dev/null ;;
+		no|NO) ;;
+		*) /sbin/auditctl -D >/dev/null ;;
 	esac
 	return "$RETVAL"
 }
