@@ -1,4 +1,4 @@
-audit (1.5.3-2+lenny1) testing-security; urgency=high
+audit (1.5.3-2.1) unstable; urgency=high
 
   * Non-maintainer upload by the Security Team.
   * Added CVE-2008-1628.patch to fix a stack-based buffer overflow
