@@ -1,2 +1,3 @@
 usr/lib/python*/site-packages/*.py
 usr/lib/python*/site-packages/*.so
+usr/lib/python*/site-packages/*.egg-info

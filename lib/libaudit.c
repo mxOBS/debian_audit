@@ -35,6 +35,7 @@
 #include <sys/poll.h>
 #include <sys/utsname.h>
 #include <fcntl.h>	/* O_NOFOLLOW needs gnu defined */
+#include <limits.h>	/* for PATH_MAX */
 
 #include "libaudit.h"
 #include "private.h"
@@ -74,9 +75,9 @@ static const struct nv_list failure_actions[] =
   { NULL,		0 }
 };
 
-int audit_archadded = 0;
-int audit_syscalladded = 0;
-unsigned int audit_elf = 0U;
+int audit_archadded hidden = 0;
+int audit_syscalladded hidden = 0;
+unsigned int audit_elf hidden = 0U;
 static struct libaudit_conf config;
 
 static int audit_failure_parser(const char *val, int line);
@@ -90,7 +91,7 @@ static const struct kw_pair keywords[] =
 };
 
 /* FIXME: Make this static again after deprecated functions no longer need it */
-int audit_priority(int xerrno)
+int hidden audit_priority(int xerrno)
 {
 	/* If they've compiled their own kernel and did not include
 	 * the audit susbsystem, they will get ECONNREFUSED. We'll
@@ -109,6 +110,7 @@ int audit_request_status(int fd)
 			"Error sending status request (%s)", strerror(-rc));
 	return rc;
 }
+hidden_def(audit_request_status)
 
 /*
  * Set everything to its default value
@@ -530,11 +532,26 @@ int audit_update_watch_perms(struct audit_rule_data *rule, int perms)
 
 int audit_add_watch(struct audit_rule_data **rulep, const char *path)
 {
+	return audit_add_watch_dir(AUDIT_WATCH, rulep, path);
+}
+
+int audit_add_dir(struct audit_rule_data **rulep, const char *path)
+{
+	return audit_add_watch_dir(AUDIT_DIR, rulep, path);
+}
+
+int audit_add_watch_dir(int type, struct audit_rule_data **rulep,
+			const char *path)
+{
 	size_t len = strlen(path);
 	struct audit_rule_data *rule = *rulep;
 
 	if (rule && rule->field_count) {
 		audit_msg(LOG_ERR, "Rule is not empty\n");
+		return -1;
+	}
+	if (type != AUDIT_WATCH && type != AUDIT_DIR) {
+		audit_msg(LOG_ERR, "Invalid type used\n");
 		return -1;
 	}
 
@@ -551,7 +568,7 @@ int audit_add_watch(struct audit_rule_data **rulep, const char *path)
 	rule->action = AUDIT_ALWAYS;
 	audit_rule_syscallbyname_data(rule, "all");
 	rule->field_count = 2;
-	rule->fields[0] = AUDIT_WATCH;
+	rule->fields[0] = type;
 	rule->values[0] = len;
 	rule->fieldflags[0] = AUDIT_EQUAL;
 	rule->buflen = len;
@@ -565,6 +582,7 @@ int audit_add_watch(struct audit_rule_data **rulep, const char *path)
 
 	return  0;
 }
+hidden_def(audit_add_watch_dir)
 
 int audit_add_rule_data(int fd, struct audit_rule_data *rule,
                         int flags, int action)
@@ -601,6 +619,48 @@ int audit_delete_rule_data(int fd, struct audit_rule_data *rule,
 				"Error sending delete rule data request (%s)",
 				strerror(-rc));
 	}
+	return rc;
+}
+
+/*
+ * This function is part of the directory auditing code
+ */
+int audit_trim_subtrees(int fd)
+{
+	int rc = audit_send(fd, AUDIT_TRIM, NULL, 0);
+	if (rc < 0) 
+		audit_msg(audit_priority(errno),
+			"Error sending trim subtrees command (%s)",
+			strerror(-rc));
+	return rc;
+}
+
+/*
+ * This function is part of the directory auditing code
+ */
+int audit_make_equivalent(int fd, const char *mount_point,
+			 const char *subtree)
+{
+	int rc;
+	size_t len1 = strlen(mount_point);
+	size_t len2 = strlen(subtree);
+ 	struct {
+ 		uint32_t sizes[2];
+ 		unsigned char buf[];
+ 	} *cmd = malloc(sizeof(*cmd) + len1 + len2);
+
+ 	memset(cmd, 0, sizeof(*cmd) + len1 + len2);
+
+ 	cmd->sizes[0] = len1;
+ 	cmd->sizes[1] = len2;
+ 	memcpy(&cmd->buf[0], mount_point, len1);
+ 	memcpy(&cmd->buf[len1], subtree, len2);
+
+ 	rc = audit_send(fd, AUDIT_MAKE_EQUIV, cmd, sizeof(*cmd) + len1 + len2);
+	if (rc < 0) 
+		audit_msg(audit_priority(errno),
+			"Error sending make_equivalent command (%s)",
+			strerror(-rc));
 	return rc;
 }
 
@@ -678,6 +738,7 @@ int audit_rule_syscall_data(struct audit_rule_data *rule, int scall)
 	rule->mask[word] |= bit;
 	return 0;
 }
+hidden_def(audit_rule_syscall_data)
 
 int audit_rule_syscallbyname_data(struct audit_rule_data *rule,
                                   const char *scall)
@@ -705,6 +766,7 @@ int audit_rule_syscallbyname_data(struct audit_rule_data *rule,
 		return audit_rule_syscall_data(rule, nr);
 	return -1;
 }
+hidden_def(audit_rule_syscallbyname_data)
 
 int audit_rule_fieldpair_data(struct audit_rule_data **rulep, const char *pair,
                               int flags)
@@ -758,7 +820,6 @@ int audit_rule_fieldpair_data(struct audit_rule_data **rulep, const char *pair,
 	if (v == NULL || f == v)
 		return -1;
 
-	audit_msg(LOG_DEBUG,"pair=%s\n", f);
 	if ((field = audit_name_to_field(f)) < 0) 
 		return -2;
 
@@ -766,7 +827,6 @@ int audit_rule_fieldpair_data(struct audit_rule_data **rulep, const char *pair,
 	if (flags == AUDIT_FILTER_EXCLUDE && field != AUDIT_MSGTYPE)
 		return -12; 
 
-	audit_msg(LOG_DEBUG,"f%d%s%s\n", field, audit_operator_to_symbol(op),v);
 	rule->fields[rule->field_count] = field;
 	rule->fieldflags[rule->field_count] = op;
 	switch (field)
@@ -809,6 +869,22 @@ int audit_rule_fieldpair_data(struct audit_rule_data **rulep, const char *pair,
 				}
 			}
 			break;
+		case AUDIT_EXIT:
+			vlen = strlen(v);
+			if (isdigit((char)*(v))) 
+				rule->values[rule->field_count] = 
+					strtol(v, NULL, 0);
+			else if (vlen >= 2 && *(v)=='-' && 
+						(isdigit((char)*(v+1)))) 
+				rule->values[rule->field_count] = 
+					strtol(v, NULL, 0);
+			else {
+				rule->values[rule->field_count] = 
+						audit_name_to_errno(v);
+				if (rule->values[rule->field_count] == 0) 
+					return -15;
+			}
+			break;
 		case AUDIT_MSGTYPE:
 			if (flags != AUDIT_FILTER_EXCLUDE)
 				return -9;
@@ -830,6 +906,7 @@ int audit_rule_fieldpair_data(struct audit_rule_data **rulep, const char *pair,
 		case AUDIT_OBJ_LEV_LOW:
 		case AUDIT_OBJ_LEV_HIGH:
 		case AUDIT_WATCH:
+		case AUDIT_DIR:
 			/* Watch & object filtering is invalid on anything
 			 * but exit */
 			if (flags != AUDIT_FILTER_EXIT)
@@ -981,10 +1058,17 @@ int audit_rule_fieldpair_data(struct audit_rule_data **rulep, const char *pair,
 					}
 				}
 				rule->values[rule->field_count] = val;
-				audit_syscalladded = 1;// perm selects syscalls
 			}
 			break;
-		case AUDIT_DEVMAJOR...AUDIT_SUCCESS:
+		case AUDIT_FILETYPE:
+			rule->values[rule->field_count] = 
+				audit_name_to_ftype(v);
+			if (rule->values[rule->field_count] < 0) {
+				return -16;
+			}
+			break;
+		case AUDIT_DEVMAJOR...AUDIT_INODE:
+		case AUDIT_SUCCESS...AUDIT_SUCCESS:
 			if (flags == AUDIT_FILTER_ENTRY)
 				return -7;
 			/* fallthrough */
@@ -1038,4 +1122,4 @@ int audit_detect_machine(void)
 		return audit_name_to_machine(uts.machine);
 	return -1;
 }
-
+hidden_def(audit_detect_machine)

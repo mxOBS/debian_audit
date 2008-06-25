@@ -1,3 +1,5 @@
 contrib/capp.rules
 contrib/lspp.rules
-sample.rules
+contrib/nispom.rules
+contrib/stig.rules
+init.d/auditd.cron

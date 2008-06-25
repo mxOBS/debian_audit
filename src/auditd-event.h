@@ -1,5 +1,5 @@
 /* auditd-event.h -- 
- * Copyright 2004, 2005 Red Hat Inc., Durham, North Carolina.
+ * Copyright 2004, 2005, 2008 Red Hat Inc., Durham, North Carolina.
  * All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -29,6 +29,7 @@
 
 void shutdown_events(void);
 int init_event(struct daemon_conf *config);
+void resume_logging(void);
 void enqueue_event(struct auditd_reply_list *rep);
 void *consumer_thread_main(void *arg);
 

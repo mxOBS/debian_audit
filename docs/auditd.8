@@ -1,9 +1,9 @@
-.TH "AUDITD" "8" "Feb 2007" "Red Hat" "System Administration Utilities"
+.TH "AUDITD" "8" "Sept 2007" "Red Hat" "System Administration Utilities"
 .SH NAME
 auditd \- The Linux Audit daemon
 .SH SYNOPSIS
 .B auditd
-.RB [ \-f ]\ [ \-l ]\ [ \-n ]
+.RB [ \-f ]\ [ \-l ]\ [ \-n ]\ [ \-s\ disable|enable|nochange ]
 .SH DESCRIPTION
 \fBauditd\fP is the userspace component to the Linux Auditing System. It's responsible for writing audit records to the disk. Viewing the logs is done with the
 .B ausearch
@@ -11,7 +11,7 @@ or
 .B aureport
 utilities. Configuring the audit rules is done with the
 .B auditctl
-utility. During startup, the rules in \fI/etc/audit.rules\fP are read by \fBauditctl\fP. The audit daemon itself has some configuration options that the admin may wish to customize. They are found in the
+utility. During startup, the rules in \fI/etc/audit/audit.rules\fP are read by \fBauditctl\fP. The audit daemon itself has some configuration options that the admin may wish to customize. They are found in the
 .B auditd.conf
 file.
 .SH OPTIONS
@@ -24,6 +24,9 @@ allow the audit daemon to follow symlinks for config files.
 .TP
 .B \-n
 no fork. This is useful for running off of inittab
+.TP
+.B \-s=\fIENABLE_STATE\fR
+specify when starting if auditd should change the current value for the kernel enabled flag. Valid values for ENABLE_STATE are "disable", "enable" or "nochange". The default is to enable (and disable when auditd terminates). The value of the enabled flag may be changed during the lifetime of auditd using 'auditctl -e'.
 .SH SIGNALS
 .TP
 SIGHUP
@@ -37,6 +40,10 @@ caused auditd to discontinue processing audit events, write a shutdown audit eve
 SIGUSR1
 causes auditd to immediately rotate the logs. It will consult the max_log_size_action to see if it should keep the logs or not.
 
+.TP
+SIGUSR2
+causes auditd to attemp to resume logging. This is usually used after logging has been suspended.
+
 .SH FILES
 .B /etc/audit/auditd.conf
 - configuration file for audit daemon
@@ -49,6 +56,7 @@ A boot param of audit=1 should be added to ensure that all processes that run be
 
 .SH "SEE ALSO"
 .BR auditd.conf (5),
+.BR audispd (8),
 .BR ausearch (8),
 .BR aureport (8),
 .BR auditctl (8).

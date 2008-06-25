@@ -1,6 +1,6 @@
 
 /* typetab.h --
- * Copyright 2007 Red Hat Inc., Durham, North Carolina.
+ * Copyright 2007-08 Red Hat Inc., Durham, North Carolina.
  * All Rights Reserved.
  *
  * This library is free software; you can redistribute it and/or
@@ -28,9 +28,11 @@ _S(T_UID,		"euid"		)
 _S(T_UID,		"suid"		)
 _S(T_UID,		"fsuid"		)
 _S(T_UID,		"ouid"		)
+_S(T_UID,		"oauid"		)
 _S(T_UID,		"iuid"		)
 _S(T_UID,		"id"		)
 _S(T_UID,		"inode_uid"	)
+_S(T_UID,		"sauid"		)
 _S(T_GID,		"gid"		)
 _S(T_GID,		"egid"		)
 _S(T_GID,		"sgid"		)
@@ -38,6 +40,7 @@ _S(T_GID,		"fsgid"		)
 _S(T_GID,		"ogid"		)
 _S(T_GID,		"igid"		)
 _S(T_GID,		"inode_gid"	)
+_S(T_GID,		"new_gid"	)
 _S(T_SYSCALL,		"syscall"	)
 _S(T_ARCH,		"arch"		)
 _S(T_EXIT,		"exit"		)
@@ -49,6 +52,9 @@ _S(T_ESCAPED,		"name"		)
 _S(T_ESCAPED,		"watch"		)
 _S(T_ESCAPED,		"cwd"		)
 _S(T_ESCAPED,		"cmd"		)
+_S(T_ESCAPED,		"acct"		)
+_S(T_ESCAPED,		"dir"		)
+_S(T_ESCAPED,		"key"		)
 _S(T_PERM,		"perm"		)
 _S(T_PERM,		"perm_mask"	)
 _S(T_MODE,		"mode"		)

@@ -1,5 +1,5 @@
 /* ausearch-options.h -- 
- * Copyright 2005 Red Hat Inc., Durham, North Carolina.
+ * Copyright 2005,2008 Red Hat Inc., Durham, North Carolina.
  * All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -35,7 +35,9 @@ extern const char *event_key;
 extern const char *event_subject;
 extern const char *event_object;
 extern int event_se;
+extern int just_one;
 extern pid_t event_ppid;
+extern int event_session_id;
 
 /* Data type to govern output format */
 extern report_t report_format;

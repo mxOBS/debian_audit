@@ -76,7 +76,7 @@ void list_append(llist *l, struct audit_rule_data *r, size_t sz)
 	newnode->next = 0;
 
 	// if we are at top, fix this up
-	if (l->head == 0)
+	if (l->head == NULL)
 		l->head = newnode;
 	else	// Otherwise add pointer to newnode
 		l->cur->next = newnode;

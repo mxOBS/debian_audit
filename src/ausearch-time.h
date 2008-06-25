@@ -1,5 +1,5 @@
 /* ausearch-time.h - header file for ausearch-time.c
- * Copyright 2006 Red Hat Inc., Durham, North Carolina.
+ * Copyright 2006-07 Red Hat Inc., Durham, North Carolina.
  * All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -25,24 +25,12 @@
 
 #include <time.h>
 
-enum {  T_NOW, T_RECENT, T_TODAY, T_YESTERDAY, T_THIS_WEEK, T_THIS_MONTH,
-	T_THIS_YEAR };
+enum {  T_NOW, T_RECENT, T_TODAY, T_YESTERDAY, T_THIS_WEEK, T_WEEK_AGO, 
+	T_THIS_MONTH, T_THIS_YEAR };
 
 extern time_t start_time, end_time;
 
 int lookup_time(const char *name);
-void clear_tm(struct tm *t);
-void set_tm_now(struct tm *d);
-void set_tm_recent(struct tm *d);
-void set_tm_today(struct tm *d);
-void set_tm_yesterday(struct tm *d);
-void set_tm_this_week(struct tm *d);
-void set_tm_this_month(struct tm *d);
-void set_tm_this_year(struct tm *d);
-void add_tm(struct tm *d, struct tm *t);
-void replace_time(struct tm *t1, struct tm *t2);
-void replace_date(struct tm *t1, struct tm *t2);
-void set_time(struct tm *t, int num, const char *t1, const char *t2);
 int ausearch_time_start(const char *da, const char *ti);
 int ausearch_time_end(const char *da, const char *ti);
 

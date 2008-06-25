@@ -81,11 +81,15 @@ extern "C" {
 #define AUDIT_TRUSTED_APP	1121	/* Trusted app msg - freestyle text */
 #define AUDIT_USER_SELINUX_ERR	1122	/* SE Linux user space error */
 #define AUDIT_USER_CMD		1123	/* User shell command and args */
+#define AUDIT_USER_TTY		1124	/* Non-ICANON TTY input meaning */
+#define AUDIT_CHUSER_ID		1125	/* Changed user ID supplemental data */
+#define AUDIT_GRP_AUTH		1126	/* Authentication for group password */
 
 #define AUDIT_FIRST_DAEMON	1200
 #define AUDIT_LAST_DAEMON	1299
 #define AUDIT_DAEMON_RECONFIG	1204	/* Audit daemon should reconfigure */
 #define AUDIT_DAEMON_ROTATE	1205	/* Audit daemon should rotate logs */
+#define AUDIT_DAEMON_RESUME	1206	/* Audit daemon should resume logging */
 
 #define AUDIT_FIRST_EVENT	1300
 #define AUDIT_LAST_EVENT	1399
@@ -103,7 +107,13 @@ extern "C" {
 #define AUDIT_FD_PAIR		1317	/* audit record for pipe/socketpair */
 #endif
 #ifndef AUDIT_OBJ_PID
-#define AUDIT_OBJ_PID		1318	/* Ptrace target */
+#define AUDIT_OBJ_PID		1318	/* signal or ptrace target */
+#endif
+#ifndef AUDIT_TTY
+#define AUDIT_TTY		1319	/* Input on an administrative TTY */
+#endif
+#ifndef AUDIT_EOE
+#define AUDIT_EOE		1320	/* End of event */
 #endif
 #define AUDIT_LAST_EVENT	1399
 
@@ -131,8 +141,14 @@ extern "C" {
 #endif
 #define AUDIT_FIRST_APPARMOR		1500
 #define AUDIT_LAST_APPARMOR		1599
-#ifndef AUDIT_SD
-#define AUDIT_SD			1500	/* Not upstream yet */
+#ifndef AUDIT_AA
+#define AUDIT_AA			1500	/* Not upstream yet */
+#define AUDIT_APPARMOR_AUDIT		1501
+#define AUDIT_APPARMOR_ALLOWED		1502
+#define AUDIT_APPARMOR_DENIED		1503
+#define AUDIT_APPARMOR_HINT		1504
+#define AUDIT_APPARMOR_STATUS		1505
+#define AUDIT_APPARMOR_ERROR		1506
 #endif
 
 #define AUDIT_FIRST_KERN_CRYPTO_MSG	1600
@@ -143,7 +159,7 @@ extern "C" {
 #define AUDIT_LAST_KERN_ANOM_MSG	1799
 #define AUDIT_ANOM_PROMISCUOUS		1700 // Device changed promiscuous mode
 #endif
-#ifndef AUDIT_ANOM_SEGFAULT
+#ifndef AUDIT_ANOM_ABEND
 #define AUDIT_ANOM_ABEND		1701 /* Process ended abnormally */
 #endif
 #define AUDIT_FIRST_ANOM_MSG		2100
@@ -165,6 +181,7 @@ extern "C" {
 #define AUDIT_ANOM_ADD_ACCT		2114 // Adding an acct
 #define AUDIT_ANOM_DEL_ACCT		2115 // Deleting an acct
 #define AUDIT_ANOM_MOD_ACCT		2116 // Changing an acct
+#define AUDIT_ANOM_ROOT_TRANS		2117 // User became root
 
 #define AUDIT_FIRST_ANOM_RESP		2200
 #define AUDIT_LAST_ANOM_RESP		2299
@@ -194,6 +211,7 @@ extern "C" {
 #define AUDIT_DEV_ALLOC			2307 /* Device was allocated */
 #define AUDIT_DEV_DEALLOC		2308 /* Device was deallocated */
 #define AUDIT_FS_RELABEL		2309 /* Filesystem relabeled */
+#define AUDIT_USER_MAC_POLICY_LOAD	2310 /* Userspc daemon loaded policy */
 
 #define AUDIT_FIRST_CRYPTO_MSG		2400
 #define AUDIT_LAST_CRYPTO_MSG		2499
@@ -201,6 +219,18 @@ extern "C" {
 #ifndef AUDIT_FIRST_USER_MSG2
 #define AUDIT_FIRST_USER_MSG2  2100    /* More userspace messages */
 #define AUDIT_LAST_USER_MSG2   2999
+#endif
+
+/* These are from the watching subtrees patch */
+#ifndef AUDIT_TRIM
+#define AUDIT_TRIM              1014    /* Trim junk from watched tree */
+#define AUDIT_MAKE_EQUIV        1015    /* Append to watched tree */
+#endif
+
+/* These are from the audit by tty patch */
+#ifndef AUDIT_TTY_GET
+#define AUDIT_TTY_GET		1016	/* Get TTY auditing status */
+#define AUDIT_TTY_SET		1017	/* Set TTY audit status */
 #endif
 
 /* This is for the new operator patch */
@@ -259,11 +289,22 @@ extern "C" {
 #define AUDIT_PERM_ATTR		8
 #endif
 
+/* This is from the directory auditing patch */
+#ifndef AUDIT_DIR
+#define AUDIT_DIR           107
+#endif
+
+/* This is from the filetype patch */
+#ifndef AUDIT_FILETYPE
+#define AUDIT_FILETYPE      108
+#endif
+
 /* This is from filterkey patch */
 #ifndef AUDIT_FILTERKEY
 #define AUDIT_FILTERKEY     210
 #define AUDIT_MAX_KEY_LEN   32
 #endif
+#define AUDIT_KEY_SEPARATOR 0x01
 
 /* This is new list defines from audit.h */
 #ifndef AUDIT_FILTER_USER
@@ -431,6 +472,10 @@ extern const char *audit_machine_to_name(int machine);
 extern unsigned int audit_machine_to_elf(int machine);
 extern int          audit_elf_to_machine(unsigned int elf);
 extern const char *audit_operator_to_symbol(int op);
+extern int        audit_name_to_errno(const char *error);
+extern const char *audit_errno_to_name(int error);
+extern int        audit_name_to_ftype(const char *name);
+extern const char *audit_ftype_to_name(int ftype); 
 
 /* AUDIT_GET */
 extern int audit_request_status(int fd);
@@ -454,6 +499,12 @@ extern int audit_request_signal_info(int fd);
 /* AUDIT_WATCH */
 extern int audit_update_watch_perms(struct audit_rule_data *rule, int perms);
 extern int audit_add_watch(struct audit_rule_data **rulep, const char *path);
+extern int audit_add_dir(struct audit_rule_data **rulep, const char *path);
+extern int audit_add_watch_dir(int type, struct audit_rule_data **rulep,
+				const char *path);
+extern int audit_trim_subtrees(int fd);
+extern int audit_make_equivalent(int fd, const char *mount_point,
+				const char *subtree);
 
 /* AUDIT_ADD */
 extern int  audit_add_rule_data(int fd, struct audit_rule_data *rule,

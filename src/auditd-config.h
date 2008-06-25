@@ -1,5 +1,5 @@
 /* auditd-config.h -- 
- * Copyright 2004-2006 Red Hat Inc., Durham, North Carolina.
+ * Copyright 2004-2007 Red Hat Inc., Durham, North Carolina.
  * All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -25,6 +25,7 @@
 #define AUDITD_CONFIG_H
 
 #include "libaudit.h"
+#include <grp.h>
 #define CONFIG_FILE "/etc/audit/auditd.conf"
 #define MEGABYTE 1048576UL
 
@@ -37,6 +38,7 @@ typedef enum { SZ_IGNORE, SZ_SYSLOG, SZ_SUSPEND, SZ_ROTATE,
 		SZ_KEEP_LOGS } size_action;
 typedef enum { QOS_NON_BLOCKING, QOS_BLOCKING } qos_t;
 typedef enum { TEST_AUDITD, TEST_SEARCH } log_test_t;
+typedef enum { N_NONE, N_HOSTNAME, N_FQD, N_NUMERIC, N_USER } node_t;
 
 struct daemon_conf
 {
@@ -47,11 +49,14 @@ struct daemon_conf
 	const char *sender_ctx;	/* the context for the sender of sighup */
 	const char *log_file;
 	logging_formats log_format;
+	gid_t log_group;
 	unsigned int priority_boost;
 	flush_technique flush;
 	unsigned int freq;
 	unsigned int num_logs;
 	const char *dispatcher;
+	node_t node_name_format;
+	const char *node_name;
 	unsigned long max_log_size;
 	size_action max_log_size_action;
 	unsigned long space_left;
@@ -72,6 +77,7 @@ int load_config(struct daemon_conf *config, log_test_t lt);
 const char *audit_lookup_format(int fmt);
 int create_log_file(const char *val);
 int validate_email(const char *acct);
+int resolve_node(struct daemon_conf *config);
 
 void init_config_manager(void);
 int start_config_manager(struct auditd_reply_list *rep);

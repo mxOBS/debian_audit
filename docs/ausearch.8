@@ -45,11 +45,20 @@ Interpret numeric entities into text. For example, uid is converted to account n
 .BR \-if ,\  \-\-input \ \fIfile-name\fP
 Use the given \fIfile\fP instead if the logs. This is to aid analysis where the logs have been moved to another machine or only part of a log was saved.
 .TP
+.BR \-\-input-logs
+Use the log file location from auditd.conf as input for searching. This is needed if you are using ausearch from a cron job.
+.TP
+.BR \-\-just-one
+Stop after emitting the first event that matches the search criteria.
+.TP
 .BR \-k ,\  \-\-key \ \fIkey-string\fP
 Search for an event based on the given \fIkey string\fP.
 .TP
 .BR \-m ,\  \-\-message \ \fImessage-type\fP\ |\ \fIcomma-sep-message-type-list\fP
 Search for an event matching the given \fImessage type\fP. You may also enter a \fIcomma separated list of message types\fP. There is an \fBALL\fP message type that doesn't exist in the actual logs. It allows you to get all messages in the system. The list of valid messages types is long. The program will display the list whenever no message type is passed with this parameter. The message type can be either text or numeric. If you enter a list, there can be only commas and no spaces separating the list.
+.TP
+.BR \-n ,\  \-\-node \ \fInode-name\fP
+Search for events originating from \fInode name\fP string.
 .TP
 .BR \-o ,\  \-\-object \ \fISE-Linux-context-string\fP
 Search for event with \fItcontext\fP (object) matching the string.
@@ -63,11 +72,14 @@ Search for an event matching the given \fIparent process ID\fP.
 .BR \-r ,\  \-\-raw
 Output is completely unformatted. This is useful for extracting records that can still be interpretted by audit tools.
 .TP
-.BR \-sc ,\  \-\-success \ \fIsyscall-name-or-value\fP
+.BR \-sc ,\  \-\-syscall \ \fIsyscall-name-or-value\fP
 Search for an event matching the given \fIsyscall\fP. You may either give the numeric syscall value or the syscall name. If you give the syscall name, it will use the syscall table for the machine that you are using. 
 .TP
 .BR \-se ,\  \-\-context \ \fISE-Linux-context-string\fP
 Search for event with either \fIscontext\fP/subject or \fItcontext\fP/object matching the string.
+.TP
+.BR \-\-session \ \fILogin-Session-ID\fP
+Search for events matching the given Login Session ID. This process attribute is set when a user logs in and can tie any process to a particular user login.
 .TP
 .BR \-su ,\  \-\-subject \ \fISE-Linux-context-string\fP
 Search for event with \fIscontext\fP (subject) matching the string.
@@ -85,7 +97,7 @@ is assumed. If the time is omitted,
 .B now
 is assumed. Use 24 hour clock time rather than AM or PM to specify time. An example date is 10/24/2005. An example of time is 18:00:00.
 
-You may also use the word: \fBnow\fP, \fBrecent\fP, \fBtoday\fP, \fByesterday\fP, \fBthis\-week\fP, \fBthis\-month\fP, \fBthis\-year\fP. \fBToday\fP means starting at 1 second after midnight. \fBRecent\fP is 10 minutes ago. \fBYesterday\fP is 1 second after midnight the previous day. \fBThis\-week\fP means starting 1 second after midnight on day 0 of the week determined by your locale (see \fBlocaltime\fP). \fBThis\-month\fP means 1 second after midnight on day 1 of the month. \fBThis\-year\fP means the 1 second after midnight on the first day of the first month.
+You may also use the word: \fBnow\fP, \fBrecent\fP, \fBtoday\fP, \fByesterday\fP, \fBthis\-week\fP, \fBweek\-ago\fP, \fBthis\-month\fP, \fBthis\-year\fP. \fBToday\fP means starting now. \fBRecent\fP is 10 minutes ago. \fBYesterday\fP is 1 second after midnight the previous day. \fBThis\-week\fP means starting 1 second after midnight on day 0 of the week determined by your locale (see \fBlocaltime\fP). \fBThis\-month\fP means 1 second after midnight on day 1 of the month. \fBThis\-year\fP means the 1 second after midnight on the first day of the first month.
 .TP
 .BR \-ts ,\  \-\-start \ [\fIstart-date\fP]\ [\fIstart-time\fP]
 Search for events with time stamps equal to or after the given end time. The format of end time depends on your locale. If the date is omitted, 

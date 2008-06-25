@@ -23,6 +23,13 @@
         #include "../lib/libaudit.h"
 %}
 
+%define __signed__
+signed
+%enddef
+#define __attribute(X) /*nothing*/
+typedef unsigned __u32;
 %include "/usr/include/linux/audit.h"
+#define __extension__ /*nothing*/
+%include "/usr/include/stdint.h"
 %include "../lib/libaudit.h"
 

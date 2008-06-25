@@ -1,5 +1,5 @@
 /* auditd-event.c -- 
- * Copyright 2004-06 Red Hat Inc., Durham, North Carolina.
+ * Copyright 2004-08 Red Hat Inc., Durham, North Carolina.
  * All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -33,6 +33,7 @@
 #include <string.h>
 #include <sys/time.h>
 #include <sys/vfs.h>
+#include <limits.h>     /* POSIX_HOST_NAME_MAX */
 #include "auditd-event.h"
 #include "auditd-dispatch.h"
 #include "libaudit.h"
@@ -67,7 +68,8 @@ static void shift_logs(struct auditd_consumer_data *data);
 static int  open_audit_log(struct auditd_consumer_data *data);
 static void change_runlevel(const char *level);
 static void safe_exec(const char *exe);
-static char *format_raw(const struct audit_reply *rep);
+static char *format_raw(const struct audit_reply *rep, 
+		struct daemon_conf *config);
 static void reconfigure(struct auditd_consumer_data *data);
 
 
@@ -94,6 +96,7 @@ int init_event(struct daemon_conf *config)
 {
 	/* Store the netlink descriptor and config info away */
 	consumer_data.config = config;
+	consumer_data.log_fd = -1;
 
 	/* Setup IPC mechanisms */
 	pthread_mutex_init(&consumer_data.queue_lock, NULL);
@@ -131,7 +134,8 @@ int init_event(struct daemon_conf *config)
 		check_log_file_size(consumer_data.log_fd, &consumer_data);
 		check_space_left(consumer_data.log_fd, config);
 	}
-	format_buf = (char *)malloc(MAX_AUDIT_MESSAGE_LENGTH);
+	format_buf = (char *)malloc(MAX_AUDIT_MESSAGE_LENGTH +
+						 _POSIX_HOST_NAME_MAX);
 	if (format_buf == NULL) {
 		audit_msg(LOG_ERR, "No memory for formatting, exiting");
 		fclose(consumer_data.log_file);
@@ -160,6 +164,14 @@ void enqueue_event(struct auditd_reply_list *rep)
 	pthread_mutex_unlock(&consumer_data.queue_lock);
 }
 
+void resume_logging(void)
+{
+	logging_suspended = 0; 
+	fs_space_left = 1;
+	fs_space_warning = 0;
+	fs_admin_space_warning = 0;
+	audit_msg(LOG_ERR, "Audit daemon is attempting to resume logging.");
+}
 
 static void *event_thread_main(void *arg) 
 {
@@ -226,7 +238,8 @@ static void handle_event(struct auditd_consumer_data *data)
 		switch (data->config->log_format)
 		{
 			case LF_RAW:
-				buf = format_raw(&data->head->reply);
+				buf = format_raw(&data->head->reply,
+							data->config);
 				break;
 			case LF_NOLOG:
 				return;
@@ -548,7 +561,9 @@ static void rotate_logs(struct auditd_consumer_data *data,
 		return;
 
 	/* Close audit file */
-	fchmod(data->log_fd, S_IRUSR|S_IRGRP);
+	fchmod(data->log_fd, 
+			data->config->log_group ? S_IRUSR|S_IRGRP : S_IRUSR);
+	fchown(data->log_fd, 0, data->config->log_group);
 	fclose(data->log_file);
 	
 	/* Rotate */
@@ -645,7 +660,7 @@ static void shift_logs(struct auditd_consumer_data *data)
 	}
 
 	/* Our last known file disappeared, start over... */
-	if (num_logs <= last_log) {
+	if (num_logs <= last_log && last_log > 1) {
 		audit_msg(LOG_WARNING, "Last known log disappeared (%s)", name);
 		num_logs = last_log = 1;
 		while (num_logs) {
@@ -737,6 +752,9 @@ retry:
 			return 1;
 		}
 	}
+	fchmod(lfd, data->config->log_group ? S_IRUSR|S_IWUSR|S_IRGRP : 
+						S_IRUSR|S_IWUSR);
+	fchown(lfd, 0, data->config->log_group);
 
 	data->log_fd = lfd;
 	data->log_file = fdopen(lfd, "a");
@@ -801,14 +819,21 @@ static void safe_exec(const char *exe)
 * text buffer that's unformatted for writing to disk. If there
 * is an error the return value is NULL.
 */
-static char *format_raw(const struct audit_reply *rep)
+static char *format_raw(const struct audit_reply *rep, 
+	struct daemon_conf *config)
 {
         char *ptr;
 
-        if (rep==NULL)
-        	snprintf(format_buf, MAX_AUDIT_MESSAGE_LENGTH,
+        if (rep==NULL) {
+		if (config->node_name_format != N_NONE)
+			snprintf(format_buf, MAX_AUDIT_MESSAGE_LENGTH +
+				_POSIX_HOST_NAME_MAX - 32,
+				"node=%s type=DAEMON msg=NULL reply",
+                                config->node_name);
+		else
+	        	snprintf(format_buf, MAX_AUDIT_MESSAGE_LENGTH,
 				"type=DAEMON msg=NULL reply");
-	else {
+	} else {
 		int len;
 		const char *type, *message;
 		char unknown[32];
@@ -828,7 +853,13 @@ static char *format_raw(const struct audit_reply *rep)
 
 		// Note: This can truncate messages if 
 		// MAX_AUDIT_MESSAGE_LENGTH is too small
-	        snprintf(format_buf, MAX_AUDIT_MESSAGE_LENGTH - 32,
+		if (config->node_name_format != N_NONE)
+			snprintf(format_buf, MAX_AUDIT_MESSAGE_LENGTH +
+				_POSIX_HOST_NAME_MAX - 32,
+				"node=%s type=%s msg=%.*s\n",
+                                config->node_name, type, len, message);
+		else
+		        snprintf(format_buf, MAX_AUDIT_MESSAGE_LENGTH - 32,
 				"type=%s msg=%.*s", type, len, message);
 
 	        /* Replace \n with space so it looks nicer. */
@@ -863,7 +894,7 @@ static void reconfigure(struct auditd_consumer_data *data)
 
 	// start with disk error action.
 	oconf->disk_error_action = nconf->disk_error_action;
-	free(oconf->disk_error_exe);
+	free((char *)oconf->disk_error_exe);
 	oconf->disk_error_exe = nconf->disk_error_exe;
 
 	// numlogs is next
@@ -887,6 +918,15 @@ static void reconfigure(struct auditd_consumer_data *data)
 		oconf->action_mail_acct = nconf->action_mail_acct;
 	} else
 		free((void *)nconf->action_mail_acct);
+
+	// node_name
+	if (oconf->node_name_format != nconf->node_name_format || 
+			(oconf->node_name && nconf->node_name && 
+			strcmp(oconf->node_name, nconf->node_name) != 0)) {
+		oconf->node_name_format = nconf->node_name_format;
+		free((char *)oconf->node_name);
+		oconf->node_name = nconf->node_name;
+	}
 
 	/* Now look at audit dispatcher changes */
 	oconf->qos = nconf->qos; // dispatcher qos
@@ -940,6 +980,8 @@ static void reconfigure(struct auditd_consumer_data *data)
 		// they are the same app - just signal it
 		else {
 			reconfigure_dispatcher();
+			free((char *)nconf->dispatcher);
+			nconf->dispatcher = NULL;
 		}
 	}
 
@@ -1014,7 +1056,7 @@ static void reconfigure(struct auditd_consumer_data *data)
 			need_space_check = 1;
 		else if (strcmp(oconf->space_left_exe, nconf->space_left_exe))
 			need_space_check = 1;
-		free(oconf->space_left_exe);
+		free((char *)oconf->space_left_exe);
 		oconf->space_left_exe = nconf->space_left_exe;
 	}
 
@@ -1040,7 +1082,7 @@ static void reconfigure(struct auditd_consumer_data *data)
 		else if (strcmp(oconf->admin_space_left_exe,
 					nconf->admin_space_left_exe))
 			need_space_check = 1;
-		free(oconf->admin_space_left_exe);
+		free((char *)oconf->admin_space_left_exe);
 		oconf->admin_space_left_exe = nconf->admin_space_left_exe;
 	}
 	// disk full action
@@ -1057,7 +1099,7 @@ static void reconfigure(struct auditd_consumer_data *data)
 			need_space_check = 1;
 		else if (strcmp(oconf->disk_full_exe, nconf->disk_full_exe))
 			need_space_check = 1;
-		free(oconf->disk_full_exe);
+		free((char *)oconf->disk_full_exe);
 		oconf->disk_full_exe = nconf->disk_full_exe;
 	}
 

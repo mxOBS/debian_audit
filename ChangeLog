@@ -1,9 +1,183 @@
+1.7.4
+- Fix interpreting of keys in syscall records
+- Interpret audit rule config change list fields
+- Don't error on name=(null) PATH records in ausearch/report
+- Add key report to aureport
+- Fix --end today to be now
+- Added python bindings for auparse_goto_record_num
+- Update system-config-audit to 0.4.7 (Miloslav Trmac)
+- Add support for the filetype field option in auditctl
+- In audispd boost priority after starting children
+
+1.7.3
+- Fix path processing in AVC records.
+- auparse_find_field_next() wasn't resetting field ptr going to next record.
+- auparse_find_field() wasn't checking current field before iterating
+- cleanup some string handling in audisp-prelude plugin
+- Update auditctl man page
+- Fix output of keys in ausearch interpretted mode
+- Fix ausearch/report --start now to not be reset to midnight
+- Added auparse_goto_record_num function
+- Prelude plugin now uses auparse_goto_record_num to avoid skipping a record
+- audispd now has a priority boost config option
+- Look for laddr in avcs reported via prelude
+- Detect page 0 mmaps and alert via prelude
+
+1.7.2
+- gen_table.c now includes IPC defines to avoid kernel headers wild goose chase
+- ausyscall program added for cross referencing syscall name and number info
+- Add login session ID search capability to ausearch
+
+1.7.1
+- Remove LSB headers info for init scripts
+- Fix buffer overflow in audit_log_user_command, again (#438840)
+- Fix memory leak in EOE code in auditd (#440075)
+- In auditctl, don't use new operators in legacy rule format
+- Made a couple corrections in alpha & x86_64 syscall tables (Miloslav Trmac)
+- Add example STIG rules file
+- Add string table lookup performance improvement patch (Miloslav Trmac)
+- auparse_find_field_next performance improvement
+
+1.7
+- Improve input error handling in audispd
+- Improve end of event detection in auparse library
+- Improve handling of abstract namespaces
+- Add test mode for prelude plugin
+- Handle user space avcs in prelude plugin
+- Audit event serial number now recorded in idmef alert
+- Add --just-one option to ausearch
+- Fix watched account login detection for some failed login attempts
+- Couple fixups in audit logging functions (Miloslav Trmac)
+- Add support in auditctl for virtual keys
+- Added new type for user space MAC policy load events
+- auparse_find_field_next was not iterating correctly, fixed it
+- Add idmef alerts for access or execution of watched file
+- Fix buffer overflow in audit_log_user_command
+- Add basic remote logging plugin - only sends & no flow control
+- Update ausearch with interpret fixes from auparse
+
+1.6.9
+- Apply hidden attribute cleanup patch (Miloslav Trmac)
+- Apply auparse expression interface patch (Miloslav Trmac)
+- Fix potential memleak in audit event dispatcher
+- Change default audispd queue depth to 80
+- Update system-config-audit to version 0.4.6 (Miloslav Trmac)
+- audisp-prelude alerts now controlled by config file
+- Updated syscall table for 2.6.25 kernel
+- Apply patch correcting acct field being misencoded (Miloslav Trmac)
+- Added watched account login detection for prelude plugin
+
+1.6.8
+- Update for gcc 4.3
+- Cleanup descriptors in audispd before running plugin
+- Fix 'recent' keyword for aureport/search
+- Fix SE Linux policy for zos_remote plugin
+- Add event type for group password authentication attempts
+- Couple of updates to the translation tables
+- Add detection of failed group authentication to audisp-prelude
+
+1.6.7
+- In ausearch/report, prefer -if to stdin
+- In ausearch/report, add new command line option --input-logs (#428860)
+- Updated audisp-prelude based on feedback from prelude-devel
+- Added prelude alert for promiscuous socket being opened
+- Added prelude alert for SE Linux policy enforcement changes
+- Added prelude alerts for Forbidden Login Locations and Time
+- Applied patch to auparse fixing error handling of searching by
+  interpreted value (Miloslav Trmac)
+
+1.6.6
+- Add prelude IDS plugin for IDMEF alerts
+- Add --user option to aulastlog command
+- Spec file cleanups
+
+1.6.5
+- Add more errno strings
+- Fix config parser to allow either 0640 or 0600 for audit logs (#427062)
+- Check for audit log being writable by owner in auditd
+- If auditd logging was suspended, it can be resumed with SIGUSR2 (#251639)
+- Updated CAPP, LSPP, and NISPOM rules for new capabilities
+- Added aulastlog utility
+
+1.6.4
+- fchmod of log file was on wrong variable (#426934)
+- Allow use of errno strings for exit codes in audit rules
+
+1.6.3
+- Add kernel release string to DEAMON_START events
+- Log warning if audit event from kernel is too big
+- Fix keep_logs when num_logs option disabled (#325561)
+- Auditd commandline option to decide whether to enable kernel auditing on
+  startup (Tony Jones)
+- Fix auparse to handle node fields for syscall records
+- Updates for auparse to uninterpret text search values (Miloslav Trmac)
+- Update system-config-audit to version 0.4.5 (Miloslav Trmac)
+- Add keyword week-ago to aureport & ausearch start/end times
+- Fix audit log permissions on rotate. If group is root 0400, otherwise 0440
+- Get "make check" working for auparse
+- Add RACF zos remote audispd plugin (Klaus Kiwi)
+- Add event queue overflow action to audispd
+- Make sure we are reading right amount of pipe in audispd
+
+1.6.2
+- Add support for searching by posix regular expressions in auparse
+- Route DEAMON events into rt interface
+- If event pipe is full, try again after doing local logging
+- Optionally add node/machine name to records in audit daemon
+- Update ausearch/aureport to specify nodes to search on
+- Fix segfault interpretting saddr fields in avcs
+
+1.6.1
+- External plugin support in place
+- Updated system-config-audit with some bug fixes. (Miloslav Trmac)
+- Add missing newline to string output of event dispatcher.
+- Fix reference counting in auparse python bindings (#263961)
+- Moved default af_unix plugin socket to /var/run/audispd_events
+
+1.6
+- Adding perm field should not set syscall added flag in auditctl
+- Fix segfault when aureport -if option is used
+- Fix auditctl to better check keys on rule lines
+- Add support for audit by TTY and other new event types 
+- Auditd config option for group permission of audit logs
+- Swig messed up a variable in ppc's python bindings causing crashes. (#251327)
+- New audit event dispatcher
+- Update syscall tables for 2.6.23 kernel
+
+1.5.6
+- Fix potential buffer overflow in print clone flags of auparse
+- Add new App Armor types (John Johansen)
+- Adjust Menu Location for system-config-audit (Miloslav Trmac)
+- Fix python traceback parsing watches without perm statement (Miloslav Trmac)
+- Added databuf_strcat function to auparse (John Dennis)
+- Update auditctl to handle legacy kernels when putting a watch on a dir
+- Fix invalid free and memory leak on reload in auditd (Miloslav Trmac)
+- Fix clone flags in auparse (John Ramsdell)
+- Add interpretation for F_SETFL of fcntl (John Ramsdell)
+- Fix acct interpretation in auparse
+- Makefile cleanups (John Ramsdell)
+
+1.5.5
+- Add system-config-audit (Miloslav Trmac)
+- Correct bug in audit_make_equivalent function (Al Viro)
+
+1.5.4
+- Add feed interface to auparse library (John Dennis)
+- Apply patch to libauparse for unresolved symbols (#241178)
+- Apply patch to add line numbers for file events in libauparse (John Dennis)
+- Change seresults to seresult in libauparse (John Dennis)
+- Add unit32_t definition to swig (#244210)
+- Add support for directory auditing
+- Update acct field to be escaped
+
 1.5.3
 - Change buffer size to prevent truncation of DAEMON events with large labels
 - Fix memory leaks in auparse (John Dennis)
 - Update syscall tables for 2.6.21 kernel
 - Update capp & lspp rules
 - New python bindings for libauparse (John Dennis)
+- Fix file permission tests (#237358)
+- Fix init script config tests (#237788)
 
 1.5.2
 - Totally re-written event dispatcher (James Antill)

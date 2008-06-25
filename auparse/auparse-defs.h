@@ -35,11 +35,18 @@ extern "C" {
 /* This tells the library where the data source is located */
 typedef enum { AUSOURCE_LOGS, AUSOURCE_FILE, AUSOURCE_FILE_ARRAY, 
 	AUSOURCE_BUFFER, AUSOURCE_BUFFER_ARRAY,
-	AUSOURCE_DESCRIPTOR, AUSOURCE_FILE_POINTER } ausource_t;
+	AUSOURCE_DESCRIPTOR, AUSOURCE_FILE_POINTER, AUSOURCE_FEED } ausource_t;
 
-/* This defines the types of searches that can be done */
-typedef enum { AUSEARCH_UNSET, AUSEARCH_EXISTS, AUSEARCH_EQUAL,
-        AUSEARCH_NOT_EQUAL } ausearch_op_t;
+/* This used to define the types of searches that can be done.  It is not used
+   any more. */
+typedef enum {
+	AUSEARCH_UNSET,
+	AUSEARCH_EXISTS,
+	AUSEARCH_EQUAL, AUSEARCH_NOT_EQUAL,
+	AUSEARCH_TIME_LT, AUSEARCH_TIME_LE, AUSEARCH_TIME_GE, AUSEARCH_TIME_GT,
+	AUSEARCH_TIME_EQ,
+	AUSEARCH_INTERPRETED = 0x40000000
+} ausearch_op_t;
 
 /* This determines where to position the cursor when a search completes */
 typedef enum { AUSEARCH_STOP_EVENT, AUSEARCH_STOP_RECORD,
@@ -59,6 +66,9 @@ typedef struct
 	const char *host;	// Machine's name
 } au_event_t;
 
+
+/* This indicates why the user supplied callback was invoked */
+typedef enum {AUPARSE_CB_EVENT_READY} auparse_cb_event_t;
 
 #ifdef __cplusplus
 }

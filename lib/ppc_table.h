@@ -1,5 +1,5 @@
 /* ppc_table.h --
- * Copyright 2005,2006 Red Hat Inc., Durham, North Carolina.
+ * Copyright 2005-08 Red Hat Inc., Durham, North Carolina.
  * All Rights Reserved.
  *
  * This library is free software; you can redistribute it and/or
@@ -317,4 +317,13 @@ _S(300, "set_robust_list")
 _S(301, "move_pages")
 _S(302, "getcpu")
 _S(303, "epoll_pwait")
+_S(304, "utimensat")
+_S(305, "signalfd")
+_S(306, "timerfd")
+_S(307, "eventfd")
+_S(308, "sync_file_range2")
+_S(309, "fallocate")
+_S(310, "subpage_prot")
+_S(311, "timerfd_settime")
+_S(312, "timerfd_gettime")
 

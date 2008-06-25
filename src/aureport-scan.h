@@ -1,5 +1,5 @@
 /* aureport-scan.h -- 
- * Copyright 2005-06 Red Hat Inc., Durham, North Carolina.
+ * Copyright 2005-06, 2008 Red Hat Inc., Durham, North Carolina.
  * All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -34,6 +34,7 @@ typedef struct sdata {
 	slist hosts;
 	slist exes;
 	slist avc_objs;
+	slist keys;
 	ilist pids;
 	ilist sys_list;
 	ilist anom_list;

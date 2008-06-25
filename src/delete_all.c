@@ -1,5 +1,5 @@
 /* delete_all.c --
- * Copyright 2005-06 Red Hat Inc., Durham, North Carolina.
+ * Copyright 2005-06, 2008 Red Hat Inc., Durham, North Carolina.
  * All Rights Reserved.
  *
  * This library is free software; you can redistribute it and/or
@@ -28,6 +28,8 @@
 #include "private.h"
 
 #include "auditctl-llist.h"
+
+extern int key_match(struct audit_reply *rep);
 
 /* Returns 0 for success and -1 for failure */
 int delete_all_rules(int fd)
@@ -88,7 +90,7 @@ int delete_all_rules(int fd)
 				list_append(&l, 
 					(struct audit_rule_data *)rep.rule, 
 					sizeof(struct audit_rule));
-			else
+			else if (key_match(&rep))
 				list_append(&l, rep.ruledata, 
 					sizeof(struct audit_rule_data) +
 					rep.ruledata->buflen);

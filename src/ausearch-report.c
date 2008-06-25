@@ -1,6 +1,6 @@
 /*
 * ausearch-report.c - Format and output events
-* Copyright (c) 2005-07 Red Hat Inc., Durham, North Carolina.
+* Copyright (c) 2005-08 Red Hat Inc., Durham, North Carolina.
 * All Rights Reserved. 
 *
 * This software may be freely redistributed and/or modified under the
@@ -36,6 +36,7 @@
 #include <linux/net.h>
 #include <time.h>
 #include <stdlib.h>
+#include <ctype.h>
 #include "libaudit.h"
 #include "ausearch-options.h"
 #include "ausearch-parse.h"
@@ -49,9 +50,9 @@ struct nv_pair {
 
 /* This is the list of field types that we can interpret */
 enum { T_UID, T_GID, T_SYSCALL, T_ARCH, T_EXIT, T_ESCAPED, T_PERM, T_MODE, 
-T_SOCKADDR, T_FLAGS, T_PROMISC, T_CAPABILITY, T_SIGNAL };
+T_SOCKADDR, T_FLAGS, T_PROMISC, T_CAPABILITY, T_SIGNAL, T_KEY, T_LIST };
 
-/* Function in ausearch-match for unescaping filenames */
+/* Function in ausearch-parse for unescaping filenames */
 extern char *unescape(char *buf);
 
 /* Local functions */
@@ -59,7 +60,7 @@ static void output_raw(llist *l);
 static void output_default(llist *l);
 static void output_interpreted(llist *l);
 static void output_interpreted_node(const lnode *n);
-static void interpret(char *name, char *val, int comma);
+static void interpret(char *name, char *val, int comma, int rtype);
 
 /* The machine based on elf type */
 static int machine = 0;
@@ -287,7 +288,7 @@ no_print:
 		val = ptr;
 		
 		// print interpreted string
-		interpret(name, val, comma);
+		interpret(name, val, comma, n->type);
 	}
 	printf("\n");
 }
@@ -303,9 +304,11 @@ static struct nv_pair typetab[] = {
 	{T_UID, "suid"},
 	{T_UID, "fsuid"},
 	{T_UID, "ouid"},
+	{T_UID, "oauid"},
 	{T_UID, "iuid"},
 	{T_UID, "id"},
 	{T_UID, "inode_uid"},
+	{T_UID, "sauid"},
 	{T_GID, "gid"},
 	{T_GID, "egid"},
 	{T_GID, "sgid"},
@@ -313,6 +316,7 @@ static struct nv_pair typetab[] = {
 	{T_GID, "ogid"},
 	{T_GID, "igid"},
 	{T_GID, "inode_gid"},
+	{T_GID, "new_gid"},
 	{T_SYSCALL, "syscall"},
 	{T_ARCH, "arch"},
 	{T_EXIT, "exit"},
@@ -324,6 +328,8 @@ static struct nv_pair typetab[] = {
 	{T_ESCAPED, "watch"},
 	{T_ESCAPED, "cwd"},
 	{T_ESCAPED, "cmd"},
+	{T_ESCAPED, "dir"},
+	{T_KEY, "key"},
 	{T_PERM, "perm"},
 	{T_PERM, "perm_mask"},
 	{T_MODE, "mode"},
@@ -333,6 +339,7 @@ static struct nv_pair typetab[] = {
 	{T_PROMISC, "old_prom"},
 	{T_CAPABILITY, "capability"},
 	{T_SIGNAL, "sig"},
+	{T_LIST, "list"},
 };
 #define TYPE_NAMES (sizeof(typetab)/sizeof(typetab[0]))
 
@@ -342,8 +349,9 @@ static int audit_lookup_type(const char *name)
         int i;
 
         for (i = 0; i < TYPE_NAMES; i++)
-                if (!strcmp(typetab[i].name, name))
+                if (!strcmp(typetab[i].name, name)) {
                         return typetab[i].value;
+		}
         return -1;
 }
 
@@ -471,8 +479,11 @@ static void print_escaped(char *val)
 		*term = 0;
 		printf("%s ", val); */
 	} else {
-		str = unescape(val);
-		printf("%s ", str);
+		if (val[0] == '0' && val[1] == '0')
+			str = unescape(&val[2]); // Abstract name
+		else
+			str = unescape(val);
+		printf("%s ", str ? str: "(null)");
 		free(str);
 	}
 }
@@ -530,21 +541,8 @@ static void print_mode(const char *val)
 		return;
 	}
 
-	// detect its type
-	if (S_ISREG(ival))
-		printf("file,");
-	else if (S_ISSOCK(ival))
-		printf("socket,");
-	else if (S_ISDIR(ival))
-		printf("dir,");
-	else if (S_ISLNK(ival))
-		printf("symlink,");
-	else if (S_ISCHR(ival))
-		printf("char,");
-	else if (S_ISBLK(ival))
-		printf("block,");
-	else if (S_ISFIFO(ival))
-		printf("fifo,");
+	// print the file type
+	printf("%s,", audit_ftype_to_name(ival & S_IFMT));
 
 	// check on special bits
 	if (S_ISUID & ival)
@@ -834,16 +832,85 @@ static void print_signals(char *val)
 		printf("conversion error(%s)", val);
 		return;
 	}
-	printf("%s", strsignal(i));
+	printf("%s ", strsignal(i));
 }
 
-static void interpret(char *name, char *val, int comma)
+static const char key_sep[2] = { AUDIT_KEY_SEPARATOR, 0 };
+static void print_key(char *val)
+{
+	int count=0;
+	char *saved=NULL;
+	if (*val == '"') {
+		char *term;
+		val++;
+		term = strchr(val, '"');
+		if (term == NULL)
+			return;
+		*term = 0;
+		printf("%s ", val);
+	} else {
+		char *keyptr = unescape(val);
+		char *kptr = strtok_r(keyptr, key_sep, &saved);
+		if (kptr == NULL) {
+			printf("%s", keyptr);
+		}
+		while (kptr) {
+			if (count == 0) {
+				printf("%s", kptr);
+				count++;
+			} else
+				printf(" key=%s", kptr);
+			kptr = strtok_r(NULL, key_sep, &saved);
+		}
+		printf(" ");
+		free(keyptr);
+	}
+}
+
+static void print_list(char *val)
+{
+	int i;
+
+	errno = 0;
+	i = strtoul(val, NULL, 10);
+	if (errno) {
+		printf("conversion error(%s)", val);
+		return;
+	}
+	printf("%s ", audit_flag_to_name(i));
+}
+
+static int is_hex_string(const char *str)
+{
+	while (*str) {
+		if (!isxdigit(*str))
+			return 0;
+		str++;
+	}
+	return 1;
+}
+
+static void interpret(char *name, char *val, int comma, int rtype)
 {
 	int type;
 
-	while (*name == ' ')
+	while (*name == ' '||*name == '(')
 		name++;
-	type = audit_lookup_type(name);
+
+	/* Do some fixups */
+	if (rtype == AUDIT_EXECVE && name[0] == 'a')
+		type = T_ESCAPED;
+	else if (rtype == AUDIT_AVC && strcmp(name, "saddr") == 0)
+		type = -1;
+	else if (strcmp(name, "acct") == 0) {
+		if (val[0] == '"')
+			type = T_ESCAPED;
+		else if (is_hex_string(val))
+			type = T_ESCAPED;
+		else
+			type = -1;
+	} else
+		type = audit_lookup_type(name);
 
 	switch(type) {
 		case T_UID:
@@ -884,6 +951,12 @@ static void interpret(char *name, char *val, int comma)
 			break;
 		case T_SIGNAL:
 			print_signals(val);
+			break;
+		case T_KEY:
+			print_key(val);
+			break;
+		case T_LIST:
+			print_list(val);
 			break;
 		default:
 			printf("%s%c", val, comma ? ',' : ' ');

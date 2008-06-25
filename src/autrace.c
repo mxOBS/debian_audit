@@ -1,5 +1,5 @@
 /* autrace.c -- 
- * Copyright 2005-07 Red Hat Inc., Durham, North Carolina.
+ * Copyright 2005-08 Red Hat Inc., Durham, North Carolina.
  * All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -103,6 +103,11 @@ static int insert_rule(int audit_fd, const char *field)
 	return 0;
 err:
 	fprintf(stderr, "Error inserting audit rule for %s\n", field);
+	return 1;
+}
+
+int key_match(struct audit_reply *rep)
+{
 	return 1;
 }
 

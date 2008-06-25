@@ -2,7 +2,7 @@
  * 
  * This is a sample program that you can customize to create your own audit
  * event handler. It will be started by auditd via the dispatcher option in
- * /etc/auditd.conf. This program can be built as follows:
+ * /etc/audit/auditd.conf. This program can be built as follows:
  *
  * gcc skeleton.c -o skeleton -laudit
  */
@@ -78,7 +78,7 @@ int main(int argc, char *argv[])
 
 static int event_loop(void)
 {
-	void* data;
+	void *data;
 	struct iovec vec[2];
 	struct audit_dispatcher_header hdr;
 
@@ -109,18 +109,24 @@ static int event_loop(void)
 		/* Get header first. it is fixed size */
 		vec[0].iov_base = (void*)&hdr;
 		vec[0].iov_len = sizeof(hdr);
+		do {
+			rc = readv(fd, &vec[0], 1);
+		} while (rc < 0 && errno == EINTR);
 
-        	// Next payload 
-		vec[1].iov_base = data;
-		vec[1].iov_len = MAX_AUDIT_MESSAGE_LENGTH; 
-
-		rc = readv(pipe_fd, vec, 2);
-		if (rc == 0 || rc == -1) {
+		if (rc > 0) {
+	        	// Next payload 
+			vec[1].iov_base = data;
+			vec[1].iov_len = hdr.size; 
+			do {
+				rc = readv(fd, &vec[1], 1);
+			} while (rc < 0 && errno == EINTR);
+		}
+		if (rc <= 0) {
 			syslog(LOG_ERR, "rc == %d(%s)", rc, strerror(errno));
-			break;
+			continue;
 		}
 
-		// handle events here. Just for illustration, we print
+		// Handle events here. Just for illustration, we print
 		// to syslog, but you will want to do something else.
 		syslog(LOG_NOTICE,"type=%d, payload size=%d", 
 			hdr.type, hdr.size);

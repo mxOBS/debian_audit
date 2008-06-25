@@ -54,6 +54,8 @@ typedef struct _rnode{
 	unsigned long long a1;  // arg 1 to the syscall
 	nvlist nv;              // name-value linked list of parsed elements
 	unsigned int item;      // Which item of the same event
+	int list_idx;		// The index into the source list, points to where record was found
+	unsigned int line_number; // The line number where record was found
 	struct _rnode* next;    // Next record node pointer
 } rnode;
 

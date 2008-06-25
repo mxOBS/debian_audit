@@ -1,6 +1,6 @@
 /*
 * ausearch-llist.c - Minimal linked list library
-* Copyright (c) 2005-2006 Red Hat Inc., Durham, North Carolina.
+* Copyright (c) 2005-2008 Red Hat Inc., Durham, North Carolina.
 * All Rights Reserved. 
 *
 * This software may be freely redistributed and/or modified under the
@@ -50,8 +50,10 @@ void list_create(llist *l)
 	l->s.comm = NULL;
 	l->s.avc = NULL;
 	l->s.acct = NULL;
+	l->s.node = NULL;
 	l->s.arch = 0;
 	l->s.syscall = 0;
+	l->s.session_id = -1;
 }
 
 void list_last(llist *l)
@@ -159,44 +161,35 @@ void list_clear(llist* l)
 	l->s.uid = -1;
 	l->s.euid = -1;
 	l->s.loginuid = -1;
-	if (l->s.hostname) {
-		free(l->s.hostname);
-		l->s.hostname = NULL;
-	}
+	free(l->s.hostname);
+	l->s.hostname = NULL;
 	if (l->s.filename) {
 		slist_clear(l->s.filename);
 		free(l->s.filename);
 		l->s.filename = NULL;
 	}
-	if (l->s.terminal) {
-		free(l->s.terminal);
-		l->s.terminal = NULL;
-	}
-	if (l->s.cwd) {
-		free(l->s.cwd);
-		l->s.cwd = NULL;
-	}
-	if (l->s.exe) {
-		free(l->s.exe);
-		l->s.exe = NULL;
-	}
+	free(l->s.terminal);
+	l->s.terminal = NULL;
+	free(l->s.cwd);
+	l->s.cwd = NULL;
+	free(l->s.exe);
+	l->s.exe = NULL;
 	if (l->s.key) {
+		slist_clear(l->s.key);
 		free(l->s.key);
 		l->s.key = NULL;
 	}
-	if (l->s.comm) {
-		free(l->s.comm);
-		l->s.comm = NULL;
-	}
+	free(l->s.comm);
+	l->s.comm = NULL;
 	if (l->s.avc) {
 		alist_clear(l->s.avc);
 		free(l->s.avc);
 		l->s.avc = NULL;
 	}
-	if (l->s.acct) {
-		free(l->s.acct);
-		l->s.acct = NULL;
-	}
+	free(l->s.acct);
+	l->s.acct = NULL;
+	free(l->s.node);
+	l->s.node = NULL;
 	l->s.arch = 0;
 	l->s.syscall = 0;
 }

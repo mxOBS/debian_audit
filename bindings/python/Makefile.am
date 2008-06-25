@@ -21,13 +21,13 @@
 # 
 
 CONFIG_CLEAN_FILES = Makefile.in *.loT *.rej *.orig
-EXTRA_DIST = setup.py
+EXTRA_DIST = setup.py auparse_python.c
 
 all:
 	$(PYTHON) setup.py build
 
 install:
-	$(PYTHON) setup.py install --prefix=$(DESTDIR)/usr
+	$(PYTHON) setup.py install --prefix=$(DESTDIR)/$(PYTHON_PREFIX)
 
 clean-generic:
 	rm -rf build

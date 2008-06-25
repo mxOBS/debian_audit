@@ -1,6 +1,6 @@
 /*
 * ausearch-llist.h - Header file for ausearch-llist.c
-* Copyright (c) 2005-2006 Red Hat Inc., Durham, North Carolina.
+* Copyright (c) 2005-2008 Red Hat Inc., Durham, North Carolina.
 * All Rights Reserved.
 *
 * This software may be freely redistributed and/or modified under the
@@ -50,15 +50,17 @@ typedef struct
   success_t success;    // success flag, 1 = yes, 0 = no, -1 = unset
   int arch;             // arch
   int syscall;          // syscall
-  char *hostname;       // hostname
+  int session_id;       // Login session id
+  char *hostname;       // remote hostname
   slist *filename;      // filename list
   char *cwd;            // current working dir
   char *exe;            // executable
-  char *key;            // key field
+  slist *key;           // key field
   char *terminal;       // terminal
   char *comm;           // comm name
   alist *avc;		// avcs for the event
   char *acct;		// account used when uid is invalid
+  char *node;		// machine's name (hostname,fqdn,ip)
 } search_items;
 
 /* This is the node of the linked list. message & item are the only elements

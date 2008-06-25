@@ -1,5 +1,5 @@
 /* auditd-dispatch.c -- 
- * Copyright 2005-2006 Red Hat Inc., Durham, North Carolina.
+ * Copyright 2005-07 Red Hat Inc., Durham, North Carolina.
  * All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -135,14 +135,20 @@ void reconfigure_dispatcher(void)
 		kill(pid, SIGHUP);
 }
 
-void dispatch_event(const struct audit_reply *rep)
+/* Returns -1 on err, 0 on success, and 1 if eagain occurred and not an err */
+int dispatch_event(const struct audit_reply *rep, int is_err)
 {
 	int rc, count = 0;
 	struct iovec vec[2];
 	struct audit_dispatcher_header hdr;
 
 	if (disp_pipe[1] == -1)
-		return;
+		return 0;
+
+	// Don't send reconfig or rotate as they are purely internal to daemon
+	if (rep->type == AUDIT_DAEMON_RECONFIG ||
+					rep->type == AUDIT_DAEMON_ROTATE)
+		return 0;
 
 	hdr.ver = AUDISP_PROTOCOL_VER; /* Hard-coded to current protocol */
 	hdr.hlen = sizeof(struct audit_dispatcher_header);
@@ -156,13 +162,15 @@ void dispatch_event(const struct audit_reply *rep)
 
 	do {
 		rc = writev(disp_pipe[1], vec, 2);
-	} while (rc < 0 && errno == EAGAIN && count++ < 10);
+	} while (rc < 0 && errno == EAGAIN && count++ < 8);
 
 	// close pipe if no child or peer has been lost
 	if (rc <= 0) {
 		if (errno == EPIPE) {
 			shutdown_dispatcher();
 			n_errs = 0;
+		} else if (errno == EAGAIN && !is_err) {
+			return 1;
 		} else {
 			if (n_errs <= REPORT_LIMIT) {
 				audit_msg(LOG_ERR, 
@@ -178,8 +186,10 @@ void dispatch_event(const struct audit_reply *rep)
 					" notification.");
 				n_errs++;
 			}
+			return -1;
 		}
 	} else
 		n_errs = 0;
+	return 0;
 }
 

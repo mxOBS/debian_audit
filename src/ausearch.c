@@ -1,6 +1,6 @@
 /*
  * ausearch.c - main file for ausearch utility 
- * Copyright 2005-07 Red Hat Inc., Durham, North Carolina.
+ * Copyright 2005-08 Red Hat Inc., Durham, North Carolina.
  * All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -23,6 +23,7 @@
 
 #include "config.h"
 #include <stdio.h>
+#include <stdio_ext.h>
 #include <string.h>
 #include <stdlib.h>
 #include <getopt.h>
@@ -53,6 +54,7 @@ static int str2event(char *s, event *e);
 static int events_are_equal(event *e1, event *e2);
 
 extern char *user_file;
+extern int force_logs;
 extern int match(llist *l);
 extern void output_record(llist *l);
 
@@ -61,14 +63,8 @@ static int input_is_pipe(void)
 	struct stat st;
 
 	if (fstat(0, &st) == 0) {
-		if (S_ISFIFO(st.st_mode)) {
-			if (user_file) {
-				fprintf(stderr,
-				    "-if option conflicts with stdin method");
-				exit(1);
-			}
+		if (S_ISFIFO(st.st_mode)) 
 			pipe_mode = 1;
-		}
 	}
 	return pipe_mode;
 }
@@ -92,15 +88,19 @@ int main(int argc, char *argv[])
 	set_aumessage_mode(MSG_STDERR, DBG_NO);
 	(void) umask( umask( 077 ) | 027 );
 
-	if (input_is_pipe())
-		rc = process_stdin();
-	else if (user_file)
+	if (user_file)
 		rc = process_file(user_file);
+	else if (force_logs)
+		rc = process_logs();
+	else if (input_is_pipe())
+		rc = process_stdin();
 	else
 		rc = process_logs();
 	ilist_clear(event_type);
 	free(event_type);
 	free(user_file);
+	aulookup_destroy_uid_list();
+	aulookup_destroy_gid_list();
 	if (rc)
 		return rc;
 	if (!found) {
@@ -154,6 +154,8 @@ static int process_logs(void)
 			free_config(&config);
 			return ret;
 		}
+		if (just_one && found)
+			break;
 
 		/* Get next log file */
 		num--;
@@ -164,8 +166,6 @@ static int process_logs(void)
 		else
 			break;
 	} while (1);
-	aulookup_destroy_uid_list();
-	aulookup_destroy_gid_list();
 	free(filename);
 	free_config(&config);
 	return 0;
@@ -180,11 +180,16 @@ static int process_log_fd(void)
 	list_create(&entries);
 	do {
 		ret = get_record(&entries);
-		if ((ret < 0)||(entries.cnt == 0))
+		if ((ret < 0)||(entries.cnt == 0)) {
 			break;
+		}
 		if (match(&entries)) {
 			output_record(&entries);
 			found = 1;
+			if (just_one) {
+				list_clear(&entries);
+				break;
+			}
 		}
 		list_clear(&entries);
 	} while (ret == 0);
@@ -209,6 +214,7 @@ static int process_file(char *filename)
 		return 1;
 	}
 
+	__fsetlocking(log_fd, FSETLOCKING_BYCALLER);
 	return process_log_fd();
 }
 
@@ -255,6 +261,8 @@ static int get_record(llist *l)
 			if (ptr)
 				*ptr = 0;
 			n.message=strdup(buff);
+			// FIXME: need to extract the node here
+			// and put things on a list of lists
 			extract_timestamp(buff, &e);
 			if (first_time) {
 				l->e.milli = e.milli;
@@ -267,6 +275,7 @@ static int get_record(llist *l)
 			} else {
 				saved_buff = buff;
 				free(n.message);
+				buff = NULL;
 				break;
 			}
 		} else {
@@ -289,9 +298,12 @@ static void extract_timestamp(const char *b, event *e)
 {
 	char *ptr, *tmp;
 
-	tmp = strndupa(b, 80);
+	tmp = strndupa(b, 120);
 	ptr = strtok(tmp, " ");
 	if (ptr) {
+		while (ptr && strncmp(ptr, "type=", 5))
+			ptr = strtok(NULL, " ");
+
 		// at this point we have type=
 		ptr = strtok(NULL, " ");
 		if (ptr) {

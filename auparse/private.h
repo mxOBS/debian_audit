@@ -22,6 +22,9 @@
 #ifndef _PRIVATE_H_
 #define _PRIVATE_H_
 
+#include "auparse.h"
+#include "libaudit.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -48,14 +51,21 @@ extern "C" {
 /* Internal syslog messaging */
 #define audit_msg auparse_msg
 #define set_aumessage_mode set_aup_message_mode
-void auparse_msg(int priority, const char *fmt, ...)
+void auparse_msg(int priority, const char *fmt, ...) hidden
 #ifdef __GNUC__
         __attribute__ ((format (printf, 2, 3)));
 #else
         ;
 #endif
+void set_aumessage_mode(message_t mode, debug_message_t debug) hidden;
 
-hidden_proto(audit_msg)
+// auparse.c
+hidden_proto(auparse_find_field_next);
+hidden_proto(auparse_first_record);
+hidden_proto(auparse_get_field_str);
+hidden_proto(auparse_next_event);
+hidden_proto(auparse_next_record);
+hidden_proto(ausearch_clear);
 
 #ifdef __cplusplus
 }

@@ -19,14 +19,17 @@ else
 	CFLAGS += -O2
 endif
 
+include /usr/share/quilt/quilt.make
+
 configure: configure-stamp
-configure-stamp:
+configure-stamp: $(QUILT_STAMPFN)
 	dh_testdir
-	QUILT_PATCHES=debian/patches quilt push -a || test $$? = 2
 	-test -r /usr/share/misc/config.sub && \
-		cp -f /usr/share/misc/config.sub config.sub
+		cp -f /usr/share/misc/config.sub config.sub && \
+		cp -f /usr/share/misc/config.sub system-config-audit/admin/config.sub
 	-test -r /usr/share/misc/config.guess && \
-		cp -f /usr/share/misc/config.guess config.guess
+		cp -f /usr/share/misc/config.guess config.guess && \
+		cp -f /usr/share/misc/config.guess system-config-audit/admin/config.guess
 	autoreconf -fv --install
 	./configure \
 		--prefix=/usr \
@@ -36,6 +39,8 @@ configure-stamp:
 		--libexecdir=/lib \
 		--mandir=/usr/share/man \
 		--enable-shared=audit \
+		--with-apparmor \
+		--with-prelude \
 		$(confflags)
 	touch $@
 
@@ -45,17 +50,27 @@ build-stamp: configure-stamp
 	$(MAKE)
 	touch $@
 
-clean:
+clean: unpatch
 	dh_testdir
 	dh_testroot
 	$(RM) build-stamp configure-stamp
-	-$(MAKE) maintainer-clean
-	QUILT_PATCHES=debian/patches quilt pop -a -R || test $$? = 2
+	[ ! -f Makefile ] || $(MAKE) maintainer-clean
 	dh_clean
 	# Clean modified/regeneratable files
 	$(RM) configure depcomp install-sh ltmain.sh missing INSTALL config.log
 	$(RM) config.sub config.guess
-	$(RM) -r .pc
+	$(RM) system-config-audit/po/stamp-it
+	$(RM) system-config-audit/po/Makefile.in.in
+	$(RM) system-config-audit/INSTALL
+	$(RM) system-config-audit/aclocal.m4
+	$(RM) system-config-audit/admin/config.guess
+	$(RM) system-config-audit/admin/config.sub
+	$(RM) system-config-audit/admin/depcomp
+	$(RM) system-config-audit/admin/install-sh
+	$(RM) system-config-audit/admin/ltmain.sh
+	$(RM) system-config-audit/admin/mkinstalldirs
+	$(RM) system-config-audit/configure
+	$(RM) system-config-audit/po/.intltool-merge-cache
 
 install: build
 	dh_testdir
@@ -74,8 +89,9 @@ install: build
 	$(RM) debian/tmp/usr/lib/libauparse.so
 
 	# The Debian way
-	$(RM) debian/tmp/usr/lib/python2.4/site-packages/_au*.*a
-	$(RM) debian/tmp/usr/lib/python2.4/site-packages/au*.py[co]
+	$(RM) debian/tmp/usr/lib/python*/site-packages/_au*.*a
+	$(RM) debian/tmp/usr/lib/python*/site-packages/au*.py[co]
+	$(RM) debian/tmp/usr/share/system-config-audit/*.py[co]
 
 my-check:
 	find debian/*aud*/ -mindepth 0 -name DEBIAN -prune -o -not -type d -print|sed -e 's,debian/[^/]*/,,' -e 's/\.gz$$//'
@@ -92,14 +108,14 @@ binary-arch: build install
 	dh_installexamples
 	dh_install --sourcedir=debian/tmp --list-missing
 	#dh_installlogrotate #auditd has a equivalent built-in feature
-	dh_installinit -- start 12 2 3 4 5 . stop 88 0 1 6 .
-	dh_installman -pauditd debian/audispd.8
+	dh_installinit -- start 37 S . start 39 0 6 .
+	#dh_installman -psystem-config-audit debian/system-config-audit.8
 	dh_link
 	dh_strip
 	dh_compress
 	dh_fixperms
 	dh_pysupport
-	dh_python
+	#dh_python
 	dh_makeshlibs
 	dh_installdeb
 	dh_shlibdeps

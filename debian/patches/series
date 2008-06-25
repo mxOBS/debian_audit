@@ -1,2 +1,4 @@
-audit-1.5.1-dist.patch
-CVE-2008-1628.patch
+man5.diff
+system-config-audit.diff
+audispd-zos-remote.diff
+rpath.diff

@@ -1,6 +1,6 @@
 /*
 * ausearch-match.c - Extract interesting fields and check for match
-* Copyright (c) 2005-06 Red Hat Inc., Durham, North Carolina.
+* Copyright (c) 2005-08 Red Hat Inc., Durham, North Carolina.
 * All Rights Reserved. 
 *
 * This software may be freely redistributed and/or modified under the
@@ -40,18 +40,26 @@ static int context_match(llist *l);
  * an 'and' statement. If anything does not match, no need to evaluate the
  * rest of the params.
  */
+#include <stdio.h>
 int match(llist *l)
 {
 	// Are we within time range?
 	if (start_time == 0 || l->e.sec >= start_time) {
 		if (end_time == 0 || l->e.sec <= end_time) {
 			if (event_id == -1 || event_id == l->e.serial) {
-
 				// OK - do the heavier checking
-				if (extract_search_items(l)) 
+				if (extract_search_items(l)) {
 					return 0;
+				}
 
 				// perform additional tests for the field
+				if (event_node) {
+					if (l->s.node == NULL)
+						return 0;
+					if (strmatch(event_node, 
+						l->s.node) == 0)
+						return 0; 
+				}
 				if (user_match(l) == 0)
 					return 0;
 				if (group_match(l) == 0)
@@ -64,6 +72,9 @@ int match(llist *l)
 					return 0;
 				if ((event_syscall != -1) &&
 						(event_syscall != l->s.syscall))
+					return 0;
+				if ((event_session_id != -1) &&
+					(event_session_id != l->s.session_id))
 					return 0;
 
 				if ((event_success != S_UNSET) &&
@@ -126,14 +137,14 @@ int match(llist *l)
 					if (strmatch(event_hostname, 
 						l->s.hostname) == 0)
 						return 0; 
-				}				
+				}
 				if (event_terminal) {
 					if (l->s.terminal == NULL)
 						return 0;
 					if (strmatch(event_terminal, 
 						l->s.terminal) == 0)
 						return 0; 
-				}				
+				}
 				if (event_exe) {
 					if (l->s.exe == NULL)
 						return 0;
@@ -151,9 +162,26 @@ int match(llist *l)
 				if (event_key) {
 					if (l->s.key == NULL)
 						return 0;
-					if (strmatch(event_key, 
-						l->s.key) == 0)
-						return 0; 
+					else {
+						int found = 0;
+						const snode *sn;
+						slist *sptr = l->s.key;
+
+						slist_first(sptr);
+						sn=slist_get_cur(sptr);
+						do {
+							if (sn->str == NULL)
+								return 0;
+							if (strmatch(
+								event_key,
+								sn->str)) {
+								found = 1;
+								break;
+							}
+						} while ((sn=slist_next(sptr)));
+						if (!found)
+							return 0;
+					}
 				}				
 				if (context_match(l) == 0)
 					return 0;

@@ -1,4 +1,4 @@
-.TH AUDITD.CONF: "5" "Jan 2007" "Red Hat" "System Administration Utilities"
+.TH AUDITD.CONF: "5" "Sept 2007" "Red Hat" "System Administration Utilities"
 .SH NAME
 auditd.conf \- audit daemon configuration file
 .SH DESCRIPTION
@@ -8,8 +8,10 @@ contains configuration information specific to the audit daemon.
 It should contain one configuration keyword per line, an equal sign,
 and then followed by appropriate configuration information. The
 keywords recognized are:
-.IR  log_file ", " log_format ", " flush ", " freq ", " num_logs ",
-.IR  max_log_file ", " max_log_file_action ", " space_left ",
+.IR  log_file ", " log_format ", " log_group ", "priority_boost ",
+.IR  flush ", " freq ", " num_logs " , " disp_qos " , " dispatcher ",
+.IR  name_format " , " name ", " max_log_file ",
+.IR  max_log_file_action ", " space_left ",
 .IR  action_mail_acct ", " space_left_action ", " admin_space_left ",
 .IR  admin_space_left_action ",
 .IR  disk_full_action ", and " disk_error_action ".
@@ -28,8 +30,11 @@ the audit records will be stored in a format exactly as the kernel sends it. If 
 .I NOLOG
 then all audit information is discarded instead of writing to disk. This mode does not affect data sent to the audit event dispatcher.
 .TP
+.I log_group
+This keyword specifies the group that is applied to the log file's permissions. The default is root. The group name can be either numeric or spelled out.
+.TP
 .I priority_boost
-This is a non-negative number that tells the audit damon how much of a priority boost it should take. The default is 3. No change is 0.
+This is a non-negative number that tells the audit daemon how much of a priority boost it should take. The default is 4. No change is 0.
 .TP
 .I flush
 Valid values are
@@ -64,11 +69,34 @@ as the
 If the number is < 2, logs are not rotated. This number must be 99 or less.
 The default is 0 - which means no rotation. As you increase the number of log files being rotated, you may need to adjust the kernel backlog setting upwards since it takes more time to rotate the files. This is typically done in /etc/audit/audit.rules.
 .TP
+.I disp_qos
+This option controls whether you want blocking/lossless or non-blocking/lossy communication between the audit daemon and the dispatcher. There is a 128k buffer between the audit daemon and dispatcher. This is good enogh for most uses. If lossy is chosen, incoming events going to the dispatcher are discarded when this queue is full. (Events are still written to disk if log_format is not nolog.) Otherwise the auditd daemon will wait for the queue to have an empty spot before logging to disk. The risk is that while the daemon is waiting for network IO, an event is not being recorded to disk. Valid values are: lossy and lossless. Lossy is the default value.
+.TP
 .I dispatcher
 The dispatcher is a program that is started by the audit daemon when it starts up. It will pass a copy of all audit events to that application's stdin. Make sure you trust the application that you add to this line since it runs with root privileges.
 .TP
-.I disp_qos
-This option controls whether you want blocking/lossless or non-blocking/lossy communication between the audit daemon and the dispatcher. There is a 128k buffer between the audit daemon and dispatcher. This is good enogh for most uses. If lossy is chosen, incoming events going to the dispatcher are discarded when this queue is full. (Events are still written to disk if log_format is not nolog.) Otherwise the auditd daemon will wait for the queue to have an empty spot before logging to disk. The risk is that while the daemon is waiting for network IO, an event is not being recorded to disk. Valid values are: lossy and lossless. Lossy is the default value.
+.I name_format
+This option controls how computer node names are inserted into the audit event stream. It has the following choices:
+.IR none ", " hostname ", " fqd ", " numeric ", and " user ".
+.IR None
+means that no computer name is inserted into the audit event.
+.IR hostname
+is the name returned by the gethostname syscall. The
+.IR fqd
+means that it takes the hostname and resolves it with dns for a fully qualified
+domain name of that machine.
+.IR Numeric
+is similar to fqd except it resolves the IP address of the machine.
+.IR User
+is an admin defined string from the name option. The default value is
+.IR none ".
+.TP
+.I name
+This is the admin defined string that identifies the machine if
+.IR user
+is given as the
+.IR name_format
+option.
 .TP
 .I max_log_file
 This keyword specifies the maximum file size in megabytes. When this limit

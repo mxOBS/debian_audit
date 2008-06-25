@@ -1,5 +1,5 @@
 /* aureport-options.c - parse commandline options and configure aureport
- * Copyright 2005-06 Red Hat Inc., Durham, North Carolina.
+ * Copyright 2005-08 Red Hat Inc., Durham, North Carolina.
  * All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -36,9 +36,11 @@
 
 /* Global vars that will be accessed by the main program */
 char *user_file = NULL;
+int force_logs = 0;
 
 /* These are for compatibility with parser */
 unsigned int event_id = -1;
+const char *event_node = NULL;
 const char *event_key = NULL;
 const char *event_filename = NULL;
 const char *event_exe = NULL;
@@ -65,7 +67,8 @@ enum {  R_INFILE, R_TIME_END, R_TIME_START, R_VERSION, R_SUMMARY, R_LOG_TIMES,
 	R_CONFIGS, R_LOGINS, R_USERS, R_TERMINALS, R_HOSTS, R_EXES, R_FILES,
 	R_AVCS, R_SYSCALLS, R_PIDS, R_EVENTS, R_ACCT_MODS,  
 	R_INTERPRET, R_HELP, R_ANOMALY, R_RESPONSE, R_SUMMARY_DET, R_CRYPTO,
-	R_MAC, R_FAILED, R_SUCCESS, R_ADD, R_DEL, R_AUTH };
+	R_MAC, R_FAILED, R_SUCCESS, R_ADD, R_DEL, R_AUTH, R_NODE, R_IN_LOGS,
+	R_KEYS };
 
 static struct nv_pair optiontab[] = {
 	{ R_AUTH, "-au" },
@@ -90,12 +93,16 @@ static struct nv_pair optiontab[] = {
 	{ R_INTERPRET, "--interpret" },
 	{ R_INFILE, "-if" },
 	{ R_INFILE, "--input" },
+	{ R_IN_LOGS, "--input-logs" },
+	{ R_KEYS, "-k" },
+	{ R_KEYS, "--key" },
 	{ R_LOGINS, "-l" },
 	{ R_LOGINS, "--login" },
 	{ R_ACCT_MODS, "-m" },
 	{ R_ACCT_MODS, "--mods" },
 	{ R_MAC, "-ma" },
 	{ R_MAC, "--mac" },
+	{ R_NODE, "--node" },
 	{ R_ANOMALY, "-n" },
 	{ R_ANOMALY, "--anomaly" },
 	{ R_PIDS, "-p" },
@@ -138,19 +145,22 @@ static void usage(void)
 {
 	printf("usage: aureport [options]\n"
 	"\t-a,--avc\t\t\tAvc report\n"
-	"\t--auth\t\t\tAuthentication report\n"
+	"\t--auth\t\t\t\tAuthentication report\n"
 	"\t-c,--config\t\t\tConfig change report\n"
 	"\t-cr,--crypto\t\t\tCrypto report\n"
 	"\t-e,--event\t\t\tEvent report\n"
 	"\t-f,--file\t\t\tFile name report\n"
 	"\t--failed\t\t\tonly failed events in report\n"
-	"\t-h,--host\t\t\tHost name report\n"
+	"\t-h,--host\t\t\tRemote Host name report\n"
 	"\t--help\t\t\t\thelp\n"
 	"\t-i,--interpret\t\t\tInterpretive mode\n"
 	"\t-if,--input <Input File name>\tuse this file as input\n"
+	"\t--input-logs\t\t\tUse the logs even if stdin is a pipe\n"
 	"\t-l,--login\t\t\tLogin report\n"
+	"\t-k,--key\t\t\tKey report\n"
 	"\t-m,--mods\t\t\tModification to accounts report\n"
 	"\t-ma,--mac\t\t\tMandatory Access Control (MAC) report\n"
+	"\t--node <node name>\t\tOnly events from a specific node\n"
 	"\t-n,--anomaly\t\t\taNomaly report\n"
 	"\t-p,--pid\t\t\tPid report\n"
 	"\t-r,--response\t\t\tResponse to anomaly report\n"
@@ -444,6 +454,19 @@ int check_params(int count, char *vars[])
 				}
 			}
 			break;
+		case R_KEYS:
+			if (set_report(RPT_KEY))
+				retval = -1;
+			else {
+				if (!optarg) {
+					set_detail(D_DETAILED);
+					event_exe = dummy;
+					event_key = dummy;
+				} else {
+					UNIMPLEMENTED;
+				}
+			}
+			break;
 		case R_TIME_END:
 			if (optarg) {
 				if ( (c+2 < count) && vars[c+2] && 
@@ -463,32 +486,9 @@ int check_params(int count, char *vars[])
 					// Check against recognized words
 					int t = lookup_time(optarg);
 					if (t >= 0) {
-						struct tm d;
-						switch (t)
-						{
-							case T_NOW:
-							    set_tm_now(&d);
-								break;
-							case T_RECENT:
-							     set_tm_recent(&d);
-								break;
-							case T_TODAY:
-							    set_tm_today(&d);
-								break;
-							case T_YESTERDAY:
-							   set_tm_yesterday(&d);
-								break;
-							case T_THIS_WEEK:
-							set_tm_this_week(&d);
-								break;
-							case T_THIS_MONTH:
-							 set_tm_this_month(&d);
-								break;
-							case T_THIS_YEAR:
-							  set_tm_this_year(&d);
-								break;
-						}
-						end_time = mktime(&d);
+						if (ausearch_time_end(optarg,
+								NULL) != 0)
+							retval = -1;
 					} else if ( (strchr(optarg, ':')) == NULL) {
 						/* Only have date */
 						if (ausearch_time_end(optarg,
@@ -528,36 +528,13 @@ int check_params(int count, char *vars[])
 					// Check against recognized words
 					int t = lookup_time(optarg);
 					if (t >= 0) {
-						struct tm d;
-						switch (t)
-						{
-							case T_NOW:
-							    set_tm_now(&d);
-								break;
-							case T_RECENT:
-							     set_tm_recent(&d);
-								break;
-							case T_TODAY:
-							    set_tm_today(&d);
-								break;
-							case T_YESTERDAY:
-							   set_tm_yesterday(&d);
-								break;
-							case T_THIS_WEEK:
-							set_tm_this_week(&d);
-								break;
-							case T_THIS_MONTH:
-							 set_tm_this_month(&d);
-								break;
-							case T_THIS_YEAR:
-							  set_tm_this_year(&d);
-								break;
-						}
-						start_time = mktime(&d);
+						if (ausearch_time_start(optarg,
+							"00:00:00") != 0)
+							retval = -1;
 					} else if ( strchr(optarg, ':') == NULL) {
 						/* Only have date */
 						if (ausearch_time_start(optarg,
-							"00:00:01") != 0)
+							"00:00:00") != 0)
 							retval = -1;
 					} else {
 						/* Only have time */
@@ -574,6 +551,19 @@ int check_params(int count, char *vars[])
 				vars[c]);
 			retval = -1;
 			break;
+		case R_NODE:
+			if (!optarg) {
+				fprintf(stderr,
+					"Argument is required for %s\n",
+					vars[c]);
+				retval = -1;
+			} else {
+				event_node = strdup(optarg);
+				if (event_node == NULL)
+					retval = -1;
+				c++;
+			}
+			break;
 		case R_SUMMARY_DET:
 			set_detail(D_SUM);
 			break;
@@ -588,6 +578,9 @@ int check_params(int count, char *vars[])
 			break;
 		case R_DEL:
 			event_conf_act = C_DEL;
+			break;
+		case R_IN_LOGS:
+			force_logs = 1;
 			break;
 		case R_VERSION:
 	                printf("aureport version %s\n", VERSION);
@@ -616,6 +609,7 @@ int check_params(int count, char *vars[])
 				event_hostname = dummy;
 				event_terminal = dummy;
 				event_exe = dummy;
+				event_key = dummy;
 			}
 		}
 	} else

@@ -1,5 +1,5 @@
 /* audit_logging.c -- 
- * Copyright 2005-2007 Red Hat Inc., Durham, North Carolina.
+ * Copyright 2005-2008 Red Hat Inc., Durham, North Carolina.
  * All Rights Reserved.
  *
  * This library is free software; you can redistribute it and/or
@@ -30,11 +30,14 @@
 #include <netinet/in.h> // inet6 addrlen
 #include <netdb.h>	// gethostbyname
 #include <arpa/inet.h>	// inet_ntop
+#include <utmp.h>
+#include <limits.h>	// PATH_MAX
 
 #include "libaudit.h"
 #include "private.h"
 
 #define TTY_PATH	32
+#define MAX_USER	(UT_NAMESIZE * 2) + 8
 
 // NOTE: The kernel fills in pid, uid, and loginuid of sender. Therefore,
 // these routines do not need to send them.
@@ -355,16 +358,40 @@ int audit_log_acct_message(int audit_fd, int type, const char *pgname,
 	if (tty == NULL) 
 		tty = _get_tty(ttyname, TTY_PATH);
 
-	if (name)
-		snprintf(buf, sizeof(buf), 
-	     "op=%s acct=%s exe=%s (hostname=%s, addr=%s, terminal=%s res=%s)",
-			op, name, pgname,
+	if (name) {
+		char user[MAX_USER];
+		const char *format, *p;
+		size_t len;
+		int enc = 0;
+
+		user[0] = 0;
+		strncat(user, name, MAX_USER-1);
+		len = strnlen(user, UT_NAMESIZE);
+		user[len] = 0;
+		p = user;
+		while (*p) {
+			if (*p == '"' || *p < 0x21 || (unsigned)*p > 0x7f) {
+				_audit_c2x(user, name, len);
+				enc = 1;
+				break;
+			}
+			p++;
+		}
+		if (enc)
+			format = 
+	     "op=%s acct=%s exe=%s (hostname=%s, addr=%s, terminal=%s res=%s)";
+		else
+			format = 
+	 "op=%s acct=\"%s\" exe=%s (hostname=%s, addr=%s, terminal=%s res=%s)";
+
+		snprintf(buf, sizeof(buf), format,
+			op, user, pgname,
 			host ? host : "?",
 			addrbuf,
 			tty ? tty : "?",
 			success
 			);
-	else
+	} else
 		snprintf(buf, sizeof(buf),
 		"op=%s id=%u exe=%s (hostname=%s, addr=%s, terminal=%s res=%s)",
 			op, id, pgname,
@@ -498,10 +525,29 @@ int audit_log_semanage_message(int audit_fd, int type, const char *pgname,
 	if (tty == NULL || strlen(tty) == 0) 
 		tty = _get_tty(ttyname, TTY_PATH);
 
-	if (name && strlen(name) > 0)
-		snprintf(buf, sizeof(buf), 
-	     "op=%s acct=%s old-seuser=%s old-role=%s old-range=%s new-seuser=%s new-role=%s new-range=%s exe=%s (hostname=%s, addr=%s, terminal=%s res=%s)",
-			op, name, 
+	if (name && strlen(name) > 0) {
+		int enc = 0;
+		size_t len;
+		const char *format, *p = name;
+		char user[MAX_USER];
+
+		user[0] = 0;
+		strncat(user, name, MAX_USER-1);
+		len = strnlen(user, UT_NAMESIZE);
+		user[len] = 0;
+		while (*p) {
+			if (*p == '"' || *p < 0x21 || (unsigned)*p > 0x7f) {
+				_audit_c2x(user, name, len);
+				enc = 1;
+				break;
+			}
+			p++;
+		}
+		if (enc)
+			format = "op=%s acct=%s old-seuser=%s old-role=%s old-range=%s new-seuser=%s new-role=%s new-range=%s exe=%s (hostname=%s, addr=%s, terminal=%s res=%s)";
+		else
+			format = "op=%s acct=\"%s\" old-seuser=%s old-role=%s old-range=%s new-seuser=%s new-role=%s new-range=%s exe=%s (hostname=%s, addr=%s, terminal=%s res=%s)";
+		snprintf(buf, sizeof(buf), format, op, user, 
 			old_seuser && strlen(old_seuser) ? old_seuser : "?",
 			old_role && strlen(old_role) ? old_role : "?",
 			old_range && strlen(old_range) ? old_range : "?",
@@ -514,9 +560,9 @@ int audit_log_semanage_message(int audit_fd, int type, const char *pgname,
 			tty && strlen(tty) ? tty : "?",
 			success
 			);
-	else
+	} else
 		snprintf(buf, sizeof(buf),
-		"op=%s id=%u old seuser=%s old role=%s old range=%s new seuser=%s new role=%s new range=%s exe=%s (hostname=%s, addr=%s, terminal=%s res=%s)",
+		"op=%s id=%u old-seuser=%s old-role=%s old-range=%s new-seuser=%s new-role=%s new-range=%s exe=%s (hostname=%s, addr=%s, terminal=%s res=%s)",
 			op, id,
 			old_seuser && strlen(old_seuser) ? old_seuser : "?",
 			old_role && strlen(old_role) ? old_role : "?",
@@ -586,8 +632,7 @@ int audit_log_user_command(int audit_fd, int type, const char *command,
 
 	// We borrow the commname buffer
 	if (getcwd(commname, PATH_MAX) == NULL)
-		strcpy(cwdname, "?");
-	strcpy(cwdname, commname);
+		strcpy(commname, "?");
 	p = commname;
 	len = strlen(commname);
 	while (*p) {
@@ -598,6 +643,8 @@ int audit_log_user_command(int audit_fd, int type, const char *command,
 		}
 		p++;
 	}
+	if (cwdenc == 0)
+		strcpy(cwdname, commname);
 
 	len = strlen(cmd);
 	// Trim the trailing carriage return and spaces
@@ -607,7 +654,10 @@ int audit_log_user_command(int audit_fd, int type, const char *command,
 	}
 
 	p = cmd;
-	strcpy(commname, cmd);
+	if (len >= PATH_MAX) {
+		cmd[PATH_MAX] = 0;
+		len = PATH_MAX-1;
+	}
 	while (*p) {
 		if (*p == '"' || *p < 0x21 || (unsigned)*p > 0x7f) {
 			_audit_c2x(commname, cmd, len);
@@ -616,7 +666,11 @@ int audit_log_user_command(int audit_fd, int type, const char *command,
 		}
 		p++;
 	}
+	if (cmdenc == 0)
+		strcpy(commname, cmd);
+	free(cmd);
 
+	// Make the format string
 	if (cwdenc)
 		p=stpcpy(format, "cwd=%s ");
 	else
@@ -629,13 +683,13 @@ int audit_log_user_command(int audit_fd, int type, const char *command,
 
 	strcpy(p, "(terminal=%s res=%s)");
 
+	// now use the format string to make the event
 	snprintf(buf, sizeof(buf), format,
 			cwdname, commname,
 			tty ? tty : "?",
 			success
 		);
 
-	free(cmd);
 	errno = 0;
 	ret = audit_send_user_message( audit_fd, type, HIDE_IT, buf );
 	if ((ret < 1) && errno == 0)

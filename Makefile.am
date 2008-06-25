@@ -1,5 +1,5 @@
 # Makefile.am -- 
-# Copyright 2004-07 Red Hat Inc., Durham, North Carolina.
+# Copyright 2004-08 Red Hat Inc., Durham, North Carolina.
 # All Rights Reserved.
 #
 # This program is free software; you can redistribute it and/or modify
@@ -21,10 +21,16 @@
 #   Rickard E. (Rik) Faith <faith@redhat.com>
 #
 
-SUBDIRS = lib auparse src/mt src audisp swig bindings init.d docs
-EXTRA_DIST = ChangeLog AUTHORS NEWS README sample.rules contrib/capp.rules contrib/nispom.rules contrib/lspp.rules contrib/skeleton.c README-install audit.spec
-CONFIG_CLEAN_FILES = Makefile.in aclocal.m4* config.h.* configure debug*.list config/*
+SUBDIRS = lib auparse src/mt src audisp tools swig bindings init.d \
+	docs system-config-audit
+EXTRA_DIST = ChangeLog AUTHORS NEWS README README-install audit.spec \
+	contrib/capp.rules contrib/nispom.rules contrib/lspp.rules \
+	contrib/stig.rules contrib/skeleton.c contrib/avc_snap \
+	contrib/plugin/Makefile contrib/plugin/audisp-example.c \
+	contrib/plugin/audisp-example.conf
+CONFIG_CLEAN_FILES = Makefile.in aclocal.m4* config.h.* configure \
+	debug*.list config/*
 
 clean-generic:
-	rm -rf autom4te*.cache
-	rm -f *.rej *.orig
+	rm -rf autom4te*.cache zos-remote-policy
+	rm -f *.rej *.orig *.lang

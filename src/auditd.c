@@ -1,5 +1,5 @@
 /* auditd.c -- 
- * Copyright 2004-06 Red Hat Inc., Durham, North Carolina.
+ * Copyright 2004-08 Red Hat Inc., Durham, North Carolina.
  * All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -36,6 +36,8 @@
 #include <sys/wait.h>
 #include <fcntl.h>
 #include <pthread.h>
+#include <sys/utsname.h>
+#include <getopt.h>
 
 #include "libaudit.h"
 #include "auditd-config.h"
@@ -43,7 +45,7 @@
 #include "auditd-dispatch.h"
 #include "private.h"
 
-#define DEFAULT_BUF_SZ	384
+#define DEFAULT_BUF_SZ	448
 #define DMSG_SIZE (DEFAULT_BUF_SZ + 48) 
 #define SUCCESS 0
 #define FAILURE 1
@@ -52,6 +54,7 @@
 volatile int stop = 0;
 volatile int hup = 0;
 volatile int rot = 0;
+volatile int resume = 0;
 
 /* Local data */
 static int fd = -1;
@@ -65,13 +68,19 @@ static void close_down(void);
 static void clean_exit(void);
 static int get_reply(int fd, struct audit_reply *rep, int seq);
 
+enum startup_state {startup_disable=0, startup_enable, startup_nochange, startup_INVALID};
+static const char *startup_states[] = {"disable", "enable", "nochange"};
 
 /*
  * Output a usage message
  */
 static void usage(void)
 {
-	puts("Usage: auditd [ -f -l -n ]");
+	fprintf(stderr, "Usage: auditd [-f] [-l] [-n] [-s %s|%s|%s]\n",
+		startup_states[startup_disable],
+		startup_states[startup_enable],
+		startup_states[startup_nochange]);
+
 	exit(2);
 }
 
@@ -109,12 +118,49 @@ static void user1_handler( int sig )
 }
 
 /*
+ * Used to resume logging
+ */
+static void user2_handler( int sig )
+{
+	resume = 1;
+}
+
+/*
  * Used with email alerts to cleanup
  */
 static void child_handler( int sig )
 {
 	while (waitpid(-1, NULL, WNOHANG) > 0)
 		; /* empty */
+}
+
+static void distribute_event(struct auditd_reply_list *rep)
+{
+	int attempt = 0;
+
+	/* Make first attempt to send to plugins */
+	if (dispatch_event(&rep->reply, attempt) == 1)
+		attempt++; /* Failed sending, retry after writing to disk */
+
+	/* End of Event is for realtime interface - skip local logging of it */
+	if (rep->reply.type != AUDIT_EOE) {
+		int yield = rep->reply.type <= AUDIT_LAST_DAEMON &&
+				rep->reply.type >= AUDIT_FIRST_DAEMON ? 1 : 0;
+		/* Write to local disk */
+		enqueue_event(rep);
+		if (yield)
+			pthread_yield(); /* Let other thread try to log it. */
+	} else
+		free(rep);	// This function takes custody of the memory
+
+	// FIXME: This is commented out since it fails to work. The
+	// problem is that the logger thread free's the buffer. Probably
+	// need a way to flag in the buffer if logger thread should free or
+	// move the free to this function.
+
+	/* Last chance to send...maybe the pipe is empty now. */
+//	if (attempt) 
+//		dispatch_event(&rep->reply, attempt);
 }
 
 /*
@@ -146,20 +192,17 @@ int send_audit_event(int type, const char *str)
 		seq_num++;
 	if (gettimeofday(&tv, NULL) == 0) {
 		rep->reply.len = snprintf((char *)rep->reply.message,
-			DMSG_SIZE, "audit(%lu.%03u:%u) %s, auditd pid=%u", 
-			tv.tv_sec, (unsigned)(tv.tv_usec/1000), seq_num, str,
-			getpid());
+			DMSG_SIZE, "audit(%lu.%03u:%u): %s", 
+			tv.tv_sec, (unsigned)(tv.tv_usec/1000), seq_num, str);
 	} else {
 		rep->reply.len = snprintf((char *)rep->reply.message,
-			DMSG_SIZE, "audit(%lu.%03u:%u) %s, auditd pid=%u", 
-			(unsigned long)time(NULL), 0, seq_num, str, getpid());
+			DMSG_SIZE, "audit(%lu.%03u:%u): %s", 
+			(unsigned long)time(NULL), 0, seq_num, str);
 	}
 	if (rep->reply.len > DMSG_SIZE)
 		rep->reply.len = DMSG_SIZE;
 
-	enqueue_event(rep);
-	pthread_yield(); /* Give the other thread a chance to log it. */
-
+	distribute_event(rep);
 	return 0;
 }
 
@@ -288,26 +331,56 @@ int main(int argc, char *argv[])
 	struct rlimit limit;
 	int hup_info_requested = 0, usr1_info_requested = 0;
 	int i;
+	int opt_foreground = 0, opt_allow_links = 0;
+	enum startup_state opt_startup = startup_enable;
+	int c;
+	extern char *optarg;
+	extern int optind;
 
 	/* Get params && set mode */
-	config.daemonize = D_BACKGROUND;
-	if (argc > 1) {
-		for (i=1; i<argc; i++) {
-			if (strcmp(argv[i], "-f") == 0) 
-				config.daemonize = D_FOREGROUND;
-			else if (strcmp(argv[i], "-l") == 0)
-				set_allow_links(1);
-			else if (strcmp(argv[i], "-n") == 0)
-				do_fork = 0;
-			else
+	while ((c = getopt(argc, argv, "flns:")) != -1) {
+		switch (c) {
+		case 'f':
+			opt_foreground = 1;
+			break;
+		case 'l':
+			opt_allow_links=1;
+			break;
+		case 'n':
+			do_fork = 0;
+			break;
+		case 's':
+			for (i=0; i<startup_INVALID; i++) {
+				if (strncmp(optarg, startup_states[i],
+					strlen(optarg)) == 0) {
+					opt_startup = i;
+					break;
+				}
+			}
+			if (i == startup_INVALID) {
+				fprintf(stderr, "unknown startup mode '%s'\n",
+					optarg);
 				usage();
+			}
+			break;
+		default:
+			usage();
 		}
 	}
 
-	// Make paramemters take effect
-	if (config.daemonize == D_FOREGROUND)
+	/* check for trailing command line following options */
+	if (optind < argc) {
+		usage();
+	}
+
+	if (opt_allow_links)
+		set_allow_links(1);
+
+	if (opt_foreground) {
+		config.daemonize = D_FOREGROUND;
 		set_aumessage_mode(MSG_STDERR, DBG_YES);
-	else {
+	} else {
+		config.daemonize = D_BACKGROUND;
 		set_aumessage_mode(MSG_SYSLOG, DBG_NO);
 		(void) umask( umask( 077 ) | 022 );
 	}
@@ -334,7 +407,7 @@ int main(int argc, char *argv[])
 	sigaction( SIGHUP, &sa, NULL );
 	sa.sa_handler = user1_handler;
 	sigaction( SIGUSR1, &sa, NULL );
-	sa.sa_handler = SIG_IGN;
+	sa.sa_handler = user2_handler;
 	sigaction( SIGUSR2, &sa, NULL );
 	sa.sa_handler = child_handler;
 	sigaction( SIGCHLD, &sa, NULL );
@@ -396,17 +469,33 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
+	/* Get machine name ready for use */
+	if (resolve_node(&config)) {
+		if (pidfile)
+			unlink(pidfile);
+		tell_parent(FAILURE);
+		return 1;
+	}
+
 	/* Write message to log that we are alive */
 	{
+		struct utsname ubuf;
 		char start[DEFAULT_BUF_SZ];
 		const char *fmt = audit_lookup_format((int)config.log_format);
 		if (fmt == NULL)
 			fmt = "UNKNOWN";
+		if (uname(&ubuf) != 0) {
+			if (pidfile)
+				unlink(pidfile);
+			tell_parent(FAILURE);
+			return 1;
+		}
 //FIXME add SUBJ
 		snprintf(start, sizeof(start), 
-		    "auditd start, ver=%s, format=%s, "
-		    "auid=%u pid=%d res=success",
-		     VERSION, fmt, audit_getloginuid(), getpid());
+		    "auditd start, ver=%s format=%s "
+		    "kernel=%.56s auid=%u pid=%d res=success",
+		     VERSION, fmt, ubuf.release,
+		     audit_getloginuid(), getpid());
 		if (send_audit_event(AUDIT_DAEMON_START, start)) {
         		audit_msg(LOG_ERR, "Cannot send start message");
 			if (pidfile)
@@ -444,8 +533,9 @@ int main(int argc, char *argv[])
 	/* Now tell parent that everything went OK */
 	tell_parent(SUCCESS);
 
-	/* Enable auditing just in case it was off */
-	if (audit_set_enabled(fd, 1) < 0) {
+	/* Depending on value of opt_startup (-s) set initial audit state */
+	if (opt_startup != startup_nochange &&
+	    audit_set_enabled(fd, (int)opt_startup) < 0) {
 		char emsg[DEFAULT_BUF_SZ];
 		snprintf(emsg, sizeof(emsg),
 			"auditd error halt, auid=%u pid=%d res=failed",
@@ -453,15 +543,19 @@ int main(int argc, char *argv[])
 		stop = 1;
 //FIXME add subj
 		send_audit_event(AUDIT_DAEMON_ABORT, emsg);
-		audit_msg(LOG_ERR, "Unable to enable auditing, exiting");
+		audit_msg(LOG_ERR,
+			"Unable to set intitial audit startup state to '%s', exiting",
+			startup_states[opt_startup]);
 		close_down();
 		if (pidfile)
 			unlink(pidfile);
 		shutdown_dispatcher();
 		return 1;
 	}
-	audit_msg(LOG_NOTICE, "Init complete, auditd %s listening for events",
-		VERSION);
+	audit_msg(LOG_NOTICE,
+		 "Init complete, auditd %s listening for events (startup state %s)",
+		VERSION,
+		startup_states[opt_startup]);
 
 	/* Parent should be gone by now...   */
 	if (do_fork)
@@ -498,9 +592,9 @@ int main(int argc, char *argv[])
 			FD_SET(fd, &read_mask);
 			retval = select(fd+1, &read_mask, NULL, NULL, &tv);
 		} while (retval == -1 && errno == EINTR && 
-				!stop && !hup && !rot);
+				!stop && !hup && !rot && !resume);
 
-		if (!stop && !hup && !rot && retval > 0) {
+		if (!stop && !hup && !rot && !resume && retval > 0) {
 			if (audit_get_reply(fd, &rep->reply, 
 					GET_REPLY_NONBLOCKING, 0) > 0) {
 				switch (rep->reply.type)
@@ -522,10 +616,8 @@ int main(int argc, char *argv[])
 							AUDIT_DAEMON_CONFIG, 
 				"auditd error getting hup info - no change,"
 				" sending auid=? pid=? subj=? res=failed");
-						    } else {
-							free(rep);
-							rep = NULL;
 						    }
+						    rep = NULL;
 						    hup_info_requested = 0;
 						} else if(usr1_info_requested){
 							char usr1[MAX_AUDIT_MESSAGE_LENGTH];
@@ -547,10 +639,13 @@ int main(int argc, char *argv[])
 						}
 						break;
 					default:
-						dispatch_event(&rep->reply);
-						enqueue_event(rep);
+						distribute_event(rep);
 						rep = NULL;
 						break;
+				}
+			} else {
+				if (errno == EFBIG) {
+					// FIXME do err action
 				}
 			}
 		}
@@ -573,6 +668,12 @@ int main(int argc, char *argv[])
 				"auditd error getting usr1 info - no change, sending auid=? pid=? subj=? res=failed");
 			else
 				usr1_info_requested = 1;
+		}
+		if (resume) {
+			resume = 0;
+			resume_logging();
+			send_audit_event(AUDIT_DAEMON_RESUME, 
+				"auditd resuming logging, sending auid=? pid=? subj=? res=success");
 		}
 		if (stop) {
 			/* Write message to log that we are going down */

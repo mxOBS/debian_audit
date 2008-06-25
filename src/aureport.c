@@ -1,6 +1,6 @@
 /*
  * aureport.c - main file for aureport utility 
- * Copyright 2005-06 Red Hat Inc., Durham, North Carolina.
+ * Copyright 2005-08 Red Hat Inc., Durham, North Carolina.
  * All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -23,6 +23,7 @@
 
 #include "config.h"
 #include <stdio.h>
+#include <stdio_ext.h>
 #include <string.h>
 #include <stdlib.h>
 #include <getopt.h>
@@ -53,6 +54,7 @@ static int str2event(char *s, event *e);
 static int events_are_equal(event *e1, event *e2);
 
 extern char *user_file;
+extern int force_logs;
 
 static int input_is_pipe(void)
 {
@@ -97,14 +99,21 @@ int main(int argc, char *argv[])
 		config.sender_ctx = NULL;
 		config.log_file = NULL;
 		config.dispatcher = NULL;
+		config.node_name = NULL;
+		config.space_left_exe = NULL;
 		config.action_mail_acct = NULL;
+		config.admin_space_left_exe = NULL;
+		config.disk_full_exe = NULL;
+		config.disk_error_exe = NULL;
 	}
 		
 	print_title();
-	if (input_is_pipe())
-		rc = process_stdin();
-	else if (user_file)
+	if (user_file)
 		rc = process_file(user_file);
+	else if (force_logs)
+		rc = process_logs(&config);
+	else if (input_is_pipe())
+		rc = process_stdin();
 	else
 		rc = process_logs(&config);
 	if (rc) {
@@ -115,6 +124,8 @@ int main(int argc, char *argv[])
 	if (!found && report_detail == D_DETAILED && report_type != RPT_TIME) {
 		printf("<no events of interest were found>\n\n");
 		destroy_counters();
+		aulookup_destroy_uid_list();
+		aulookup_destroy_gid_list();
 		free_config(&config); 
 		return 1;
 	} else 
@@ -249,6 +260,7 @@ static int process_file(char *filename)
 		return 1;
 	}
 
+	__fsetlocking(log_fd, FSETLOCKING_BYCALLER);
 	return process_log_fd(filename);
 }
 
@@ -304,6 +316,7 @@ static int get_record(llist *l)
 			} else {
 				saved_buff = buff;
 				free(n.message);
+				buff = NULL;
 				break;
 			}
 		} else {
@@ -326,9 +339,12 @@ static void extract_timestamp(const char *b, event *e)
 {
 	char *ptr, *tmp;
 
-	tmp = strndupa(b,80);
+	tmp = strndupa(b, 120);
 	ptr = strtok(tmp, " ");
 	if (ptr) {
+		while (ptr && strncmp(ptr, "type=", 5))
+			ptr = strtok(NULL, " ");
+
 		// at this point we have type=
 		ptr = strtok(NULL, " ");
 		if (ptr) {

@@ -1,5 +1,5 @@
 /* fieldtab.h --
- * Copyright 2005,2006 Red Hat Inc., Durham, North Carolina.
+ * Copyright 2005-07 Red Hat Inc., Durham, North Carolina.
  * All Rights Reserved.
  *
  * This library is free software; you can redistribute it and/or
@@ -53,6 +53,8 @@ _S(AUDIT_EXIT,         "exit"         )
 _S(AUDIT_SUCCESS,      "success"      )
 _S(AUDIT_WATCH,        "path"         )
 _S(AUDIT_PERM,         "perm"         )
+_S(AUDIT_DIR,          "dir"          )
+_S(AUDIT_FILETYPE,     "filetype"     )
 
 _S(AUDIT_ARG0,         "a0"           )
 _S(AUDIT_ARG1,         "a1"           )

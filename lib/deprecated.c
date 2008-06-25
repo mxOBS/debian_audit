@@ -32,10 +32,10 @@
 #include "libaudit.h"
 #include "private.h"
 
-extern int audit_archadded;
-extern int audit_syscalladded;
-extern unsigned int audit_elf;
-extern int audit_priority(int xerrno);
+extern int audit_archadded hidden;
+extern int audit_syscalladded hidden;
+extern unsigned int audit_elf hidden;
+extern int audit_priority(int xerrno) hidden;
 
 int audit_request_rules_list(int fd)
 {
@@ -215,31 +215,16 @@ int audit_rule_fieldpair(struct audit_rule *rule, const char *pair, int flags)
 		*v++ = '\0';
 		op = AUDIT_NEGATE; // legacy
 		// op = AUDIT_NOT_EQUAL;
-	} else if ( (v = strstr(pair, ">=")) ) {
-		*v++ = '\0';
-		*v++ = '\0';
-		op = AUDIT_GREATER_THAN_OR_EQUAL;
-	} else if ( (v = strstr(pair, "<=")) ) {
-		*v++ = '\0';
-		*v++ = '\0';
-		op = AUDIT_LESS_THAN_OR_EQUAL;
-	} else if ( (v = strstr(pair, "&=")) ) {
-		*v++ = '\0';
-		*v++ = '\0';
-		op = AUDIT_BIT_TEST;
+	} else if ( (v = strstr(pair, ">")) ) {
+		return -10;
+	} else if ( (v = strstr(pair, "<")) ) {
+		return -10;
+	} else if ( (v = strstr(pair, "&")) ) {
+		return -10;
 	} else if ( (v = strstr(pair, "=")) ) {
 		*v++ = '\0';
 		op = 0; // legacy 
 		// op = AUDIT_EQUAL;
-	} else if ( (v = strstr(pair, ">")) ) {
-		*v++ = '\0';
-		op = AUDIT_GREATER_THAN;
-	} else if ( (v = strstr(pair, "<")) ) {
-		*v++ = '\0';
-		op = AUDIT_LESS_THAN;
-	} else if ( (v = strstr(pair, "&")) ) {
-		*v++ = '\0';
-		op = AUDIT_BIT_MASK;
 	}
 
 	if (v == NULL || f == v)
@@ -293,6 +278,22 @@ int audit_rule_fieldpair(struct audit_rule *rule, const char *pair, int flags)
 						pair);
 					return -2;
 				}
+			}
+			break;
+		case AUDIT_EXIT:
+			vlen = strlen(v);
+			if (isdigit((char)*(v)))
+				rule->values[rule->field_count] =
+					strtol(v, NULL, 0);
+			else if (vlen >= 2 && *(v)=='-' &&
+					(isdigit((char)*(v+1))))
+				rule->values[rule->field_count] =
+					strtol(v, NULL, 0);
+			else {
+				rule->values[rule->field_count] =
+						audit_name_to_errno(v);
+				if (rule->values[rule->field_count] == 0) 
+					return -15;
 			}
 			break;
 		case AUDIT_MSGTYPE:
@@ -399,6 +400,13 @@ int audit_rule_fieldpair(struct audit_rule *rule, const char *pair, int flags)
 			rule->values[rule->field_count] = audit_elf;
 			audit_archadded = 1;
 			break;
+		case AUDIT_FILETYPE:
+			rule->values[rule->field_count] =
+				audit_name_to_ftype(v);
+			if (rule->values[rule->field_count] < 0) {
+				return -16;
+			}
+			break;
 		/* These are strings */
 		case AUDIT_SUBJ_USER:
 		case AUDIT_SUBJ_ROLE:
@@ -412,9 +420,12 @@ int audit_rule_fieldpair(struct audit_rule *rule, const char *pair, int flags)
 		case AUDIT_OBJ_LEV_HIGH:
 		case AUDIT_WATCH:
 		case AUDIT_PERM:
+		case AUDIT_DIR:
 		case AUDIT_FILTERKEY:
 			return -10;
-		case AUDIT_DEVMAJOR...AUDIT_SUCCESS:
+                case AUDIT_DEVMAJOR...AUDIT_INODE:
+                case AUDIT_SUCCESS...AUDIT_SUCCESS:
+
 			if (flags == AUDIT_FILTER_ENTRY)
 				return -7;
 			/* fallthrough */
