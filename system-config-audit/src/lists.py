@@ -15,12 +15,15 @@
 # permission of Red Hat, Inc.
 #
 # Red Hat Author: Miloslav Trmac <mitr@redhat.com>
+import stat
+
 import audit
 
 __all__ = ('field_vars',
            'ids_to_names', 'ids_severities', 'ids_types',
            'machines', 'machine_names', 'event_types', 'event_type_names',
-           'sorted_machine_names', 'sorted_event_type_names', 'syscalls')
+           'sorted_machine_names', 'sorted_event_type_names',
+           'sorted_file_type_names', 'syscalls')
 
 def N_(s): return s
 
@@ -59,11 +62,24 @@ audit.AUDIT_EXIT,
 audit.AUDIT_SUCCESS,
 audit.AUDIT_WATCH,
 audit.AUDIT_PERM,
+audit.AUDIT_DIR,
+audit.AUDIT_FILETYPE,
 audit.AUDIT_ARG0,
 audit.AUDIT_ARG1,
 audit.AUDIT_ARG2,
 audit.AUDIT_ARG3,
 audit.AUDIT_FILTERKEY,
+)
+
+# sed -n '/S_IFMT/d; s/^# *define[ \t]*\(S_IF[^ \t]*\)[ \t].*$/stat.\1,/p' /usr/include/sys/stat.h
+file_types = (
+stat.S_IFDIR,
+stat.S_IFCHR,
+stat.S_IFBLK,
+stat.S_IFREG,
+stat.S_IFIFO,
+stat.S_IFLNK,
+stat.S_IFSOCK,
 )
 
 # sed -n '/machine type list/,/machine_t/s/^[ \t]*\(MACH_[^,=]*\)\([,=].*\)\?$/audit.\1,/p' /usr/include/libaudit.h
@@ -89,8 +105,13 @@ audit.AUDIT_SIGNAL_INFO,
 audit.AUDIT_ADD_RULE,
 audit.AUDIT_DEL_RULE,
 audit.AUDIT_LIST_RULES,
+audit.AUDIT_TRIM,
+audit.AUDIT_MAKE_EQUIV,
+audit.AUDIT_TTY_GET,
+audit.AUDIT_TTY_SET,
 audit.AUDIT_FIRST_USER_MSG,
 audit.AUDIT_USER_AVC,
+audit.AUDIT_USER_TTY,
 audit.AUDIT_LAST_USER_MSG,
 audit.AUDIT_FIRST_USER_MSG2,
 audit.AUDIT_LAST_USER_MSG2,
@@ -113,6 +134,9 @@ audit.AUDIT_MQ_NOTIFY,
 audit.AUDIT_MQ_GETSETATTR,
 audit.AUDIT_KERNEL_OTHER,
 audit.AUDIT_FD_PAIR,
+audit.AUDIT_OBJ_PID,
+audit.AUDIT_TTY,
+audit.AUDIT_EOE,
 audit.AUDIT_AVC,
 audit.AUDIT_SELINUX_ERR,
 audit.AUDIT_AVC_PATH,
@@ -128,9 +152,13 @@ audit.AUDIT_MAC_IPSEC_ADDSA,
 audit.AUDIT_MAC_IPSEC_DELSA,
 audit.AUDIT_MAC_IPSEC_ADDSPD,
 audit.AUDIT_MAC_IPSEC_DELSPD,
+audit.AUDIT_MAC_IPSEC_EVENT,
+audit.AUDIT_MAC_UNLBL_STCADD,
+audit.AUDIT_MAC_UNLBL_STCDEL,
 audit.AUDIT_FIRST_KERN_ANOM_MSG,
 audit.AUDIT_LAST_KERN_ANOM_MSG,
 audit.AUDIT_ANOM_PROMISCUOUS,
+audit.AUDIT_ANOM_ABEND,
 audit.AUDIT_KERNEL,
 )
 
@@ -157,8 +185,10 @@ def ids_to_names(ids, fn):
     possible_names = (fn(i) for i in ids)
     return [name for name in possible_names if name is not None]
 
-machine_names = ids_to_names(machines, audit.audit_machine_to_name)
+file_type_names = ids_to_names(file_types, audit.audit_ftype_to_name)
 event_type_names = ids_to_names(event_types, audit.audit_msg_type_to_name)
+machine_names = ids_to_names(machines, audit.audit_machine_to_name)
 
-sorted_machine_names = sorted(machine_names)
 sorted_event_type_names = sorted(event_type_names)
+sorted_file_type_names = sorted(file_type_names)
+sorted_machine_names = sorted(machine_names)

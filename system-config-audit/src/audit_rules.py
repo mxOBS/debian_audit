@@ -18,6 +18,7 @@
 import getopt
 from gettext import gettext as _
 import grp
+import os.path
 import pwd
 import re
 import sys
@@ -133,6 +134,23 @@ class _MsgTypeFieldType(FieldType):
     @staticmethod
     def hints():
         return lists.sorted_event_type_names
+
+class _FileTypeFieldType(FieldType):
+    @staticmethod
+    def parse_value(string, *_):
+        return util.parse_filetype(string)
+
+    @staticmethod
+    def value_text(value):
+        return util.filetype_string(value)
+
+    @staticmethod
+    def hints():
+        return lists.sorted_file_type_names
+
+    @staticmethod
+    def usual_operators(_):
+        return (Field.OP_EQ, Field.OP_NE)
 
 class _StringFieldType(FieldType):
     @staticmethod
@@ -273,7 +291,9 @@ class Field(object):
 
     __field_type_map = {
         audit.AUDIT_ARCH: _ArchFieldType,
+        audit.AUDIT_DIR: _StringFieldType,
         audit.AUDIT_EGID: _GIDFieldType, audit.AUDIT_EUID: _UIDFieldType,
+        audit.AUDIT_FILETYPE: _FileTypeFieldType,
         audit.AUDIT_FILTERKEY: _FilterKeyFieldType,
         audit.AUDIT_FSGID: _GIDFieldType, audit.AUDIT_FSUID: _UIDFieldType,
         audit.AUDIT_GID: _GIDFieldType,
@@ -360,7 +380,8 @@ class Field(object):
             assert self.op == self.OP_EQ
             return '-k %s' % val
         elif (self.var == audit.AUDIT_PERM and
-              len([f for f in rule.fields if f.var == audit.AUDIT_WATCH]) == 1):
+              len([f for f in rule.fields
+                   if f.var in (audit.AUDIT_DIR, audit.AUDIT_WATCH)]) == 1):
             assert self.op == self.OP_EQ
             return '-p %s' % val
         else:
@@ -417,9 +438,10 @@ class Rule(object):
                 raise ParsingError('Field type "%s" is valid only "exclude" '
                                    'rules' % audit.audit_field_to_name(var))
             if (list is not rules.exit_rules and
-                var in (audit.AUDIT_OBJ_USER, audit.AUDIT_OBJ_ROLE,
-                        audit.AUDIT_OBJ_TYPE, audit.AUDIT_OBJ_LEV_LOW,
-                        audit.AUDIT_OBJ_LEV_HIGH, audit.AUDIT_WATCH)):
+                var in (audit.AUDIT_DIR, audit.AUDIT_OBJ_USER,
+                        audit.AUDIT_OBJ_ROLE, audit.AUDIT_OBJ_TYPE,
+                        audit.AUDIT_OBJ_LEV_LOW, audit.AUDIT_OBJ_LEV_HIGH,
+                        audit.AUDIT_WATCH)):
                 raise ParsingError('Field type "%s" is valid only in system '
                                    'call exit and watch rules' %
                                    audit.audit_field_to_name(var))
@@ -443,24 +465,31 @@ class Rule(object):
     def command_text(self, rules, list, list_name):
         '''Represent self as a string within a list with list_name in rules.'''
         o = []
+        used_fields = set(field.var for field in self.fields)
         watches = [field for field in self.fields
-                   if field.var == audit.AUDIT_WATCH]
-        if not watches or self.action != self.ACTION_ALWAYS:
-            o.append('-a %s,%s' % (list_name, self.action))
-            watch_used = False
-        else:
-            assert (len(watches) == 1 and watches[0].op == Field.OP_EQ and
-                    list is rules.exit_rules)
+                   if field.var in (audit.AUDIT_DIR, audit.AUDIT_WATCH)]
+        if (list is rules.exit_rules and
+            self.syscalls == [self.SYSCALLS_ALL] and
+            used_fields.issubset(set((audit.AUDIT_DIR, audit.AUDIT_FILTERKEY,
+                                      audit.AUDIT_PERM, audit.AUDIT_WATCH))) and
+            len(watches) == 1 and watches[0].op == Field.OP_EQ):
             o.append('-w %s' % watches[0].value)
             watch_used = True
+        else:
+            o.append('-a %s,%s' % (list_name, self.action))
+            watch_used = False
         # Add fields before syscalls because -F arch=... may change the meaning
         # of syscall names.  But add AUDIT_FILTERKEY only after -S, auditctl
         # stubbornly insists on that order.
         for f in self.fields:
             if (f.var != audit.AUDIT_FILTERKEY and
-                (f.var != audit.AUDIT_WATCH or not watch_used)):
+                (f.var not in (audit.AUDIT_DIR, audit.AUDIT_WATCH) or
+                 not watch_used)):
                 o.append(f.option_text(self))
-        if list is not rules.exclude_rules and list is not rules.user_rules:
+        # exclude_rules and user_rules are not syscall related.  -w implies
+        # -S all.
+        if (list is not rules.exclude_rules and
+            list is not rules.user_rules and not watch_used):
             for s in self.syscalls:
                 if s == self.SYSCALLS_ALL:
                     o.append('-S all')
@@ -590,11 +619,15 @@ class AuditRules(object):
             elif opt == '-W' or opt == '-w':
                 if rule.action is not None:
                     raise ParsingError('Action already specified for a rule')
-                if audit.AUDIT_WATCH in (field.var for field in rule.fields):
+                if (set(field.var for field in rule.fields).
+                    intersection((audit.AUDIT_DIR, audit.AUDIT_WATCH))):
                     raise ParsingError('Two paths specified for a rule')
                 rule.action = Rule.ACTION_ALWAYS
                 field = Field()
-                field.parse_special(audit.AUDIT_WATCH, arg)
+                if os.path.isdir(arg):
+                    field.parse_special(audit.AUDIT_DIR, arg)
+                else:
+                    field.parse_special(audit.AUDIT_WATCH, arg)
                 rule.fields.append(field)
                 if opt == '-W':
                     rule_operation = '-d'

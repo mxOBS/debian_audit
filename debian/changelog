@@ -1,3 +1,22 @@
+audit (1.7.8-1) unstable; urgency=low
+
+  * New upstream release.
+    - Includes debian/patches/{man5,rpath,audispd-zos-remote}.diff
+    - Includes debian/patches/automake{,.in}}.diff
+  * debian/control:
+    - Build-Deps: +libev-dev, +chrpath, +libwrap0-dev, +libkrb5-dev,
+      debhelper (>= 6.0.7~)
+    - Enable system-config-audit
+  * debian/rules:
+    - Enable TCP wrapper
+    - Enable GSSAPI-krb5
+    - chmod o-(r)wx on several files and directories
+    - dh_lintian auditd.lintian-overrides
+   debian/patches/test.diff
+    - Fix "make {dist,}check" in auparse/test/
+
+ -- Philipp Matthias Hahn <pmhahn@debian.org>  Thu, 23 Oct 2008 01:16:47 +0200
+
 audit (1.7.4-1) unstable; urgency=low
 
   * New upstream release (Closes: #452414)

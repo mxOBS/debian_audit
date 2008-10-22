@@ -227,8 +227,14 @@ int audit_rule_fieldpair(struct audit_rule *rule, const char *pair, int flags)
 		// op = AUDIT_EQUAL;
 	}
 
-	if (v == NULL || f == v)
+	if (v == NULL)
 		return -1;
+	
+	if (*f == 0)
+		return -22;
+
+	if (*v == 0)
+		return -20;
 
 	audit_msg(LOG_DEBUG,"pair=%s\n", f);
 	if ((field = audit_name_to_field(f)) < 0) 
@@ -251,15 +257,11 @@ int audit_rule_fieldpair(struct audit_rule *rule, const char *pair, int flags)
 			if (isdigit((char)*(v))) 
 				rule->values[rule->field_count] = 
 					strtol(v, NULL, 0);
-			else if (vlen >= 2 && *(v)=='-' && 
-						(isdigit((char)*(v+1)))) 
-				rule->values[rule->field_count] = 
-					strtol(v, NULL, 0);
 			else {
 				if (name_to_uid(v, 
 					&rule->values[rule->field_count])) {
 					audit_msg(LOG_ERR, "Unknown user: %s",
-						pair);
+						v);
 					return -2;
 				}
 			}
@@ -275,12 +277,14 @@ int audit_rule_fieldpair(struct audit_rule *rule, const char *pair, int flags)
 				if (name_to_gid(v, 
 					&rule->values[rule->field_count])) {
 					audit_msg(LOG_ERR, "Unknown group: %s",
-						pair);
+						v);
 					return -2;
 				}
 			}
 			break;
 		case AUDIT_EXIT:
+			if (flags != AUDIT_FILTER_EXIT)
+				return -7;
 			vlen = strlen(v);
 			if (isdigit((char)*(v)))
 				rule->values[rule->field_count] =
@@ -401,6 +405,8 @@ int audit_rule_fieldpair(struct audit_rule *rule, const char *pair, int flags)
 			audit_archadded = 1;
 			break;
 		case AUDIT_FILETYPE:
+			if (flags != AUDIT_FILTER_EXIT && flags != AUDIT_FILTER_ENTRY)
+				return -17;
 			rule->values[rule->field_count] =
 				audit_name_to_ftype(v);
 			if (rule->values[rule->field_count] < 0) {
@@ -424,9 +430,8 @@ int audit_rule_fieldpair(struct audit_rule *rule, const char *pair, int flags)
 		case AUDIT_FILTERKEY:
 			return -10;
                 case AUDIT_DEVMAJOR...AUDIT_INODE:
-                case AUDIT_SUCCESS...AUDIT_SUCCESS:
-
-			if (flags == AUDIT_FILTER_ENTRY)
+                case AUDIT_SUCCESS:
+			if (flags != AUDIT_FILTER_EXIT)
 				return -7;
 			/* fallthrough */
 		default:
@@ -434,6 +439,16 @@ int audit_rule_fieldpair(struct audit_rule *rule, const char *pair, int flags)
 				if (!(op == AUDIT_NEGATE || op == 0))
 					return -13;
 			}
+			if (field == AUDIT_PPID && (flags != AUDIT_FILTER_EXIT
+				&& flags != AUDIT_FILTER_ENTRY))
+				return -17;
+			
+			if (flags == AUDIT_FILTER_EXCLUDE)
+				return -18;
+			
+			if (!isdigit((char)*(v)))
+				return -21;
+
 			rule->values[rule->field_count] = strtol(v, NULL, 0);
 			break;
 	}

@@ -18,6 +18,7 @@ ifneq (,$(findstring noopt,$(DEB_BUILD_OPTIONS)))
 else
 	CFLAGS += -O2
 endif
+LDFLAGS = -Wl,--as-needed
 
 include /usr/share/quilt/quilt.make
 
@@ -30,7 +31,7 @@ configure-stamp: $(QUILT_STAMPFN)
 	-test -r /usr/share/misc/config.guess && \
 		cp -f /usr/share/misc/config.guess config.guess && \
 		cp -f /usr/share/misc/config.guess system-config-audit/admin/config.guess
-	autoreconf -fv --install
+	#autoreconf -fv --install
 	./configure \
 		--prefix=/usr \
 		--sysconfdir=/etc \
@@ -39,38 +40,48 @@ configure-stamp: $(QUILT_STAMPFN)
 		--libexecdir=/lib \
 		--mandir=/usr/share/man \
 		--enable-shared=audit \
+		--enable-gssapi-krb5 \
 		--with-apparmor \
 		--with-prelude \
+		--with-libwrap \
 		$(confflags)
 	touch $@
 
 build: build-stamp
 build-stamp: configure-stamp
 	dh_testdir
-	$(MAKE)
+	$(MAKE) LDFLAGS=$(LDFLAGS)
 	touch $@
 
-clean: unpatch
+unpatch: preunpatch
+preunpatch: configure-stamp
 	dh_testdir
 	dh_testroot
+	[ ! -f Makefile ] || $(MAKE) distclean
+.PHONY: preunpatch
+
+clean: unpatch
 	$(RM) build-stamp configure-stamp
-	[ ! -f Makefile ] || $(MAKE) maintainer-clean
 	dh_clean
 	# Clean modified/regeneratable files
-	$(RM) configure depcomp install-sh ltmain.sh missing INSTALL config.log
 	$(RM) config.sub config.guess
+	$(RM) system-config-audit/admin/config.sub system-config-audit/admin/config.guess
 	$(RM) system-config-audit/po/stamp-it
-	$(RM) system-config-audit/po/Makefile.in.in
-	$(RM) system-config-audit/INSTALL
-	$(RM) system-config-audit/aclocal.m4
-	$(RM) system-config-audit/admin/config.guess
-	$(RM) system-config-audit/admin/config.sub
-	$(RM) system-config-audit/admin/depcomp
-	$(RM) system-config-audit/admin/install-sh
-	$(RM) system-config-audit/admin/ltmain.sh
-	$(RM) system-config-audit/admin/mkinstalldirs
-	$(RM) system-config-audit/configure
-	$(RM) system-config-audit/po/.intltool-merge-cache
+	$(RM) system-config-audit/po/cs.gmo
+	$(RM) system-config-audit/src/.dirstamp
+	$(RM) system-config-audit/src/.deps/.dirstamp
+	#$(RM) system-config-audit/po/Makefile.in.in
+	#$(RM) system-config-audit/INSTALL
+	#$(RM) system-config-audit/aclocal.m4
+	#$(RM) system-config-audit/admin/depcomp
+	#$(RM) system-config-audit/admin/install-sh
+	#$(RM) system-config-audit/admin/ltmain.sh
+	#$(RM) system-config-audit/admin/mkinstalldirs
+	#$(RM) system-config-audit/configure
+	#$(RM) system-config-audit/po/.intltool-merge-cache
+	$(RM) system-config-audit/po/system-config-audit.pot
+	$(RM) system-config-audit/system-config-audit.desktop
+	$(RM) src/mt/*.[ch]
 
 install: build
 	dh_testdir
@@ -90,6 +101,7 @@ install: build
 
 	# The Debian way
 	$(RM) debian/tmp/usr/lib/python*/site-packages/_au*.*a
+	$(RM) debian/tmp/usr/lib/python*/site-packages/auparse.*a
 	$(RM) debian/tmp/usr/lib/python*/site-packages/au*.py[co]
 	$(RM) debian/tmp/usr/share/system-config-audit/*.py[co]
 
@@ -109,13 +121,19 @@ binary-arch: build install
 	dh_install --sourcedir=debian/tmp --list-missing
 	#dh_installlogrotate #auditd has a equivalent built-in feature
 	dh_installinit -- start 37 S . start 39 0 6 .
-	#dh_installman -psystem-config-audit debian/system-config-audit.8
+	dh_installman -psystem-config-audit debian/system-config-audit.8
+	dh_lintian
+	chrpath -d $(CURDIR)/debian/system-config-audit/lib/system-config-audit-server
 	dh_link
 	dh_strip
 	dh_compress
 	dh_fixperms
+	#chmod o-wx debian/auditd/usr/bin/aulastlog
+	#chmod o-wx debian/auditd/sbin/{auditctl,auditd,autrace}
+	#chmod 750 debian/auditd/sbin/audispd
+	chmod -R o-rwx debian/auditd/var/log/audit
+	chmod -R o-rwx debian/auditd/etc/audit debian/auditd/etc/audisp{,/plugins.d}
 	dh_pysupport
-	#dh_python
 	dh_makeshlibs
 	dh_installdeb
 	dh_shlibdeps
@@ -125,3 +143,31 @@ binary-arch: build install
 
 binary: binary-indep binary-arch
 .PHONY: build clean binary-indep binary-arch binary install configure
+
+#FIXME
+these-files-are-wrongly-removed:
+	auparse/captabs.h
+	auparse/clone-flagtabs.h
+	auparse/famtabs.h
+	auparse/fcntl-cmdtabs.h
+	auparse/flagtabs.h
+	auparse/ipctabs.h
+	auparse/open-flagtabs.h
+	auparse/socktabs.h
+	auparse/typetabs.h
+	lib/actiontabs.h
+	lib/alpha_tables.h
+	lib/errtabs.h
+	lib/fieldtabs.h
+	lib/flagtabs.h
+	lib/ftypetabs.h
+	lib/i386_tables.h
+	lib/ia64_tables.h
+	lib/machinetabs.h
+	lib/msg_typetabs.h
+	lib/optabs.h
+	lib/ppc_tables.h
+	lib/s390_tables.h
+	lib/s390x_tables.h
+	lib/x86_64_tables.h
+	swig/audit.py

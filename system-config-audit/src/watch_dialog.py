@@ -16,6 +16,7 @@
 #
 # Red Hat Author: Miloslav Trmac <mitr@redhat.com>
 from gettext import gettext as _
+import os.path
 
 import audit
 import gtk
@@ -68,7 +69,7 @@ class WatchDialog(DialogBase):
         for f in rule.fields:
             if f.var == audit.AUDIT_FILTERKEY:
                 self.keys.append(f.value)
-            elif f.var == audit.AUDIT_WATCH:
+            elif f.var in (audit.AUDIT_DIR, audit.AUDIT_WATCH):
                 assert not have_path
                 have_path = True
                 self.watch_path.set_text(f.value)
@@ -103,10 +104,14 @@ class WatchDialog(DialogBase):
                 f.op = Field.OP_EQ
                 f.value = key
                 rule.fields.append(f)
+        path = self.watch_path.get_text()
         f = Field()
-        f.var = audit.AUDIT_WATCH
+        if os.path.isdir(path):
+            f.var = audit.AUDIT_DIR
+        else:
+            f.var = audit.AUDIT_WATCH
         f.op = Field.OP_EQ
-        f.value = self.watch_path.get_text()
+        f.value = path
         rule.fields.append(f)
         perm = 0
         for (w, mask) in ((self.watch_read, audit.AUDIT_PERM_READ),

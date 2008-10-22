@@ -1,10 +1,11 @@
 Source: audit
 Priority: extra
 Maintainer: Philipp Matthias Hahn <pmhahn@debian.org>
-Build-Depends: debhelper (>= 5.0.37.2),
+Build-Depends: debhelper (>= 6.0.7~),
  python-all-dev (>= 2.3.5-11), python-support (>= 0.5.3), swig,
  automake1.9, autoconf (>= 2.59), libtool, autotools-dev, quilt,
- intltool, cvs, libprelude-dev, libldap2-dev
+ intltool, cvs, libprelude-dev, libldap2-dev, libev-dev, chrpath,
+ libwrap0-dev, libkrb5-dev
 Build-Conflicts: autoconf2.13, automake1.4
 XS-Python-Version: all
 Standards-Version: 3.8.0
@@ -59,10 +60,10 @@ Description: Plugins for the audit event dispatcher
  like relay events to remote machines or analyze events for suspicious
  behavior.
 
-#Package: system-config-audit
-#Section: admin
-#Architecture: any
-#Depends: python-audit, ${shlibs:Depends}
-#Description: Graphical utility for editing audit configuration
-# The system-config-audit package provides a graphical users interface for
-# configuring the Linux audit subsystem.
+Package: system-config-audit
+Section: admin
+Architecture: any
+Depends: python-audit, ${shlibs:Depends}
+Description: Graphical utility for editing audit configuration
+ The system-config-audit package provides a graphical users interface for
+ configuring the Linux audit subsystem.

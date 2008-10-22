@@ -45,9 +45,12 @@ __field_help = {
                          'operations.'),
     audit.AUDIT_DEVMAJOR: N_('Device major number'),
     audit.AUDIT_DEVMINOR: N_('Device minor number'),
+    # audit.AUDIT_DIR is handled specially in the GUI
     audit.AUDIT_EGID: N_('Effective group ID'),
     audit.AUDIT_EUID: N_('Effective user ID'),
     audit.AUDIT_EXIT: N_('Exit value from a syscall'),
+    audit.AUDIT_FILETYPE: N_("The target file's type.  Can be either file, "
+                             "dir, socket, symlink, char, block, or fifo."),
     # audit.AUDIT_FILTERKEY is handled specially in the GUI
     audit.AUDIT_FSGID: N_('File system group ID'),
     audit.AUDIT_FSUID: N_('File system user ID'),
