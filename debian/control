@@ -63,7 +63,7 @@ Description: Plugins for the audit event dispatcher
 Package: system-config-audit
 Section: admin
 Architecture: any
-Depends: python-audit, ${shlibs:Depends}
+Depends: python-audit, ${shlibs:Depends}, menu, chkconfig
 Description: Graphical utility for editing audit configuration
  The system-config-audit package provides a graphical users interface for
  configuring the Linux audit subsystem.

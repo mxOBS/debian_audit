@@ -123,7 +123,16 @@ binary-arch: build install
 	dh_installinit -- start 37 S . start 39 0 6 .
 	dh_installman -psystem-config-audit debian/system-config-audit.8
 	dh_lintian
+	chrpath -d $(CURDIR)/debian/audispd-plugins/sbin/audispd-zos-remote
+	chrpath -d $(CURDIR)/debian/audispd-plugins/sbin/audisp-prelude
+	chrpath -d $(CURDIR)/debian/auditd/usr/bin/aulast
+	chrpath -d $(CURDIR)/debian/auditd/usr/bin/aulastlog
+	chrpath -d $(CURDIR)/debian/auditd/usr/bin/ausyscall
+	chrpath -d $(CURDIR)/debian/libaudit0/lib/libauparse.so.0.0.0
+	chrpath -d $(CURDIR)/debian/python-audit/usr/lib/python*/site-packages/_audit.so
+	chrpath -d $(CURDIR)/debian/python-audit/usr/lib/python*/site-packages/auparse.so
 	chrpath -d $(CURDIR)/debian/system-config-audit/lib/system-config-audit-server
+
 	dh_link
 	dh_strip
 	dh_compress
@@ -143,31 +152,3 @@ binary-arch: build install
 
 binary: binary-indep binary-arch
 .PHONY: build clean binary-indep binary-arch binary install configure
-
-#FIXME
-these-files-are-wrongly-removed:
-	auparse/captabs.h
-	auparse/clone-flagtabs.h
-	auparse/famtabs.h
-	auparse/fcntl-cmdtabs.h
-	auparse/flagtabs.h
-	auparse/ipctabs.h
-	auparse/open-flagtabs.h
-	auparse/socktabs.h
-	auparse/typetabs.h
-	lib/actiontabs.h
-	lib/alpha_tables.h
-	lib/errtabs.h
-	lib/fieldtabs.h
-	lib/flagtabs.h
-	lib/ftypetabs.h
-	lib/i386_tables.h
-	lib/ia64_tables.h
-	lib/machinetabs.h
-	lib/msg_typetabs.h
-	lib/optabs.h
-	lib/ppc_tables.h
-	lib/s390_tables.h
-	lib/s390x_tables.h
-	lib/x86_64_tables.h
-	swig/audit.py

@@ -8,6 +8,7 @@ sbin/auditd
 sbin/aureport
 sbin/ausearch
 sbin/autrace
+usr/bin/aulast
 usr/bin/aulastlog
 usr/bin/ausyscall
 usr/share/man/man5/audispd.conf.5
@@ -16,6 +17,7 @@ usr/share/man/man5/ausearch-expression.5
 usr/share/man/man8/audispd.8
 usr/share/man/man8/auditctl.8
 usr/share/man/man8/auditd.8
+usr/share/man/man8/aulast.8
 usr/share/man/man8/aulastlog.8
 usr/share/man/man8/aureport.8
 usr/share/man/man8/ausearch.8

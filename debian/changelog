@@ -1,3 +1,16 @@
+audit (1.7.9-1) unstable; urgency=low
+
+  * New upstream release.
+    - Includes debian/patches/test.diff
+  * debian/auditd.install: Add aulast.
+  * Fix "fails to start in two cases : auditd not installed or not run
+    as root" by "using su-to-root -X" (Closes: #503656)
+  * debian/control#system-config-audit:
+    - Depends: menu for su-to-root
+    - Depends: chkconfig for restart
+
+ -- Philipp Matthias Hahn <pmhahn@debian.org>  Sun, 09 Nov 2008 21:25:03 +0100
+
 audit (1.7.8-1) unstable; urgency=low
 
   * New upstream release.
