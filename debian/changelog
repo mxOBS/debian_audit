@@ -1,3 +1,10 @@
+audit (1.7.9-2) unstable; urgency=low
+
+  * Fix bashism in debian/rules (Closes: #505261)
+    Thanks to Michael Bienia <michael vorlon ping de>
+
+ -- Philipp Matthias Hahn <pmhahn@debian.org>  Tue, 11 Nov 2008 19:32:06 +0100
+
 audit (1.7.9-1) unstable; urgency=low
 
   * New upstream release.

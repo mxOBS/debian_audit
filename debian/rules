@@ -99,7 +99,7 @@ install: build
 	$(RM) debian/tmp/usr/lib/libaudit.so
 	$(RM) debian/tmp/usr/lib/libauparse.so
 
-	# The Debian way
+	# The Debian way compiles Python packages on install
 	$(RM) debian/tmp/usr/lib/python*/site-packages/_au*.*a
 	$(RM) debian/tmp/usr/lib/python*/site-packages/auparse.*a
 	$(RM) debian/tmp/usr/lib/python*/site-packages/au*.py[co]
@@ -138,10 +138,12 @@ binary-arch: build install
 	dh_compress
 	dh_fixperms
 	#chmod o-wx debian/auditd/usr/bin/aulastlog
-	#chmod o-wx debian/auditd/sbin/{auditctl,auditd,autrace}
+	#chmod o-wx debian/auditd/sbin/auditctl
+	#chmod o-wx debian/auditd/sbin/auditd
+	#chmod o-wx debian/auditd/sbin/autrace
 	#chmod 750 debian/auditd/sbin/audispd
 	chmod -R o-rwx debian/auditd/var/log/audit
-	chmod -R o-rwx debian/auditd/etc/audit debian/auditd/etc/audisp{,/plugins.d}
+	chmod -R o-rwx debian/auditd/etc/audit debian/auditd/etc/audisp debian/auditd/etc/audisp/plugins.d
 	dh_pysupport
 	dh_makeshlibs
 	dh_installdeb
