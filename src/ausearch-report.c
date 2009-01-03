@@ -50,7 +50,8 @@ struct nv_pair {
 
 /* This is the list of field types that we can interpret */
 enum { T_UID, T_GID, T_SYSCALL, T_ARCH, T_EXIT, T_ESCAPED, T_PERM, T_MODE, 
-T_SOCKADDR, T_FLAGS, T_PROMISC, T_CAPABILITY, T_SIGNAL, T_KEY, T_LIST };
+T_SOCKADDR, T_FLAGS, T_PROMISC, T_CAPABILITY, T_SIGNAL, T_KEY, T_LIST,
+T_TTY_DATA };
 
 /* Function in ausearch-parse for unescaping filenames */
 extern char *unescape(char *buf);
@@ -343,6 +344,7 @@ static struct nv_pair typetab[] = {
 	{T_ESCAPED, "cwd"},
 	{T_ESCAPED, "cmd"},
 	{T_ESCAPED, "dir"},
+	{T_TTY_DATA, "data"},
 	{T_KEY, "key"},
 	{T_PERM, "perm"},
 	{T_PERM, "perm_mask"},
@@ -894,16 +896,6 @@ static void print_list(char *val)
 	printf("%s ", audit_flag_to_name(i));
 }
 
-static int is_hex_string(const char *str)
-{
-	while (*str) {
-		if (!isxdigit(*str))
-			return 0;
-		str++;
-	}
-	return 1;
-}
-
 static void interpret(char *name, char *val, int comma, int rtype)
 {
 	int type;
@@ -971,6 +963,9 @@ static void interpret(char *name, char *val, int comma, int rtype)
 			break;
 		case T_LIST:
 			print_list(val);
+			break;
+		case T_TTY_DATA:
+			print_tty_data(val);
 			break;
 		default:
 			printf("%s%c", val, comma ? ',' : ' ');
