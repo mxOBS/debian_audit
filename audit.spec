@@ -1,4 +1,4 @@
-%define audit_version 1.7.10
+%define audit_version 1.7.11
 %define audit_release 1
 %define sca_version 0.4.8
 %define sca_release 1
@@ -257,6 +257,17 @@ fi
 %config(noreplace) %{_sysconfdir}/security/console.apps/system-config-audit-server
 
 %changelog
+* Sat Jan 10 2009 Steve Grubb <sgrubb@redhat.com> 1.7.11-1
+- Don't error out in auditd when calling setsid
+- Reformat a couple auditd error messages (Oden Eriksson)
+- If log rotate fails, leave the old log writable
+- Fixed bug in setting up auditd event loop when listening
+- Warn if on biarch machine and auditctl rules show a syscall mismatch
+- Audisp-remote was not parsing some config options correctly
+- In auparse, check for single key in addition to virtual keys
+- When auditd shuts down, send AUDIT_RMW_TYPE_ENDING messages to clients
+- Created reconnect option to remote ending setting of audisp-remote
+
 * Sat Dec 13 2008 Steve Grubb <sgrubb@redhat.com> 1.7.10-1
 - Fix ausearch and aureport to handle out of order events
 - Add line-buffer option to ausearch & timeout pipe input (Tony Jones)
