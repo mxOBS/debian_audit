@@ -15,7 +15,7 @@
 @SET_MAKE@
 
 # Makefile.am --
-# Copyright 2008 Red Hat Inc., Durham, North Carolina.
+# Copyright 2008-2009 Red Hat Inc., Durham, North Carolina.
 # All Rights Reserved.
 #
 # This library is free software; you can redistribute it and/or
@@ -72,7 +72,8 @@ am__installdirs = "$(DESTDIR)$(sbindir)" "$(DESTDIR)$(man5dir)" \
 sbinPROGRAMS_INSTALL = $(INSTALL_PROGRAM)
 PROGRAMS = $(sbin_PROGRAMS)
 am_audisp_remote_OBJECTS = audisp_remote-audisp-remote.$(OBJEXT) \
-	audisp_remote-remote-config.$(OBJEXT)
+	audisp_remote-remote-config.$(OBJEXT) \
+	audisp_remote-queue.$(OBJEXT)
 audisp_remote_OBJECTS = $(am_audisp_remote_OBJECTS)
 audisp_remote_LDADD = $(LDADD)
 audisp_remote_LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) \
@@ -234,9 +235,9 @@ prog_confdir = $(sysconfdir)/audisp
 prog_conf = audisp-remote.conf
 plugin_confdir = $(prog_confdir)/plugins.d
 plugin_conf = au-remote.conf
-noinst_HEADERS = remote-config.h
+noinst_HEADERS = remote-config.h queue.h
 man_MANS = audisp-remote.8 audisp-remote.conf.5
-audisp_remote_SOURCES = audisp-remote.c remote-config.c
+audisp_remote_SOURCES = audisp-remote.c remote-config.c queue.c
 audisp_remote_CFLAGS = -fPIE -DPIE -g -D_REENTRANT -D_GNU_SOURCE -Wundef
 audisp_remote_LDFLAGS = -pie -Wl,-z,relro $(gss_libs)
 all: all-am
@@ -330,6 +331,12 @@ audisp_remote-remote-config.o: remote-config.c
 
 audisp_remote-remote-config.obj: remote-config.c
 	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(audisp_remote_CFLAGS) $(CFLAGS) -c -o audisp_remote-remote-config.obj `if test -f 'remote-config.c'; then $(CYGPATH_W) 'remote-config.c'; else $(CYGPATH_W) '$(srcdir)/remote-config.c'; fi`
+
+audisp_remote-queue.o: queue.c
+	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(audisp_remote_CFLAGS) $(CFLAGS) -c -o audisp_remote-queue.o `test -f 'queue.c' || echo '$(srcdir)/'`queue.c
+
+audisp_remote-queue.obj: queue.c
+	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(audisp_remote_CFLAGS) $(CFLAGS) -c -o audisp_remote-queue.obj `if test -f 'queue.c'; then $(CYGPATH_W) 'queue.c'; else $(CYGPATH_W) '$(srcdir)/queue.c'; fi`
 
 mostlyclean-libtool:
 	-rm -f *.lo

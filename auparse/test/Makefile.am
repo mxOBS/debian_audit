@@ -38,6 +38,7 @@ drop_srcdir = sed 's,$(srcdir)/test,test,'
 check: auparse_test
 	test "$(top_srcdir)" = "$(top_builddir)" || \
 			cp $(top_srcdir)/auparse/test/test*.log .
+		cp ${top_builddir}/swig/.libs/_audit.so ${top_builddir}/swig
 	LC_ALL=C \
 	./auparse_test > auparse_test.cur
 	diff -u $(top_srcdir)/auparse/test/auparse_test.ref auparse_test.cur
@@ -75,4 +76,5 @@ ${top_builddir}/bindings/python/build/*/auparse.so: ${top_srcdir}/bindings/pytho
 	cd ${top_builddir}/bindings/python && make
 clean-generic:
 	$(RM) *.cur
+	$(RM) ${top_builddir}/swig/_audit.so
 	test "$(top_srcdir)" = "$(top_builddir)" || $(RM) test*.log
