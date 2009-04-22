@@ -1,3 +1,10 @@
+audit (1.7.13-1) unstable; urgency=low
+
+  * New upstream release.
+  * debian/control: ~Suggest audispd-plugins" (Closes: #523098)
+
+ -- Philipp Matthias Hahn <pmhahn@debian.org>  Wed, 22 Apr 2009 21:56:34 +0200
+
 audit (1.7.12-1) unstable; urgency=low
 
   * New upstream release. (Closes: #522026)
