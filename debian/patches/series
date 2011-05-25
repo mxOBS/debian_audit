@@ -2,3 +2,5 @@ mode.diff
 503656_su-to-x.diff
 rpath.diff
 system-config-audit_service.diff
+add_missing_headers.diff
+ld-no-add-needed.diff

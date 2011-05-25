@@ -1,3 +1,16 @@
+audit (1.7.13-1.1) unstable; urgency=low
+
+  * Non-maintainer upload.
+  * debian/patches/ld-no-add-needed.diff
+    - fix build with ld --no-add-needed, patch from bug; Closes: #553961
+  * debian/patches/add_missing_headers.diff
+    - Add missing headers to fix undefined reference to `S_ISREG' linker error,
+      from Ubuntu
+  * debian/python-audit.install, debian/rules
+    - use '*-packages' instead of 'site-packages', diff from Ubuntu
+
+ -- Sandro Tosi <morph@debian.org>  Wed, 25 May 2011 13:55:43 +0200
+
 audit (1.7.13-1) unstable; urgency=low
 
   * New upstream release.
