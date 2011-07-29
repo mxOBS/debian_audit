@@ -1,3 +1,30 @@
+audit (1.7.18-1) unstable; urgency=low
+
+  * New upstream release.
+    - Fixes inode with != operator (Closes: #539356)
+  * debian/source/format, debian/README.source: Convert to 3.0 (quilt)
+  * debian/patches/htons_family.diff: Don't htons(AF_INET) (Closes: #635202)
+    Thanks to John Feuerstein <john@feurix.com>.
+  * debian/control:
+    - Bump Standards-Version: 3.9.2
+    - Priority: optional for libaudit0.
+    - Depend on missing python-glade2 (Closes: #635199)
+    - Drop quilt from Build-Depends.
+    - Use automake1.10, DebHelper8
+  * debian/rules: Switch to debhelper8 and dh_pyhon2
+  * Build bindings for all Python versions (Closes: #627919)
+  * debian/patches:
+    - fix-out-of-tree-build.diff: Fix an out-of-tree build issue
+    - fix-desktopinfo.diff: Drop Encoding from desktop info file
+    - fix-spelling.diff: Fix spelling mistakes in manual pages
+    - manpage-dash.diff: Quote dashes in manual pages
+  * debian/auditd.init
+    - Change start/stop levels (also debian/rules) (Closes: #586664)
+    - Drop support for customizing language  (Closes: #549186)
+  * debian/audit.*: Add support for pam_loginuid (Closes: #560281)
+
+ -- Philipp Matthias Hahn <pmhahn@debian.org>  Fri, 29 Jul 2011 23:28:00 +0200
+
 audit (1.7.13-1.2) unstable; urgency=low
 
   * Non-maintainer upload.
