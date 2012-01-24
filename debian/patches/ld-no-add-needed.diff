@@ -1,55 +1,59 @@
 Link to Kerberos libraries
---- a/audisp/plugins/remote/Makefile.in
-+++ b/audisp/plugins/remote/Makefile.in
-@@ -241,7 +241,7 @@ noinst_HEADERS = remote-config.h queue.h
- man_MANS = audisp-remote.8 audisp-remote.conf.5
- audisp_remote_SOURCES = audisp-remote.c remote-config.c queue.c
+diff -ru audit-2.1.3/audisp/plugins/remote/Makefile.am audit-2.1.3.pat/audisp/plugins/remote/Makefile.am
+--- audit-2.1.3/audisp/plugins/remote/Makefile.am	2011-08-16 03:30:59.000000000 +1000
++++ audit-2.1.3.pat/audisp/plugins/remote/Makefile.am	2012-01-24 17:15:24.169571191 +1100
+@@ -35,7 +35,7 @@
+ 
+ audisp_remote_SOURCES = audisp-remote.c remote-config.c queue.c remote-fgets.c
  audisp_remote_CFLAGS = -fPIE -DPIE -g -D_REENTRANT -D_GNU_SOURCE -Wundef
--audisp_remote_LDFLAGS = -pie -Wl,-z,relro $(gss_libs)
-+audisp_remote_LDFLAGS = -pie -Wl,-z,relro -lkrb5 $(gss_libs)
+-audisp_remote_LDFLAGS = -pie -Wl,-z,relro -Wl,-z,now $(gss_libs)
++audisp_remote_LDFLAGS = -pie -Wl,-z,relro -lkrb5 -Wl,-z,now $(gss_libs)
+ audisp_remote_LDADD = $(CAPNG_LDADD)
+ 
+ test_queue_SOURCES = queue.c test-queue.c
+diff -ru audit-2.1.3/audisp/plugins/remote/Makefile.in audit-2.1.3.pat/audisp/plugins/remote/Makefile.in
+--- audit-2.1.3/audisp/plugins/remote/Makefile.in	2011-08-16 03:31:11.000000000 +1000
++++ audit-2.1.3.pat/audisp/plugins/remote/Makefile.in	2012-01-24 17:15:58.796226098 +1100
+@@ -276,7 +276,7 @@
+ TESTS = $(check_PROGRAMS)
+ audisp_remote_SOURCES = audisp-remote.c remote-config.c queue.c remote-fgets.c
+ audisp_remote_CFLAGS = -fPIE -DPIE -g -D_REENTRANT -D_GNU_SOURCE -Wundef
+-audisp_remote_LDFLAGS = -pie -Wl,-z,relro -Wl,-z,now $(gss_libs)
++audisp_remote_LDFLAGS = -pie -Wl,-z,relro -Wl,-z,now -lkrb5 $(gss_libs)
+ audisp_remote_LDADD = $(CAPNG_LDADD)
+ test_queue_SOURCES = queue.c test-queue.c
  all: all-am
+diff -ru audit-2.1.3/src/Makefile.am audit-2.1.3.pat/src/Makefile.am
+--- audit-2.1.3/src/Makefile.am	2011-08-16 03:31:00.000000000 +1000
++++ audit-2.1.3.pat/src/Makefile.am	2012-01-24 17:13:40.945580658 +1100
+@@ -31,10 +31,10 @@
+ noinst_HEADERS = auditd-config.h auditd-event.h auditd-listen.h ausearch-llist.h ausearch-options.h auditctl-llist.h aureport-options.h ausearch-parse.h aureport-scan.h ausearch-lookup.h ausearch-int.h auditd-dispatch.h ausearch-string.h ausearch-nvpair.h ausearch-common.h ausearch-avc.h ausearch-time.h ausearch-lol.h
  
- .SUFFIXES:
---- a/audisp/plugins/remote/Makefile.am
-+++ b/audisp/plugins/remote/Makefile.am
-@@ -34,7 +34,7 @@ man_MANS = audisp-remote.8 audisp-remote
+ auditd_SOURCES = auditd.c auditd-event.c auditd-config.c auditd-reconfig.c auditd-sendmail.c auditd-dispatch.c auditd-listen.c
+-auditd_CFLAGS = -fPIE -DPIE -g -D_REENTRANT -D_GNU_SOURCE -fno-strict-aliasing 
+-auditd_LDFLAGS = -pie -Wl,-z,relro -Wl,-z,now
++auditd_CFLAGS = -pthread -fPIE -DPIE -g -D_REENTRANT -D_GNU_SOURCE -fno-strict-aliasing 
++auditd_LDFLAGS = -pthread -pie -Wl,-z,relro -Wl,-z,now
+ auditd_DEPENDENCIES = mt/libauditmt.a libev/libev.a
+-auditd_LDADD = @LIBWRAP_LIBS@ @libev_LIBS@ -Llibev -lev -lrt -lpthread -lm $(gss_libs)
++auditd_LDADD = @LIBWRAP_LIBS@ @libev_LIBS@ -Llibev -lev -lrt -lpthread -lm -lkrb5 $(gss_libs)
  
- audisp_remote_SOURCES = audisp-remote.c remote-config.c queue.c
- audisp_remote_CFLAGS = -fPIE -DPIE -g -D_REENTRANT -D_GNU_SOURCE -Wundef
--audisp_remote_LDFLAGS = -pie -Wl,-z,relro $(gss_libs)
-+audisp_remote_LDFLAGS = -pie -Wl,-z,relro -lkrb5 $(gss_libs)
- 
- install-data-hook:
- 	mkdir -p -m 0750 ${DESTDIR}${plugin_confdir}
---- a/src/Makefile.in
-+++ b/src/Makefile.in
-@@ -274,10 +274,10 @@ LDADD = -lpthread
+ auditctl_SOURCES = auditctl.c auditctl-llist.c delete_all.c
+ auditctl_DEPENDENCIES = mt/libauditmt.a 
+diff -ru audit-2.1.3/src/Makefile.in audit-2.1.3.pat/src/Makefile.in
+--- audit-2.1.3/src/Makefile.in	2011-08-16 03:31:11.000000000 +1000
++++ audit-2.1.3.pat/src/Makefile.in	2012-01-24 17:14:52.394805452 +1100
+@@ -307,10 +307,10 @@
  AM_CFLAGS = -D_REENTRANT -D_GNU_SOURCE
  noinst_HEADERS = auditd-config.h auditd-event.h auditd-listen.h ausearch-llist.h ausearch-options.h auditctl-llist.h aureport-options.h ausearch-parse.h aureport-scan.h ausearch-lookup.h ausearch-int.h auditd-dispatch.h ausearch-string.h ausearch-nvpair.h ausearch-common.h ausearch-avc.h ausearch-time.h ausearch-lol.h
  auditd_SOURCES = auditd.c auditd-event.c auditd-config.c auditd-reconfig.c auditd-sendmail.c auditd-dispatch.c auditd-listen.c
 -auditd_CFLAGS = -fPIE -DPIE -g -D_REENTRANT -D_GNU_SOURCE -fno-strict-aliasing 
--auditd_LDFLAGS = -pie -Wl,-z,relro
-+auditd_CFLAGS = -pthread -fPIE -DPIE -g -D_REENTRANT -D_GNU_SOURCE -fno-strict-aliasing
-+auditd_LDFLAGS = -pthread -pie -Wl,-z,relro
+-auditd_LDFLAGS = -pie -Wl,-z,relro -Wl,-z,now
++auditd_CFLAGS = -pthread -fPIE -DPIE -g -D_REENTRANT -D_GNU_SOURCE -fno-strict-aliasing 
++auditd_LDFLAGS = -pthread -pie -Wl,-z,relro -Wl,-z,now
  auditd_DEPENDENCIES = mt/libauditmt.a libev/libev.a
--auditd_LDADD = @LIBWRAP_LIBS@ @libev_LIBS@ -Llibev -lev -lrt -lm $(gss_libs)
-+auditd_LDADD = @LIBWRAP_LIBS@ @libev_LIBS@ -Llibev -lev -lrt -lm -lkrb5 $(gss_libs)
+-auditd_LDADD = @LIBWRAP_LIBS@ @libev_LIBS@ -Llibev -lev -lrt -lpthread -lm $(gss_libs)
++auditd_LDADD = @LIBWRAP_LIBS@ @libev_LIBS@ -Llibev -lev -lrt -lpthread -lm -lkrb5 $(gss_libs)
  auditctl_SOURCES = auditctl.c auditctl-llist.c delete_all.c
  auditctl_DEPENDENCIES = mt/libauditmt.a 
  aureport_SOURCES = aureport.c auditd-config.c ausearch-llist.c aureport-options.c ausearch-string.c ausearch-parse.c aureport-scan.c aureport-output.c ausearch-lookup.c ausearch-int.c ausearch-time.c ausearch-nvpair.c ausearch-avc.c ausearch-lol.c
---- a/src/Makefile.am
-+++ b/src/Makefile.am
-@@ -31,10 +31,10 @@ AM_CFLAGS = -D_REENTRANT -D_GNU_SOURCE
- noinst_HEADERS = auditd-config.h auditd-event.h auditd-listen.h ausearch-llist.h ausearch-options.h auditctl-llist.h aureport-options.h ausearch-parse.h aureport-scan.h ausearch-lookup.h ausearch-int.h auditd-dispatch.h ausearch-string.h ausearch-nvpair.h ausearch-common.h ausearch-avc.h ausearch-time.h ausearch-lol.h
- 
- auditd_SOURCES = auditd.c auditd-event.c auditd-config.c auditd-reconfig.c auditd-sendmail.c auditd-dispatch.c auditd-listen.c
--auditd_CFLAGS = -fPIE -DPIE -g -D_REENTRANT -D_GNU_SOURCE -fno-strict-aliasing 
--auditd_LDFLAGS = -pie -Wl,-z,relro
-+auditd_CFLAGS = -pthread -fPIE -DPIE -g -D_REENTRANT -D_GNU_SOURCE -fno-strict-aliasing
-+auditd_LDFLAGS = -pthread -pie -Wl,-z,relro
- auditd_DEPENDENCIES = mt/libauditmt.a libev/libev.a
--auditd_LDADD = @LIBWRAP_LIBS@ @libev_LIBS@ -Llibev -lev -lrt -lm $(gss_libs)
-+auditd_LDADD = @LIBWRAP_LIBS@ @libev_LIBS@ -Llibev -lev -lrt -lm -lkrb5 $(gss_libs)
- 
- auditctl_SOURCES = auditctl.c auditctl-llist.c delete_all.c
- auditctl_DEPENDENCIES = mt/libauditmt.a 

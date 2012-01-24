@@ -1,5 +1,5 @@
 /* auditd-config.c -- 
- * Copyright 2004-2009 Red Hat Inc., Durham, North Carolina.
+ * Copyright 2004-2011 Red Hat Inc., Durham, North Carolina.
  * All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -334,7 +334,7 @@ int load_config(struct daemon_conf *config, log_test_t lt)
 	}
 
 	/* it's ok, read line by line */
-	f = fdopen(fd, "r");
+	f = fdopen(fd, "rm");
 	if (f == NULL) {
 		audit_msg(LOG_ERR, "Error - fdopen failed (%s)", 
 			strerror(errno));
@@ -686,6 +686,7 @@ static int name_format_parser(struct nv_pair *nv, int line,
 {
 	int i;
 
+	audit_msg(LOG_DEBUG, "name_format_parser called with: %s", nv->value);
 	for (i=0; node_name_formats[i].name != NULL; i++) {
 		if (strcasecmp(nv->value, node_name_formats[i].name) == 0) {
 			config->node_name_format = node_name_formats[i].option;
@@ -699,6 +700,7 @@ static int name_format_parser(struct nv_pair *nv, int line,
 static int name_parser(struct nv_pair *nv, int line,
 		struct daemon_conf *config)
 {
+	audit_msg(LOG_DEBUG, "name_parser called with: %s", nv->value);
 	if (nv->value == NULL)
 		config->node_name = NULL;
 	else
@@ -1064,7 +1066,7 @@ static int admin_space_left_action_parser(struct nv_pair *nv, int line,
 		"Email option is specified but %s doesn't seem executable.",
 						 email_command);
 				}
-			} else if (i == FA_EXEC) {
+			} else if (failure_actions[i].option == FA_EXEC) {
 				if (check_exe_name(nv->option, line))
 					return 1;
 				config->admin_space_left_exe = 
@@ -1120,12 +1122,12 @@ static int disk_error_action_parser(struct nv_pair *nv, int line,
 			"Illegal option %s for disk_error_action - line %d",
 					nv->value, line);
 				return 1;
-			} else if (i == FA_EXEC) {
+			} else if (failure_actions[i].option == FA_EXEC) {
 				if (check_exe_name(nv->option, line))
 					return 1;
 				config->disk_error_exe = strdup(nv->option);
 			}
-			config->disk_error_action = FA_EXEC;
+			config->disk_error_action = failure_actions[i].option;
 			return 0;
 		}
 	}
@@ -1625,15 +1627,18 @@ int resolve_node(struct daemon_conf *config)
 				struct addrinfo *ai;
 				struct addrinfo hints;
 
+				audit_msg(LOG_DEBUG,
+					"Resolving numeric address for %s",
+					tmp_name);
 				memset(&hints, 0, sizeof(hints));
 				hints.ai_flags = AI_ADDRCONFIG | AI_PASSIVE;
 				hints.ai_socktype = SOCK_STREAM;
 
 				rc2 = getaddrinfo(tmp_name, NULL, &hints, &ai);
-				if (rc2 != 0) {
+				if (rc2) {
 					audit_msg(LOG_ERR,
 					"Cannot resolve hostname %s (%s)",
-					tmp_name, gai_strerror(rc));
+					tmp_name, gai_strerror(rc2));
 					rc = -1;
 					break;
 				}
@@ -1647,6 +1652,9 @@ int resolve_node(struct daemon_conf *config)
 			}
 			break;
 	}
+	if (rc == 0 && config->node_name)
+		audit_msg(LOG_DEBUG, "Resolved node name: %s",
+				config->node_name);
 	return rc;
 }
 

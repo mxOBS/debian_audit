@@ -1,3 +1,14 @@
+audit (2.1.3-1) unstable; urgency=low
+
+  * NMU as the new version is over 6 months old and fixes some annoying bugs.
+  * New upstream release. (Closes: #639865)
+  * Removed the patches for the desktop info file and the condrestart as
+    upstream has removed the things that it is patched against.
+  * Removed the patch for htons on AF_INET as it's fixed upstream.
+  * system-config-audit is now in a separate source package.
+
+ -- Russell Coker <russell@coker.com.au>  Tue, 24 Jan 2012 18:07:07 +1100
+
 audit (1.7.18-1) unstable; urgency=low
 
   * New upstream release.

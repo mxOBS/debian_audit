@@ -2,12 +2,11 @@ Description: Add missing headers to fix undefined reference to `S_ISREG' linker
  error and hence FTBFS
 Author: Bhavani Shankar <bhavi@ubuntu.com>
 Bug-Ubuntu: https://bugs.launchpad.net/bugs/600129
-Index: audit-1.7.13/lib/libaudit.c
-===========================================
---- audit-1.7.13.orig/lib/libaudit.c
-+++ audit-1.7.13/lib/libaudit.c
-@@ -36,6 +36,8 @@
- #include <sys/utsname.h>
+diff -ru audit-2.1.3/lib/libaudit.c audit-2.1.3.pat/lib/libaudit.c
+--- audit-2.1.3/lib/libaudit.c	2011-08-16 03:31:03.000000000 +1000
++++ audit-2.1.3.pat/lib/libaudit.c	2012-01-24 17:50:36.387133058 +1100
+@@ -37,6 +37,8 @@
+ #include <sys/stat.h>
  #include <fcntl.h>	/* O_NOFOLLOW needs gnu defined */
  #include <limits.h>	/* for PATH_MAX */
 +#include <sys/stat.h>
