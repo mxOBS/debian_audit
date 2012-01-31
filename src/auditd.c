@@ -1,5 +1,5 @@
 /* auditd.c -- 
- * Copyright 2004-09,2011 Red Hat Inc., Durham, North Carolina.
+ * Copyright 2004-08 Red Hat Inc., Durham, North Carolina.
  * All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -265,14 +265,7 @@ static int write_pid_file(void)
 static void avoid_oom_killer(void)
 {
 	int oomfd;
-
-	/* New kernels use different technique */	
-	oomfd = open("/proc/self/oom_score_adj", O_NOFOLLOW | O_WRONLY);
-	if (oomfd >= 0) {
-		(void)write(oomfd, "-1000", 5);
-		close(oomfd);
-		return;
-	}
+	
 	oomfd = open("/proc/self/oom_adj", O_NOFOLLOW | O_WRONLY);
 	if (oomfd >= 0) {
 		(void)write(oomfd, "-17", 3);
@@ -397,6 +390,7 @@ static void netlink_handler(struct ev_loop *loop, struct ev_io *io,
 		case NLMSG_DONE:
 		case NLMSG_ERROR:
 		case AUDIT_GET: /* Or these */
+		case AUDIT_LIST:
 		case AUDIT_LIST_RULES:
 		case AUDIT_FIRST_DAEMON...AUDIT_LAST_DAEMON:
 			break;
@@ -671,6 +665,9 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
+	/* Now tell parent that everything went OK */
+	tell_parent(SUCCESS);
+
 	/* Depending on value of opt_startup (-s) set initial audit state */
 	if (opt_startup != startup_nochange && (audit_is_enabled(fd) < 2) &&
 	    audit_set_enabled(fd, (int)opt_startup) < 0) {
@@ -692,9 +689,16 @@ int main(int argc, char *argv[])
 		if (pidfile)
 			unlink(pidfile);
 		shutdown_dispatcher();
-		tell_parent(FAILURE);
 		return 1;
 	}
+	audit_msg(LOG_NOTICE,
+	    "Init complete, auditd %s listening for events (startup state %s)",
+		VERSION,
+		startup_states[opt_startup]);
+
+	/* Parent should be gone by now...   */
+	if (do_fork)
+		close(init_pipe[1]);
 
 	loop = ev_default_loop (EVFLAG_NOENV);
 
@@ -722,32 +726,10 @@ int main(int argc, char *argv[])
 		ev_periodic_start (loop, &periodic_watcher);
 
 	if (auditd_tcp_listen_init (loop, &config)) {
-		char emsg[DEFAULT_BUF_SZ];
-		if (*subj)
-			snprintf(emsg, sizeof(emsg),
-			"auditd error halt, auid=%u pid=%d subj=%s res=failed",
-				audit_getloginuid(), getpid(), subj);
-		else
-			snprintf(emsg, sizeof(emsg),
-				"auditd error halt, auid=%u pid=%d res=failed",
-				audit_getloginuid(), getpid());
+		tell_parent (FAILURE);
 		stop = 1;
-		send_audit_event(AUDIT_DAEMON_ABORT, emsg);
-		tell_parent(FAILURE);
-	} else {
-		/* Now tell parent that everything went OK */
-		tell_parent(SUCCESS);
-		audit_msg(LOG_NOTICE,
-	    "Init complete, auditd %s listening for events (startup state %s)",
-			VERSION,
-			startup_states[opt_startup]);
 	}
 
-	/* Parent should be gone by now...   */
-	if (do_fork)
-		close(init_pipe[1]);
-
-	// Init complete, start event loop
 	if (!stop)
 		ev_loop (loop, 0);
 

@@ -29,6 +29,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <regex.h>
 #include <stdio_ext.h>
 
 static int debug = 0;
@@ -179,7 +180,7 @@ auparse_state_t *auparse_init(ausource_t source, const void *b)
 			break;
 		case AUSOURCE_DESCRIPTOR:
 			n = (long)b;
-			au->in = fdopen(n, "rm");
+			au->in = fdopen(n, "r");
 			break;
 		case AUSOURCE_FILE_POINTER:
 			au->in = (FILE *)b;
@@ -204,6 +205,7 @@ auparse_state_t *auparse_init(ausource_t source, const void *b)
 	au->expr = NULL;
 	au->find_field = NULL;
 	au->search_where = AUSEARCH_STOP_EVENT;
+	au->regex_valid = 0;
 
 	return au;
 bad_exit:
@@ -341,6 +343,10 @@ static int ausearch_add_item_internal(auparse_state_t *au, const char *field,
 	if (field == NULL)
 		goto err_out;
 
+	// Do not allow regex to get replaced this way
+	if (au->regex_valid != 0)
+		goto err_out;
+
 	// Make sure how is within range
 	if (how < AUSEARCH_RULE_CLEAR || how > AUSEARCH_RULE_AND)
 		goto err_out;
@@ -415,6 +421,10 @@ found_op:
 	if (milli >= 1000)
 		goto err_out;
 
+	// Do not allow regex to get replaced this way
+	if (au->regex_valid != 0)
+		goto err_out;
+
 	// Make sure how is within range
 	if (how < AUSEARCH_RULE_CLEAR || how > AUSEARCH_RULE_AND)
 		goto err_out;
@@ -437,6 +447,9 @@ int ausearch_add_expression(auparse_state_t *au, const char *expression,
 {
 	struct expr *expr;
 
+	// Do not allow regex to get replaced this way
+	if (au->regex_valid != 0)
+		goto err_einval;
 	if (how < AUSEARCH_RULE_CLEAR || how > AUSEARCH_RULE_AND)
 		goto err_einval;
 
@@ -457,20 +470,25 @@ err:
 	return -1;
 }
 
-int ausearch_add_regex(auparse_state_t *au, const char *regexp)
+int ausearch_add_regex(auparse_state_t *au, const char *expr)
 {
-	struct expr *expr;
+	int rc;
 
 	// Make sure there's an expression
-	if (regexp == NULL)
+	if (expr == NULL)
 		goto err_out;
 
-	expr = expr_create_regexp_expression(regexp);
-	if (expr == NULL)
-		return -1;
-	if (add_expr(au, expr, AUSEARCH_RULE_AND) != 0)
-		return -1; /* expr is freed by add_expr() */
-	return 0;
+	if (au->regex_valid != 0 || au->expr != NULL)
+		goto err_out;
+
+	// Compile expression now to make sure the expression is correct
+	rc = regcomp(&au->regex, expr, REG_EXTENDED|REG_NOSUB);
+	if (rc) {
+		goto err_out;
+	}
+	au->regex_valid = 1;
+
+	return 0; 
 
 err_out:
 	errno = EINVAL;
@@ -490,6 +508,10 @@ int ausearch_set_stop(auparse_state_t *au, austop_t where)
 
 void ausearch_clear(auparse_state_t *au)
 {
+	if (au->regex_valid != 0) {
+		regfree(&au->regex);
+		au->regex_valid = 0;
+	}
 	if (au->expr != NULL) {
 		expr_free(au->expr);
 		au->expr = NULL;
@@ -686,7 +708,7 @@ static int extract_timestamp(const char *b, au_event_t *e)
 		// Optionally grab the node - may or may not be included
 		if (*ptr == 'n') {
 			e->host = strdup(ptr+5);
-			(void)strtok(NULL, " "); // Bump along to the next one
+			ptr = strtok(NULL, " "); // Bump along to the next one
 		}
 		// at this point we have type=
 		ptr = strtok(NULL, " ");
@@ -788,7 +810,7 @@ static int retrieve_next_line(auparse_state_t *au)
 				}
 				au->line_number = 0;
 				au->in = fopen(au->source_list[au->list_idx],
-									"rm");
+									"r");
 				if (au->in == NULL)
 					return -1;
 				__fsetlocking(au->in, FSETLOCKING_BYCALLER);
@@ -806,7 +828,7 @@ static int retrieve_next_line(auparse_state_t *au)
 					if (au->source_list[au->list_idx]) {
 						au->in = fopen(
 						  au->source_list[au->list_idx],
-						  "rm");
+						  "r");
 						if (au->in == NULL)
 							return -1;
 						__fsetlocking(au->in,
@@ -879,6 +901,16 @@ static int ausearch_compare(auparse_state_t *au)
 {
 	rnode *r;
 
+	if (au->regex_valid != 0) {
+		int rc;
+
+		r = aup_list_get_cur(&au->le);
+		rc = regexec(&au->regex, r->record, 0, NULL, 0);
+		if (rc == 0)
+			return 1;
+		else
+			return 0;
+	}
 	r = aup_list_get_cur(&au->le);
 	if (r)
 		return expr_eval(au, r, au->expr);
@@ -891,7 +923,7 @@ int ausearch_next_event(auparse_state_t *au)
 {
 	int rc;
 
-	if (au->expr == NULL) {
+	if (au->expr == NULL && au->regex_valid == 0) {
 		errno = EINVAL;
 		return -1;
 	}

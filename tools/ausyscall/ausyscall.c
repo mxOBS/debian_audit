@@ -70,12 +70,6 @@ int main(int argc, char *argv[])
 					stderr);
 			exit(1);
 #endif
-#ifndef WITH_ARMEB
-		} else if (strcmp("armeb", argv[i]) == 0) {
-			fputs("Arm eabi processor support is not enabled\n",
-					stderr);
-			exit(1);
-#endif
 		} else {
 			if (name != NULL) {
 				fputs("Two syscall names not allowed\n",stderr);

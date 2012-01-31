@@ -128,6 +128,7 @@ fmt_event(time_t seconds, unsigned int milli, unsigned long serial, const char *
 
     snprintf(buf2, sizeof(buf2), buf1, milli, serial, host, sizeof(buf2));
     return buf2;
+    exit(EXIT_SUCCESS);
 }
 
 static PyObject *
@@ -972,12 +973,9 @@ AuParser_get_timestamp(AuParser *self)
     event_ptr = auparse_get_timestamp(self->au);
 
     if (event_ptr == NULL) {
-        if (errno) {
-            PyErr_SetFromErrno(PyExc_EnvironmentError);
-            return NULL;
-        } else {
-            Py_RETURN_NONE;
-        }
+        Py_RETURN_NONE;
+        PyErr_SetFromErrno(PyExc_EnvironmentError);
+        return NULL;
     }
     py_event = AuEvent_new_from_struct(event_ptr);
     Py_INCREF(py_event);        /* FIXME: should we be bumping the ref count? */

@@ -1,141 +1,31 @@
-2.1.3
-- Fix parsing of EXECVE records to not escape argc field
-- If auditd's disk is full, send the right reason to client (#715315)
-- Add CAP_WAKE_ALARM to interpretations
-- Some updates to audisp-remote's remote-fgets function (Mirek Trmac)
-- Add detection of TTY events to audisp-prelude (Matteo Sessa)
-- Updated syscall tables for the 3.0 kernel
-- Update linker flags for better relro support
-- Make default size of logs bigger (#727310)
-- Extract obj from NETFILTER_PKT events
-- Disable 2 kerberos config options in audisp-remote.conf
-
-2.1.2
-- In ausearch/report, fix a segfault caused by MAC_POLICY_LOAD records
-- In ausearch/report, add and update parsers
-- In auditd, cleanup DAEMON_ACCEPT and DAEMON_CLOSE addr fields
-- In ausearch/report, parse addr field of DAEMON_ACCEPT & DAEMON_CLOSE records
-- In auditd, move startup success to after events are registered
-- If auditd shutsdown due to failed tcp init, write a DAEMON_ABORT event
-- Update auditd to avoid the oom killer in new kernels (Andreas Jaeger)
-- Parse and interpret NETFILTER_PKT events correctly
-- Return error if auditctl -l fails (#709345)
-- In audisp-remote, replace glibc's fgets with custom implementation
-
-2.1.1
-- When ausearch is interpretting, output "as is" if no = is found
-- Correct socket setup in remote logging
-- Adjusted a couple default settings for remote logging and init script
-- Audispd was not marking restarted plugins as active
-- Audisp-remote should keep a capability if local_port < 1024
-- When audispd restarts plugin, send event in its preferred format
-- In audisp-remote, make all I/O asynchronous
-- In audisp-remote, add sigusr1 handler to dump internal state
-- Fix autrace to use correct syscalls on s390 and s390x systems
-- Add shutdown syscall to remote logging teardowns
-- Correct autrace rule for 32 bits systems
-
-2.1
-- Update auditctl man page for new field on user filter
-- Fix crash in aulast when auid is foreign to the system
-- Code cleanups
-- Add store and forward model to audispd-remote (Mirek Trmac)
-- Free memory on failed startups in audisp-prelude
-- Fix memory leak in aureport
-- Fix parsing state problem in libauparse
-- Improve the robustness of libaudit field encoding functions
-- Update capability tables
-- In auditd, make failure action config checking consistent 
-- In auditd, check that NULL is not being passed to safe_exec
-- In audisp-remote, overflow_action wasn't suspending if that action was chosen
-- Update interpretations for virt events
-- Improve remote logging warning and error messages
-- Add interpretations for netfilter events
-
-2.0.6
-- ausearch/report performance improvements
-- Synchronize all sample syscall rules to use action,list
-- If program name provided to audit_log_acct_message, escape it
-- Fix man page for the audit_encode_nv_string function (#647131)
-- If value is NULL, don't segfault (#647128)
-- Fix simple event parsing to not assume session id can't be last (Peng Haitao)
-- Add support for new mmap audit event type
-- Add ability for audispd syslog plugin to choose facility local0-7 (#593340)
-- Fix autrace to use correct syscalls on i386 systems (Peng Haitao)
-- On startup and reconfig, check for excess logs and unlink them
-- Add a couple missing parser debug messages
-- Fix error output resolving numeric address and update man page
-- Add netfilter event types
-- Fix spelling error in audit.rules man page (#667845)
-- Improve warning in auditctl regarding immutable mode (#654883)
-- Update syscall tables for the 2.6.37 kernel
-- In ausearch, allow searching for auid -1
-- Add queue overflow_action to audisp-remote to control queue overflows
-- Update sample rules for new syscalls and packages
-
-2.0.5
+1.7.18
+- Update time examples in ausearch/report man pages
 - Make auparse handle empty AUSOURCE_FILE_ARRAY correctly (Miloslav Trmač)
 - On i386, audit rules do not work on inode's with a large number (#554553)
-- Fix displaying of inode values to be unsigned integers when listing rules
-- Correct Makefile install of audispd (Jason Tang)
-- Syscall table updates for 2.6.34 kernel
-- Add definitions for service start and stop
 - Fix handling of ignore errors in auditctl
-- Fix gssapi support to build with new linker options
 - Add virtualization event types
 - Update aureport program help and man pages to show all options
+- Fix displaying of inode values to be unsigned integers when listing rules
 
-2.0.4
-- Make alpha processor support optional
-- Add support for the arm eabi processor
-- add a compatible regexp processing capability to auparse (Miloslav Trmač)
-- Fix regression in parsing user space originating records in aureport
+1.7.17
 - Add tcp_max_per_addr option in auditd.conf to limit concurrent connections
+- Make alpha processor support optional
 - Rearrange shutdown of auditd to allow DAEMON_END event more time
 
-2.0.3
+1.7.16
+- If audisp-remote plugin has a queue at exit, use non-zero exit code
 - In auditd, tell libev to stop processing a connection when idle timeout
 - In auditd, tell libev to stop processing a connection when shutting down
-- Interpret CAPSET records in ausearch/auparse
 
-2.0.2
-- If audisp-remote plugin has a queue at exit, use non-zero exit code
-- Fix autrace to use the exit filter
+1.7.15
 - In audisp-remote, add a sigchld handler
 - In auditd, check for duplicate remote connections before accepting
 - Remove trailing ':' if any are at the end of acct fields in ausearch
 - Update remote logging code to do better sanity check of data
 - Fix audisp-prelude to prefer files if multiple path records are encountered
-- Add libaudit.conf man page
 - In auditd, disconnect idle clients
 
-2.0.1
-- Aulast now reads daemon_start events for the kernel version of reboot
-- Clarify the man pages for ausearch/report regarding locale and date formats
-- Fix getloginuid for python bindings
-- Disable the audispd af_unix plugin by default
-- Add a couple new init script actions for LSB 3.2
-- In audisp-remote plugin, timeout network reads (#514090)
-- Make some error logging in audisp-remote plugin more prominent
-- Add audit.rules man page
-- Interpret the session field in audit events
-
-2.0
-- Remove system-config-audit
-- Get rid of () from userspace originating events
-- Removed old syscall rules API - not needed since 2.6.16
-- Remove all use of the old rule structs from API
-- Fix uninitialized variable in auditd log rotation
-- Add libcap-ng support for audispd plugins
-- Removed ancient defines that are part of kernel 2.6.29 headers
-- Bump soname number for libaudit
-- In auditctl, deprecate the entry filter and move rules to exit filter
-- Parse integrity audit records in ausearch/report (Mimi Zohar)
-- Updated syscall table for 2.6.31 kernel
-- Remove support for the legacy negate syscall rule operator
-- In auditd reset syslog warnings if disk space becomes available
-
-1.8
+1.7.14
 - In auditctl rules allow a0-a3 to be negative numbers
 - Add partial support for IMA integrity auditing
 - In s-c-audit, fix error handling with audit-1.7.12 and later
@@ -144,6 +34,12 @@
 - Aureport and ausearch do not need to stat the dispatcher
 - Make auparse handle empty AUSOURCE_FILE_ARRAY correctly (Miloslav Trmač)
 - Allow ausearch/report to specify multiple node names (Lenny Bruzenak)
+- Correct checking of != operator in audit_rule_fieldpair_data
+- Updated syscall table for 2.6.31 kernel
+- In auditd reset syslog warnings if disk space becomes available
+- Fix getloginuid for python bindings
+- In auditsp-remote plugin, timeout network reads (#514090)
+- Add audit.rules man page
 
 1.7.13
 - Disable libev asserts unless --with-debug passed to configure

@@ -1,5 +1,5 @@
 /* prelude-config.c -- 
- * Copyright 2008,2010-2011 Red Hat Inc., Durham, North Carolina.
+ * Copyright 2008 Red Hat Inc., Durham, North Carolina.
  * All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -122,10 +122,6 @@ static int watched_mk_exe_parser(struct nv_pair *nv, int line,
 		prelude_conf_t *config);
 static int watched_mk_exe_act_parser(struct nv_pair *nv, int line, 
 		prelude_conf_t *config);
-static int tty_parser(struct nv_pair *nv, int line, 
-		prelude_conf_t *config);
-static int tty_act_parser(struct nv_pair *nv, int line, 
-		prelude_conf_t *config);
 static int sanity_check(prelude_conf_t *config, const char *file);
 
 static const struct kw_pair keywords[] = 
@@ -162,8 +158,6 @@ static const struct kw_pair keywords[] =
   {"watched_exec_action",        watched_exec_act_parser,	0 },
   {"detect_watched_mk_exe",      watched_mk_exe_parser,		0 },
   {"watched_mk_exe_action",      watched_mk_exe_act_parser,	0 },
-  {"detect_tty",                 tty_parser,		0 },
-  {"tty_action",                 tty_act_parser,	0 },
   { NULL,             NULL }
 };
 
@@ -221,8 +215,6 @@ void clear_config(prelude_conf_t *config)
 	config->watched_exec_act = A_IDMEF;
 	config->watched_mk_exe = E_YES;
 	config->watched_mk_exe_act = A_IDMEF;
-	config->tty = E_NO;
-	config->tty_act = A_IDMEF;
 	ilist_create(&config->watched_accounts);
 }
 
@@ -239,7 +231,6 @@ int load_config(prelude_conf_t *config, const char *file)
 	mode = O_RDONLY;
 	rc = open(file, mode);
 	if (rc < 0) {
-		free_config(config);
 		if (errno != ENOENT) {
 			syslog(LOG_ERR, "Error opening %s (%s)", file,
 				strerror(errno));
@@ -255,28 +246,24 @@ int load_config(prelude_conf_t *config, const char *file)
 	 * not symlink.
 	 */
 	if (fstat(fd, &st) < 0) {
-		free_config(config);
 		syslog(LOG_ERR, "Error fstat'ing config file (%s)", 
 			strerror(errno));
 		close(fd);
 		return 1;
 	}
 	if (st.st_uid != 0) {
-		free_config(config);
 		syslog(LOG_ERR, "Error - %s isn't owned by root", 
 			file);
 		close(fd);
 		return 1;
 	}
 	if ((st.st_mode & S_IWOTH) == S_IWOTH) {
-		free_config(config);
 		syslog(LOG_ERR, "Error - %s is world writable", 
 			file);
 		close(fd);
 		return 1;
 	}
 	if (!S_ISREG(st.st_mode)) {
-		free_config(config);
 		syslog(LOG_ERR, "Error - %s is not a regular file", 
 			file);
 		close(fd);
@@ -284,9 +271,8 @@ int load_config(prelude_conf_t *config, const char *file)
 	}
 
 	/* it's ok, read line by line */
-	f = fdopen(fd, "rm");
+	f = fdopen(fd, "r");
 	if (f == NULL) {
-		free_config(config);
 		syslog(LOG_ERR, "Error - fdopen failed (%s)", 
 			strerror(errno));
 		close(fd);
@@ -322,7 +308,6 @@ int load_config(prelude_conf_t *config, const char *file)
 			continue;
 		}
 		if (nv.value == NULL) {
-			free_config(config);
 			fclose(f);
 			return 1;
 		}
@@ -330,7 +315,6 @@ int load_config(prelude_conf_t *config, const char *file)
 		/* identify keyword or error */
 		kw = kw_lookup(nv.name);
 		if (kw->name == NULL) {
-			free_config(config);
 			syslog(LOG_ERR, 
 				"Unknown keyword \"%s\" in line %d of %s", 
 				nv.name, lineno, file);
@@ -340,7 +324,6 @@ int load_config(prelude_conf_t *config, const char *file)
 
 		/* Check number of options */
 		if (kw->max_options == 0 && nv.option != NULL) {
-			free_config(config);
 			syslog(LOG_ERR, 
 				"Keyword \"%s\" has invalid option "
 				"\"%s\" in line %d of %s", 
@@ -352,7 +335,6 @@ int load_config(prelude_conf_t *config, const char *file)
 		/* dispatch to keyword's local parser */
 		rc = kw->parser(&nv, lineno, config);
 		if (rc != 0) {
-			free_config(config);
 			fclose(f);
 			return 1; // local parser puts message out
 		}
@@ -808,23 +790,6 @@ static int watched_mk_exe_act_parser(struct nv_pair *nv, int line,
         return 1;
 }
 
-static int tty_parser(struct nv_pair *nv, int line,
-	prelude_conf_t *config)
-{
-	if (lookup_enabler(nv->value, &config->tty) == 0)
-		return 0;
-	syslog(LOG_ERR, "Option %s not found - line %d", nv->value, line);
-	return 1;
-}
-
-static int tty_act_parser(struct nv_pair *nv, int line,
-	prelude_conf_t *config)
-{
-	if (lookup_action(nv->value, &config->tty_act) == 0)
-		return 0;
-	syslog(LOG_ERR, "Option %s not found - line %d", nv->value, line);
-	return 1;
-}
 /*
  * This function is where we do the integrated check of the audispd config
  * options. At this point, all fields have been read. Returns 0 if no

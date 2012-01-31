@@ -1,20 +1,21 @@
 Get rid of rpath.
-diff -ru audit-2.1.3/tools/aulast/Makefile.am audit-2.1.3.pat/tools/aulast/Makefile.am
---- audit-2.1.3/tools/aulast/Makefile.am	2011-08-16 03:31:03.000000000 +1000
-+++ audit-2.1.3.pat/tools/aulast/Makefile.am	2012-01-24 16:54:20.754553934 +1100
-@@ -24,7 +24,7 @@
+--- a/tools/aulast/Makefile.am
++++ b/tools/aulast/Makefile.am
+@@ -24,10 +24,9 @@ CONFIG_CLEAN_FILES = *.loT *.rej *.orig
  AUTOMAKE_OPTIONS = no-dependencies
  EXTRA_DIST = $(man_MANS)
  INCLUDES = -I${top_srcdir} -I${top_srcdir}/lib -I${top_srcdir}/auparse
 -LIBS = -L${top_builddir}/auparse -lauparse
 +LDADD = ${top_builddir}/auparse/libauparse.la
- AM_CFLAGS = -D_GNU_SOURCE
  bin_PROGRAMS = aulast
  noinst_HEADERS = aulast-llist.h
-diff -ru audit-2.1.3/tools/aulast/Makefile.in audit-2.1.3.pat/tools/aulast/Makefile.in
---- audit-2.1.3/tools/aulast/Makefile.in	2011-08-16 03:31:12.000000000 +1000
-+++ audit-2.1.3.pat/tools/aulast/Makefile.in	2012-01-24 16:59:37.478323183 +1100
-@@ -75,6 +75,7 @@
+ man_MANS = aulast.8
+ 
+ aulast_SOURCES = aulast.c aulast-llist.c
+-
+--- a/tools/aulast/Makefile.in
++++ b/tools/aulast/Makefile.in
+@@ -73,6 +73,7 @@ PROGRAMS = $(bin_PROGRAMS)
  am_aulast_OBJECTS = aulast.$(OBJEXT) aulast-llist.$(OBJEXT)
  aulast_OBJECTS = $(am_aulast_OBJECTS)
  aulast_LDADD = $(LDADD)
@@ -22,7 +23,7 @@ diff -ru audit-2.1.3/tools/aulast/Makefile.in audit-2.1.3.pat/tools/aulast/Makef
  DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)
  depcomp =
  am__depfiles_maybe =
-@@ -153,7 +154,7 @@
+@@ -132,7 +133,7 @@ LDFLAGS = @LDFLAGS@
  LIBOBJS = @LIBOBJS@
  LIBPRELUDE_CFLAGS = @LIBPRELUDE_CFLAGS@
  LIBPRELUDE_LDFLAGS = @LIBPRELUDE_LDFLAGS@
@@ -31,30 +32,31 @@ diff -ru audit-2.1.3/tools/aulast/Makefile.in audit-2.1.3.pat/tools/aulast/Makef
  LIBTOOL = @LIBTOOL@
  LIBTOOL_DEPS = @LIBTOOL_DEPS@
  LIBWRAP_LIBS = @LIBWRAP_LIBS@
-@@ -252,6 +253,7 @@
+@@ -226,6 +227,7 @@ CONFIG_CLEAN_FILES = *.loT *.rej *.orig
  AUTOMAKE_OPTIONS = no-dependencies
  EXTRA_DIST = $(man_MANS)
  INCLUDES = -I${top_srcdir} -I${top_srcdir}/lib -I${top_srcdir}/auparse
 +LDADD = ${top_builddir}/auparse/libauparse.la
- AM_CFLAGS = -D_GNU_SOURCE
  noinst_HEADERS = aulast-llist.h
  man_MANS = aulast.8
-diff -ru audit-2.1.3/tools/aulastlog/Makefile.am audit-2.1.3.pat/tools/aulastlog/Makefile.am
---- audit-2.1.3/tools/aulastlog/Makefile.am	2011-08-16 03:31:03.000000000 +1000
-+++ audit-2.1.3.pat/tools/aulastlog/Makefile.am	2012-01-24 17:00:10.977023523 +1100
-@@ -24,7 +24,7 @@
+ aulast_SOURCES = aulast.c aulast-llist.c
+--- a/tools/aulastlog/Makefile.am
++++ b/tools/aulastlog/Makefile.am
+@@ -24,10 +24,9 @@ CONFIG_CLEAN_FILES = *.loT *.rej *.orig
  AUTOMAKE_OPTIONS = no-dependencies
  EXTRA_DIST = $(man_MANS)
  INCLUDES = -I${top_srcdir} -I${top_srcdir}/auparse
 -LIBS = -L${top_builddir}/auparse -lauparse
 +LDADD = ${top_builddir}/auparse/libauparse.la
- AM_CFLAGS = -D_GNU_SOURCE
  bin_PROGRAMS = aulastlog
  noinst_HEADERS = aulastlog-llist.h
-diff -ru audit-2.1.3/tools/aulastlog/Makefile.in audit-2.1.3.pat/tools/aulastlog/Makefile.in
---- audit-2.1.3/tools/aulastlog/Makefile.in	2011-08-16 03:31:12.000000000 +1000
-+++ audit-2.1.3.pat/tools/aulastlog/Makefile.in	2012-01-24 17:01:17.862428355 +1100
-@@ -75,6 +75,7 @@
+ man_MANS = aulastlog.8
+ 
+ aulastlog_SOURCES = aulastlog.c aulastlog-llist.c
+-
+--- a/tools/aulastlog/Makefile.in
++++ b/tools/aulastlog/Makefile.in
+@@ -73,6 +73,7 @@ PROGRAMS = $(bin_PROGRAMS)
  am_aulastlog_OBJECTS = aulastlog.$(OBJEXT) aulastlog-llist.$(OBJEXT)
  aulastlog_OBJECTS = $(am_aulastlog_OBJECTS)
  aulastlog_LDADD = $(LDADD)
@@ -62,7 +64,7 @@ diff -ru audit-2.1.3/tools/aulastlog/Makefile.in audit-2.1.3.pat/tools/aulastlog
  DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)
  depcomp =
  am__depfiles_maybe =
-@@ -153,7 +154,7 @@
+@@ -132,7 +133,7 @@ LDFLAGS = @LDFLAGS@
  LIBOBJS = @LIBOBJS@
  LIBPRELUDE_CFLAGS = @LIBPRELUDE_CFLAGS@
  LIBPRELUDE_LDFLAGS = @LIBPRELUDE_LDFLAGS@
@@ -71,18 +73,17 @@ diff -ru audit-2.1.3/tools/aulastlog/Makefile.in audit-2.1.3.pat/tools/aulastlog
  LIBTOOL = @LIBTOOL@
  LIBTOOL_DEPS = @LIBTOOL_DEPS@
  LIBWRAP_LIBS = @LIBWRAP_LIBS@
-@@ -252,6 +253,7 @@
+@@ -226,6 +227,7 @@ CONFIG_CLEAN_FILES = *.loT *.rej *.orig
  AUTOMAKE_OPTIONS = no-dependencies
  EXTRA_DIST = $(man_MANS)
  INCLUDES = -I${top_srcdir} -I${top_srcdir}/auparse
 +LDADD = ${top_builddir}/auparse/libauparse.la
- AM_CFLAGS = -D_GNU_SOURCE
  noinst_HEADERS = aulastlog-llist.h
  man_MANS = aulastlog.8
-diff -ru audit-2.1.3/tools/ausyscall/Makefile.am audit-2.1.3.pat/tools/ausyscall/Makefile.am
---- audit-2.1.3/tools/ausyscall/Makefile.am	2011-08-16 03:31:02.000000000 +1000
-+++ audit-2.1.3.pat/tools/ausyscall/Makefile.am	2012-01-24 17:02:00.104789215 +1100
-@@ -24,7 +24,7 @@
+ aulastlog_SOURCES = aulastlog.c aulastlog-llist.c
+--- a/tools/ausyscall/Makefile.am
++++ b/tools/ausyscall/Makefile.am
+@@ -24,7 +24,7 @@ CONFIG_CLEAN_FILES = *.loT *.rej *.orig
  AUTOMAKE_OPTIONS = no-dependencies
  EXTRA_DIST = $(man_MANS)
  INCLUDES = -I${top_srcdir} -I${top_srcdir}/lib
@@ -91,10 +92,9 @@ diff -ru audit-2.1.3/tools/ausyscall/Makefile.am audit-2.1.3.pat/tools/ausyscall
  bin_PROGRAMS = ausyscall
  man_MANS = ausyscall.8
  
-diff -ru audit-2.1.3/tools/ausyscall/Makefile.in audit-2.1.3.pat/tools/ausyscall/Makefile.in
---- audit-2.1.3/tools/ausyscall/Makefile.in	2011-08-16 03:31:12.000000000 +1000
-+++ audit-2.1.3.pat/tools/ausyscall/Makefile.in	2012-01-24 17:03:07.386178275 +1100
-@@ -73,6 +73,7 @@
+--- a/tools/ausyscall/Makefile.in
++++ b/tools/ausyscall/Makefile.in
+@@ -71,6 +71,7 @@ PROGRAMS = $(bin_PROGRAMS)
  am_ausyscall_OBJECTS = ausyscall-ausyscall.$(OBJEXT)
  ausyscall_OBJECTS = $(am_ausyscall_OBJECTS)
  ausyscall_LDADD = $(LDADD)
@@ -102,7 +102,7 @@ diff -ru audit-2.1.3/tools/ausyscall/Makefile.in audit-2.1.3.pat/tools/ausyscall
  ausyscall_LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) \
  	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(ausyscall_CFLAGS) \
  	$(CFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -o $@
-@@ -153,7 +154,7 @@
+@@ -132,7 +133,7 @@ LDFLAGS = @LDFLAGS@
  LIBOBJS = @LIBOBJS@
  LIBPRELUDE_CFLAGS = @LIBPRELUDE_CFLAGS@
  LIBPRELUDE_LDFLAGS = @LIBPRELUDE_LDFLAGS@
@@ -111,7 +111,7 @@ diff -ru audit-2.1.3/tools/ausyscall/Makefile.in audit-2.1.3.pat/tools/ausyscall
  LIBTOOL = @LIBTOOL@
  LIBTOOL_DEPS = @LIBTOOL_DEPS@
  LIBWRAP_LIBS = @LIBWRAP_LIBS@
-@@ -252,6 +253,7 @@
+@@ -226,6 +227,7 @@ CONFIG_CLEAN_FILES = *.loT *.rej *.orig
  AUTOMAKE_OPTIONS = no-dependencies
  EXTRA_DIST = $(man_MANS)
  INCLUDES = -I${top_srcdir} -I${top_srcdir}/lib

@@ -142,7 +142,7 @@ static int adjust_reply(struct audit_reply *rep, int len)
 	rep->len      = rep->msg.nlh.nlmsg_len;
 	rep->nlh      = &rep->msg.nlh;
 	rep->status   = NULL;
-	rep->ruledata = NULL;
+	rep->rule     = NULL;
 	rep->login    = NULL;
 	rep->message  = NULL;
 	rep->error    = NULL;
@@ -169,6 +169,9 @@ static int adjust_reply(struct audit_reply *rep, int len)
 			break;
 		case AUDIT_GET:   
 			rep->status  = NLMSG_DATA(rep->nlh); 
+			break;
+		case AUDIT_LIST:  
+			rep->rule    = NLMSG_DATA(rep->nlh); 
 			break;
 		case AUDIT_LIST_RULES:  
 			rep->ruledata = NLMSG_DATA(rep->nlh); 

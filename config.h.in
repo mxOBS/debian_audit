@@ -24,9 +24,6 @@
 /* Define to 1 if you have the `kqueue' function. */
 #undef HAVE_KQUEUE
 
-/* libcap-ng support */
-#undef HAVE_LIBCAP_NG
-
 /* Define to 1 if you have the `m' library (-lm). */
 #undef HAVE_LIBM
 
@@ -96,10 +93,6 @@
 /* Define to 1 if you have the <unistd.h> header file. */
 #undef HAVE_UNISTD_H
 
-/* Define to the sub-directory in which libtool stores uninstalled libraries.
-   */
-#undef LT_OBJDIR
-
 /* Define to 1 if your C compiler doesn't accept -c and -o together. */
 #undef NO_MINUS_C_MINUS_O
 
@@ -117,9 +110,6 @@
 
 /* Define to the one symbol short name of this package. */
 #undef PACKAGE_TARNAME
-
-/* Define to the home page for this package. */
-#undef PACKAGE_URL
 
 /* Define to the version of this package. */
 #undef PACKAGE_VERSION
@@ -147,9 +137,6 @@
 
 /* Define if you want to enable AppArmor events. */
 #undef WITH_APPARMOR
-
-/* Define if you want to enable Arm eabi processor support. */
-#undef WITH_ARMEB
 
 /* Define to empty if `const' does not conform to ANSI C. */
 #undef const

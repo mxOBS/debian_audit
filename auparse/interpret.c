@@ -1,6 +1,6 @@
 /*
 * interpret.c - Lookup values to something more readable
-* Copyright (c) 2007-09,2011 Red Hat Inc., Durham, North Carolina.
+* Copyright (c) 2007,08 Red Hat Inc., Durham, North Carolina.
 * All Rights Reserved. 
 *
 * This software may be freely redistributed and/or modified under the
@@ -45,7 +45,6 @@
 #include <linux/x25.h>
 #include <linux/if.h>   // FIXME: remove when ipx.h is fixed
 #include <linux/ipx.h>
-#include <linux/capability.h>
 #include "auparse-defs.h"
 #include "gen_tables.h"
 
@@ -74,8 +73,6 @@
 #include "socktabs.h"
 #include "seeks.h"
 #include "typetabs.h"
-#include "nfprototabs.h"
-#include "icmptypetabs.h"
 
 typedef enum { AVC_UNSET, AVC_DENIED, AVC_GRANTED } avc_t;
 typedef enum { S_UNSET=-1, S_FAILED, S_SUCCESS } success_t;
@@ -496,7 +493,7 @@ static const char *print_sockaddr(const char *val)
         const struct sockaddr *saddr;
         char name[NI_MAXHOST], serv[NI_MAXSERV];
         const char *host;
-        char *out = NULL;
+        char *out;
         const char *str;
 
         slen = strlen(val)/2;
@@ -678,41 +675,6 @@ static const char *print_capabilities(const char *val)
 		return strdup(s);
 	asprintf(&out, "unknown capability(%s)", val);
 	return out;
-}
-
-static const char *print_cap_bitmap(const char *val)
-{
-#define MASK(x) (1U << (x))
-	unsigned long long temp;
-	__u32 caps[2];
-	int i, found=0;
-	char *p, buf[600]; // 17 per cap * 33
-
-	errno = 0;
-	temp = strtoull(val, NULL, 16);
-	if (errno) {
-		char *out;
-                asprintf(&out, "conversion error(%s)", val);
-                return out;
-	}
-
-        caps[0] = temp & 0xFFFFFFFF;
-        caps[1] = (temp & 0xFFFFFFFF) >> 32;
-	p = buf;
-	for (i=0; i <= CAP_LAST_CAP; i++) {
-		if (MASK(i%32) & caps[i/32]) {
-			const char *s;
-			if (found)
-				p = stpcpy(p, ",");
-			s = cap_i2s(i);
-			if (s != NULL)
-				p = stpcpy(p, s);
-			found = 1;
-		}
-	}
-	if (found == 0)
-		return strdup("none");
-	return strdup(buf);
 }
 
 static const char *print_success(const char *val)
@@ -945,71 +907,6 @@ static const char *print_signals(const char *val)
 	return out;
 }
 
-static const char *print_nfproto(const char *val)
-{
-        int proto;
-	char *out;
-	const char *s;
-
-        errno = 0;
-        proto = strtoul(val, NULL, 10);
-        if (errno) {
-                asprintf(&out, "conversion error(%s)", val);
-                return out;
-        }
-
-	s = nfproto_i2s(proto);
-	if (s != NULL)
-		return strdup(s);
-	asprintf(&out, "unknown netfilter protocol (%s)", val);
-	return out;
-}
-
-static const char *print_icmptype(const char *val)
-{
-        int icmptype;
-	char *out;
-	const char *s;
-
-        errno = 0;
-        icmptype = strtoul(val, NULL, 10);
-        if (errno) {
-                asprintf(&out, "conversion error(%s)", val);
-                return out;
-        }
-
-	s = icmptype_i2s(icmptype);
-	if (s != NULL)
-		return strdup(s);
-	asprintf(&out, "unknown icmp type (%s)", val);
-	return out;
-}
-
-static const char *print_protocol(const char *val)
-{
-	int i;
-	char *out;
-
-	errno = 0;
-        i = strtoul(val, NULL, 10);
-	if (errno) 
-		asprintf(&out, "conversion error(%s)", val);
-	else {
-		struct protoent *p = getprotobynumber(i);
-		if (p)
-			out = strdup(p->p_name);
-		else
-			out = strdup("undefined protocol");
-	}
-	return out;
-}
-
-static const char *print_addr(const char *val)
-{
-	char *out = strdup(val);
-	return out;
-}
-
 static const char *print_list(const char *val)
 {
 	int i;
@@ -1154,14 +1051,6 @@ static const char *print_tty_data(const char *raw_data)
 	return buf.buf;
 }
 
-static const char *print_session(const char *val)
-{
-	if (strcmp(val, "4294967295") == 0)
-		return strdup("unset");
-	else
-		return strdup(val);
-}
-
 int lookup_type(const char *name)
 {
 	int i;
@@ -1181,14 +1070,12 @@ const char *interpret(const rnode *r)
 	const char *val = nvlist_get_cur_val(nv);
 
 	/* Do some fixups */
-	if (r->type == AUDIT_EXECVE && name[0] == 'a' && strcmp(name, "argc"))
+	if (r->type == AUDIT_EXECVE && name[0] == 'a')
 		type = AUPARSE_TYPE_ESCAPED;
 	else if (r->type == AUDIT_AVC && strcmp(name, "saddr") == 0)
 		type = -1;
 	else if (r->type == AUDIT_USER_TTY && strcmp(name, "msg") == 0)
 		type = AUPARSE_TYPE_ESCAPED;
-	else if (r->type == AUDIT_NETFILTER_PKT && strcmp(name, "saddr") == 0)
-		type = AUPARSE_TYPE_ADDR;
 	else if (strcmp(name, "acct") == 0) {
 		if (val[0] == '"')
 			type = AUPARSE_TYPE_ESCAPED;
@@ -1256,24 +1143,6 @@ const char *interpret(const rnode *r)
 			break;
 		case AUPARSE_TYPE_TTY_DATA:
 			out = print_tty_data(val);
-			break;
-		case AUPARSE_TYPE_SESSION:
-			out = print_session(val);
-			break;
-		case AUPARSE_TYPE_CAP_BITMAP:
-			out = print_cap_bitmap(val);
-			break;
-		case AUPARSE_TYPE_NFPROTO:
-			out = print_nfproto(val);
-			break; 
-		case AUPARSE_TYPE_ICMPTYPE:
-			out = print_icmptype(val);
-			break; 
-		case AUPARSE_TYPE_PROTOCOL:
-			out = print_protocol(val);
-			break; 
-		case AUPARSE_TYPE_ADDR:
-			out = print_addr(val);
 			break;
 		case AUPARSE_TYPE_UNCLASSIFIED:
 		default: {

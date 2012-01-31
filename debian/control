@@ -64,3 +64,16 @@ Description: Plugins for the audit event dispatcher
  interface to the audit system, audispd. These plugins can do things
  like relay events to remote machines or analyze events for suspicious
  behavior.
+
+Package: system-config-audit
+Section: admin
+Architecture: any
+Depends: python-audit,
+ python-glade2,
+ menu,
+ chkconfig,
+ ${shlibs:Depends}, ${python:Depends}, ${misc:Depends}
+Description: Graphical utility for editing audit configuration
+ The system-config-audit package provides a graphical users interface for
+ configuring the Linux audit subsystem, which is used to monitor systems for
+ security related events.

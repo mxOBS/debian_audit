@@ -33,6 +33,3 @@ _S(MACH_S390,    "s390"   )
 #ifdef WITH_ALPHA
 _S(MACH_ALPHA,   "alpha"  )
 #endif
-#ifdef WITH_ARMEB
-_S(MACH_ARMEB,   "armeb"  )
-#endif

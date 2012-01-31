@@ -1,6 +1,6 @@
 /*
  * aureport.c - main file for aureport utility 
- * Copyright 2005-08, 2010,11 Red Hat Inc., Durham, North Carolina.
+ * Copyright 2005-08 Red Hat Inc., Durham, North Carolina.
  * All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -159,7 +159,6 @@ static int process_logs(struct daemon_conf *config)
 	do {
 		if (access(filename, R_OK) != 0)
 			break;
-// FIXME: do a time check and put them on linked list for later
 		num++;
 		snprintf(filename, len, "%s.%d", config->log_file, num);
 	} while (1);
@@ -222,7 +221,6 @@ static int process_log_fd(const char *filename)
 				found = 1;
 		}
 		list_clear(entries);
-		free(entries);
 	} while (ret == 0);
 	fclose(log_fd);
 	// This is the per file action items
@@ -257,7 +255,7 @@ static int process_stdin(void)
 
 static int process_file(char *filename)
 {
-	log_fd = fopen(filename, "rm");
+	log_fd = fopen(filename, "r");
 	if (log_fd == NULL) {
 		fprintf(stderr, "Error opening %s (%s)\n", filename, 
 			strerror(errno));
@@ -297,7 +295,7 @@ static int get_record(llist **l)
 			}
 		} else {
 			free(buff);
-			if (feof_unlocked(log_fd)) {
+			if (feof(log_fd)) {
 				terminate_all_events(&lo);
 				*l = get_ready_event(&lo);
 				if (*l)

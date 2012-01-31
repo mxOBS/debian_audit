@@ -1,6 +1,6 @@
 /*
  * aulastlog.c - A lastlog program based on audit logs 
- * Copyright (c) 2008-2009,2011 Red Hat Inc., Durham, North Carolina.
+ * Copyright (c) 2008-2009 Red Hat Inc., Durham, North Carolina.
  * All Rights Reserved.
  *
  * This software may be freely redistributed and/or modified under the
@@ -126,8 +126,7 @@ int main(int argc, char *argv[])
 					list_update_term(&l, str);
 			}
 		}
-		if (auparse_next_event(au) < 0)
-			break;
+		auparse_next_event(au);
 	}
         auparse_destroy(au);
 

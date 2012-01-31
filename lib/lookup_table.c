@@ -37,9 +37,6 @@
 #ifdef WITH_ALPHA
 #include "alpha_tables.h"
 #endif
-#ifdef WITH_ARMEB
-#include "armeb_tables.h"
-#endif
 #include "i386_tables.h"
 #include "ia64_tables.h"
 #include "ppc_tables.h"
@@ -54,10 +51,6 @@
 #include "machinetabs.h"
 #include "msg_typetabs.h"
 #include "optabs.h"
-
-#ifndef EM_ARM
-#define EM_ARM  40
-#endif
 
 struct int_transtab {
     int        key;
@@ -74,9 +67,6 @@ static const struct int_transtab elftab[] = {
     { MACH_S390,    AUDIT_ARCH_S390   },
 #ifdef WITH_ALPHA
     { MACH_ALPHA,   AUDIT_ARCH_ALPHA  }
-#endif
-#ifdef WITH_ARMEB
-    { MACH_ARMEB,   AUDIT_ARCH_ARMEB  }
 #endif
 };
 #define AUDIT_ELF_NAMES (sizeof(elftab)/sizeof(elftab[0]))
@@ -126,11 +116,6 @@ int audit_name_to_syscall(const char *sc, int machine)
 			found = alpha_syscall_s2i(sc, &res);
 			break;
 #endif
-#ifdef WITH_ARMEB
-	        case MACH_ARMEB:
-			found = armeb_syscall_s2i(sc, &res);
-			break;
-#endif
 		default:
 			return -1;
 	}
@@ -160,10 +145,6 @@ const char *audit_syscall_to_name(int sc, int machine)
 #ifdef WITH_ALPHA
 	        case MACH_ALPHA:
 			return alpha_syscall_i2s(sc);
-#endif
-#ifdef WITH_ARMEB
-	        case MACH_ARMEB:
-			return armeb_syscall_i2s(sc);
 #endif
 	}
 	return NULL;
@@ -272,6 +253,11 @@ hidden_def(audit_elf_to_machine)
 
 const char *audit_operator_to_symbol(int op)
 {
+	/* Convert legacy ops */
+	if (op == 0)
+		op = AUDIT_EQUAL;
+	else if (op & AUDIT_NEGATE)
+		op = AUDIT_NOT_EQUAL;
 	return op_i2s(op);
 }
 hidden_def(audit_operator_to_symbol)

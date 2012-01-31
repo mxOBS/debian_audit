@@ -1,5 +1,5 @@
 /* audit_logging.c -- 
- * Copyright 2005-2008,2010,2011 Red Hat Inc., Durham, North Carolina.
+ * Copyright 2005-2008 Red Hat Inc., Durham, North Carolina.
  * All Rights Reserved.
  *
  * This library is free software; you can redistribute it and/or
@@ -85,9 +85,6 @@ int audit_value_needs_encoding(const char *str, unsigned int size)
 {
 	int i;
 
-	if (str == NULL)
-		return 0;
-
 	for (i=0; i<size; i++) {
 		// we don't test for > 0x7f because str[] is signed.
 		if (str[i] == '"' || str[i] < 0x21 || str[i] == 0x7F)
@@ -105,14 +102,6 @@ char *audit_encode_value(char *final, const char *buf, unsigned int size)
 	char *ptr = final;
 	const char *hex = "0123456789ABCDEF";
 
-	if (final == NULL)
-		return NULL;
-
-	if (buf == NULL) {
-		*final = 0;
-		return final;
-	}
-
 	for (i=0; i<size; i++) {
 		*ptr++ = hex[(buf[i] & 0xF0)>>4]; /* Upper nibble */
 		*ptr++ = hex[buf[i] & 0x0F];      /* Lower nibble */
@@ -126,19 +115,16 @@ char *audit_encode_nv_string(const char *name, const char *value,
 {
 	char *str;
 
-	if (vlen == 0 && value)
+	if (vlen == 0)
 		vlen = strlen(value);
 
-	if (value && audit_value_needs_encoding(value, vlen)) {
+	if (audit_value_needs_encoding(value, vlen)) {
 		char *tmp = malloc(2*vlen + 1);
-		if (tmp) {
-			audit_encode_value(tmp, value, vlen);
-			asprintf(&str, "%s=%s", name, tmp);
-			free(tmp);
-		} else
-			str = NULL;
+		audit_encode_value(tmp, value, vlen);
+		asprintf(&str, "%s=%s", name, tmp);
+		free(tmp);
 	} else
-		asprintf(&str, "%s=\"%s\"", name, value ? value : "?");
+		asprintf(&str, "%s=\"%s\"", name, value);
 	return str;
 }
 
@@ -148,14 +134,19 @@ char *audit_encode_nv_string(const char *name, const char *value,
 static char *_get_exename(char *exename, int size)
 {
 	int res;
-	char tmp[PATH_MAX+1];
+	char tmp[PATH_MAX];
 
 	/* get the name of the current executable */
-	if ((res = readlink("/proc/self/exe", tmp, PATH_MAX)) == -1) {
+	if ((res = readlink("/proc/self/exe", tmp, PATH_MAX - 1)) == -1) {
 		strcpy(exename, "\"?\"");
 		audit_msg(LOG_ERR, "get_exename: cannot determine executable");
 	} else {
+		int len;
+
 		tmp[res] = '\0';
+		len = strlen(tmp);
+		if (len < res)
+			res = len;
 		if (audit_value_needs_encoding(tmp, res))
 			return audit_encode_value(exename, tmp, res);
 		snprintf(exename, size, "\"%s\"", tmp);
@@ -269,7 +260,7 @@ int audit_log_user_message(int audit_fd, int type, const char *message,
 		tty = NULL;
 
 	snprintf(buf, sizeof(buf),
-		"%s: exe=%s hostname=%s addr=%s terminal=%s res=%s",
+		"%s: exe=%s (hostname=%s, addr=%s, terminal=%s res=%s)",
 		message, exename,
 		hostname ? hostname : "?",
 		addrbuf,
@@ -338,7 +329,7 @@ int audit_log_user_comm_message(int audit_fd, int type, const char *message,
 	_get_commname(comm, commname, sizeof(commname));
 
 	snprintf(buf, sizeof(buf),
-		"%s: comm=%s exe=%s hostname=%s addr=%s terminal=%s res=%s",
+		"%s: comm=%s exe=%s (hostname=%s, addr=%s, terminal=%s res=%s)",
 		message, commname, exename,
 		hostname ? hostname : "?",
 		addrbuf,
@@ -402,13 +393,10 @@ int audit_log_acct_message(int audit_fd, int type, const char *pgname,
 	else
 		strncat(addrbuf, addr, sizeof(addrbuf)-1);
 
-        if (pgname == NULL)
-                _get_exename(exename, sizeof(exename));
-        else if (pgname[0] != '"')
-                snprintf(exename, sizeof(exename), "\"%s\"", pgname);
-        else
-                snprintf(exename, sizeof(exename), "%s", pgname);
-
+	if (pgname == NULL) {
+		_get_exename(exename, sizeof(exename));
+		pgname = exename;
+	}
 	if (tty == NULL) 
 		tty = _get_tty(ttyname, TTY_PATH);
 	else if (*tty == 0)
@@ -426,13 +414,13 @@ int audit_log_acct_message(int audit_fd, int type, const char *pgname,
 		if (audit_value_needs_encoding(name, len)) {
 			audit_encode_value(user, name, len);
 			format = 
-	     "op=%s acct=%s exe=%s hostname=%s addr=%s terminal=%s res=%s";
+	     "op=%s acct=%s exe=%s (hostname=%s, addr=%s, terminal=%s res=%s)";
 		} else
 			format = 
-	 "op=%s acct=\"%s\" exe=%s hostname=%s addr=%s terminal=%s res=%s";
+	 "op=%s acct=\"%s\" exe=%s (hostname=%s, addr=%s, terminal=%s res=%s)";
 
 		snprintf(buf, sizeof(buf), format,
-			op, user, exename,
+			op, user, pgname,
 			host ? host : "?",
 			addrbuf,
 			tty ? tty : "?",
@@ -440,8 +428,8 @@ int audit_log_acct_message(int audit_fd, int type, const char *pgname,
 			);
 	} else
 		snprintf(buf, sizeof(buf),
-		"op=%s id=%u exe=%s hostname=%s addr=%s terminal=%s res=%s",
-			op, id, exename,
+		"op=%s id=%u exe=%s (hostname=%s, addr=%s, terminal=%s res=%s)",
+			op, id, pgname,
 			host ? host : "?",
 			addrbuf,
 			tty ? tty : "?",
@@ -497,7 +485,7 @@ int audit_log_user_avc_message(int audit_fd, int type, const char *message,
 		tty = NULL;
 
 	snprintf(buf, sizeof(buf),
-	    "%s: exe=%s sauid=%d hostname=%s addr=%s terminal=%s",
+	    "%s: exe=%s (sauid=%d, hostname=%s, addr=%s, terminal=%s)",
 		message, exename, uid,
 		hostname ? hostname : "?",
 		addrbuf,
@@ -593,9 +581,9 @@ int audit_log_semanage_message(int audit_fd, int type, const char *pgname,
 		user[len] = 0;
 		if (audit_value_needs_encoding(name, len)) {
 			audit_encode_value(user, name, len);
-			format = "op=%s acct=%s old-seuser=%s old-role=%s old-range=%s new-seuser=%s new-role=%s new-range=%s exe=%s hostname=%s addr=%s terminal=%s res=%s";
+			format = "op=%s acct=%s old-seuser=%s old-role=%s old-range=%s new-seuser=%s new-role=%s new-range=%s exe=%s (hostname=%s, addr=%s, terminal=%s res=%s)";
 		} else
-			format = "op=%s acct=\"%s\" old-seuser=%s old-role=%s old-range=%s new-seuser=%s new-role=%s new-range=%s exe=%s hostname=%s addr=%s terminal=%s res=%s";
+			format = "op=%s acct=\"%s\" old-seuser=%s old-role=%s old-range=%s new-seuser=%s new-role=%s new-range=%s exe=%s (hostname=%s, addr=%s, terminal=%s res=%s)";
 		snprintf(buf, sizeof(buf), format, op, user, 
 			old_seuser && strlen(old_seuser) ? old_seuser : "?",
 			old_role && strlen(old_role) ? old_role : "?",
@@ -611,7 +599,7 @@ int audit_log_semanage_message(int audit_fd, int type, const char *pgname,
 			);
 	} else
 		snprintf(buf, sizeof(buf),
-		"op=%s id=%u old-seuser=%s old-role=%s old-range=%s new-seuser=%s new-role=%s new-range=%s exe=%s hostname=%s addr=%s terminal=%s res=%s",
+		"op=%s id=%u old-seuser=%s old-role=%s old-range=%s new-seuser=%s new-role=%s new-range=%s exe=%s (hostname=%s, addr=%s, terminal=%s res=%s)",
 			op, id,
 			old_seuser && strlen(old_seuser) ? old_seuser : "?",
 			old_role && strlen(old_role) ? old_role : "?",
@@ -721,7 +709,7 @@ int audit_log_user_command(int audit_fd, int type, const char *command,
 	else
 		p = stpcpy(p, "cmd=\"%s\" ");
 
-	strcpy(p, "terminal=%s res=%s");
+	strcpy(p, "(terminal=%s res=%s)");
 
 	// now use the format string to make the event
 	snprintf(buf, sizeof(buf), format,

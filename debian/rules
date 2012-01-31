@@ -68,6 +68,7 @@ override_dh_auto_install: debian/install-python-stamp $(PYVERS:%=debian/install-
 	$(RM) debian/tmp/usr/lib/python*/*-packages/_au*.*a
 	$(RM) debian/tmp/usr/lib/python*/*-packages/auparse.*a
 	$(RM) debian/tmp/usr/lib/python*/*-packages/au*.py[co]
+	$(RM) debian/tmp/usr/share/system-config-audit/*.py[co]
 
 override_dh_install:
 	dh_install --sourcedir=debian/tmp --list-missing
@@ -97,6 +98,7 @@ override_dh_makeshlibs:
 	chrpath -d debian/libaudit0/lib/libauparse.so.0.0.0
 	chrpath -d debian/python-audit/usr/lib/python*/*-packages/_audit.so
 	chrpath -d debian/python-audit/usr/lib/python*/*-packages/auparse.so
+	chrpath -d debian/system-config-audit/lib/system-config-audit-server
 	dh_makeshlibs
 
 get-orig-source:

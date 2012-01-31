@@ -1,5 +1,5 @@
 # Makefile.am -- 
-# Copyright 2004-2009 Red Hat Inc., Durham, North Carolina.
+# Copyright 2004-2008 Red Hat Inc., Durham, North Carolina.
 # All Rights Reserved.
 #
 # This library is free software; you can redistribute it and/or
@@ -24,7 +24,6 @@ SUBDIRS = test
 CLEANFILES = $(BUILT_SOURCES)
 CONFIG_CLEAN_FILES = *.loT *.rej *.orig
 EXTRA_DIST = syscall-update.txt
-VERSION_INFO = 1:0
 AM_CFLAGS = -fPIC -DPIC -D_GNU_SOURCE
 INCLUDES = -I. -I${top_srcdir} -I${top_srcdir}/auparse
 lib_LTLIBRARIES = libaudit.la
@@ -34,7 +33,7 @@ libaudit_la_SOURCES = libaudit.c message.c netlink.c \
 	private.h errormsg.h
 libaudit_la_LIBADD =
 libaudit_la_DEPENDENCIES = $(libaudit_la_SOURCES) ../config.h
-libaudit_la_LDFLAGS = -Wl,-z,relro -version-info $(VERSION_INFO)
+libaudit_la_LDFLAGS = -Wl,-z,relro
 nodist_libaudit_la_SOURCES = $(BUILT_SOURCES)
 
 BUILT_SOURCES = actiontabs.h errtabs.h fieldtabs.h flagtabs.h \
@@ -44,9 +43,6 @@ BUILT_SOURCES = actiontabs.h errtabs.h fieldtabs.h flagtabs.h \
 if USE_ALPHA
 BUILT_SOURCES += alpha_tables.h
 endif
-if USE_ARMEB
-BUILT_SOURCES += armeb_tables.h
-endif
 noinst_PROGRAMS = gen_actiontabs_h gen_errtabs_h gen_fieldtabs_h \
 	gen_flagtabs_h gen_ftypetabs_h gen_i386_tables_h \
 	gen_ia64_tables_h gen_machinetabs_h gen_msg_typetabs_h \
@@ -54,9 +50,6 @@ noinst_PROGRAMS = gen_actiontabs_h gen_errtabs_h gen_fieldtabs_h \
 	gen_s390x_tables_h gen_x86_64_tables_h
 if USE_ALPHA
 noinst_PROGRAMS += gen_alpha_tables_h
-endif
-if USE_ARMEB
-noinst_PROGRAMS += gen_armeb_tables_h
 endif
 gen_actiontabs_h_SOURCES = gen_tables.c gen_tables.h actiontab.h
 gen_actiontabs_h_CFLAGS = $(AM_CFLAGS) '-DTABLE_H="actiontab.h"'
@@ -68,13 +61,6 @@ gen_alpha_tables_h_SOURCES = gen_tables.c gen_tables.h alpha_table.h
 gen_alpha_tables_h_CFLAGS = $(AM_CFLAGS) '-DTABLE_H="alpha_table.h"'
 alpha_tables.h: gen_alpha_tables_h Makefile
 	./gen_alpha_tables_h --lowercase --i2s --s2i alpha_syscall > $@
-endif
-
-if USE_ARMEB
-gen_armeb_tables_h_SOURCES = gen_tables.c gen_tables.h armeb_table.h
-gen_armeb_tables_h_CFLAGS = $(AM_CFLAGS) '-DTABLE_H="armeb_table.h"'
-armeb_tables.h: gen_armeb_tables_h Makefile
-	./gen_armeb_tables_h --lowercase --i2s --s2i armeb_syscall > $@
 endif
 
 gen_errtabs_h_SOURCES = gen_tables.c gen_tables.h errtab.h

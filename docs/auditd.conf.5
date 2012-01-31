@@ -70,7 +70,7 @@ This keyword specifies the number of log files to keep if rotate is given
 as the
 .I max_log_file_action.
 If the number is < 2, logs are not rotated. This number must be 99 or less.
-The default is 0 - which means no rotation. As you increase the number of log files being rotated, you may need to adjust the kernel backlog setting upwards since it takes more time to rotate the files. This is typically done in /etc/audit/audit.rules. If log rotation is configured to occur, the daemon will check for excess logs and remove them in effort to keep disk space available. The excess log check is only done on startup and when a reconfigure results in a space check.
+The default is 0 - which means no rotation. As you increase the number of log files being rotated, you may need to adjust the kernel backlog setting upwards since it takes more time to rotate the files. This is typically done in /etc/audit/audit.rules.
 .TP
 .I disp_qos
 This option controls whether you want blocking/lossless or non-blocking/lossy communication between the audit daemon and the dispatcher. There is a 128k buffer between the audit daemon and dispatcher. This is good enogh for most uses. If lossy is chosen, incoming events going to the dispatcher are discarded when this queue is full. (Events are still written to disk if log_format is not nolog.) Otherwise the auditd daemon will wait for the queue to have an empty spot before logging to disk. The risk is that while the daemon is waiting for network IO, an event is not being recorded to disk. Valid values are: lossy and lossless. Lossy is the default value.
@@ -89,7 +89,7 @@ is the name returned by the gethostname syscall. The
 means that it takes the hostname and resolves it with dns for a fully qualified
 domain name of that machine.
 .IR Numeric
-is similar to fqd except it resolves the IP address of the machine. In order to use this option, you might want to test that 'hostname -i' or 'domainname -i' returns a numeric address. Also, this option is not recommended if dhcp is used because you could have different addresses over time for the same machine.
+is similar to fqd except it resolves the IP address of the machine.
 .IR User
 is an admin defined string from the name option. The default value is
 .IR none ".
@@ -186,7 +186,7 @@ detected that the partition to which log files are written has become full. Vali
 .IR ignore ", " syslog ", " exec ", " suspend ", " single ", and " halt .
 If set to
 .IR ignore ,
-the audit daemon will issue a syslog message but no other action is taken.
+the audit daemon does nothing.
 .I Syslog
 means that it will issue a warning to syslog.
 .I exec
@@ -204,7 +204,7 @@ detected when writing audit events to disk or rotating logs. Valid values are
 .IR ignore ", " syslog ", " exec ", " suspend ", " single ", and " halt .
 If set to
 .IR ignore ,
-the audit daemon will issue a syslog message but no other action is taken.
+the audit daemon does nothing.
 .I Syslog
 means that it will issue a warning to syslog.
 .I exec
@@ -220,7 +220,7 @@ option will cause the audit daemon to shutdown the computer system.
 This is a numeric value in the range 1..65535 which, if specified,
 causes auditd to listen on the corresponding TCP port for audit
 records from remote systems. The audit daemon may be linked with
-tcp_wrappers. You may want to control access with an entry in the
+tcp_wrappers. You may want to controll access with an entry in the
 hosts.allow and deny files.
 .TP
 .I tcp_listen_queue
