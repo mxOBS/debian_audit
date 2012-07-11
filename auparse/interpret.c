@@ -1,6 +1,6 @@
 /*
 * interpret.c - Lookup values to something more readable
-* Copyright (c) 2007,08 Red Hat Inc., Durham, North Carolina.
+* Copyright (c) 2007-09,2011-12 Red Hat Inc., Durham, North Carolina.
 * All Rights Reserved. 
 *
 * This software may be freely redistributed and/or modified under the
@@ -45,6 +45,8 @@
 #include <linux/x25.h>
 #include <linux/if.h>   // FIXME: remove when ipx.h is fixed
 #include <linux/ipx.h>
+#include <linux/capability.h>
+#include <sys/personality.h>
 #include "auparse-defs.h"
 #include "gen_tables.h"
 
@@ -53,6 +55,7 @@
 #define SEMOP            1
 #define SEMGET           2
 #define SEMCTL           3
+#define SEMTIMEDOP	 4
 #define MSGSND          11
 #define MSGRCV          12
 #define MSGGET          13
@@ -69,15 +72,26 @@
 #include "fcntl-cmdtabs.h"
 #include "flagtabs.h"
 #include "ipctabs.h"
+#include "mmaptabs.h"
+#include "mounttabs.h"
 #include "open-flagtabs.h"
+#include "persontabs.h"
+#include "prottabs.h"
+#include "ptracetabs.h"
+#include "recvtabs.h"
+#include "rlimittabs.h"
 #include "socktabs.h"
-#include "seeks.h"
+#include "socktypetabs.h"
+#include "signaltabs.h"
+#include "clocktabs.h"
 #include "typetabs.h"
+#include "nfprototabs.h"
+#include "icmptypetabs.h"
 
 typedef enum { AVC_UNSET, AVC_DENIED, AVC_GRANTED } avc_t;
 typedef enum { S_UNSET=-1, S_FAILED, S_SUCCESS } success_t;
 
-static const char *print_signals(const char *val);
+static const char *print_signals(const char *val, unsigned int base);
 
 
 /*
@@ -268,13 +282,13 @@ void aulookup_destroy_gid_list(void)
 	gid_list_created = 0;
 }
 
-static const char *print_uid(const char *val)
+static const char *print_uid(const char *val, unsigned int base)
 {
         int uid;
         char name[64];
 
         errno = 0;
-        uid = strtoul(val, NULL, 10);
+        uid = strtoul(val, NULL, base);
         if (errno) {
 		char *out;
                 asprintf(&out, "conversion error(%s)", val);
@@ -284,13 +298,13 @@ static const char *print_uid(const char *val)
         return strdup(aulookup_uid(uid, name, sizeof(name)));
 }
 
-static const char *print_gid(const char *val)
+static const char *print_gid(const char *val, unsigned int base)
 {
         int gid;
         char name[64];
 
         errno = 0;
-        gid = strtoul(val, NULL, 10);
+        gid = strtoul(val, NULL, base);
         if (errno) {
 		char *out;
                 asprintf(&out, "conversion error(%s)", val);
@@ -449,14 +463,14 @@ static const char *print_perm(const char *val)
 	return strdup(buf);
 }
 
-static const char *print_mode(const char *val)
+static const char *print_mode(const char *val, unsigned int base)
 {
         unsigned int ival;
 	char *out, buf[48];
 	const char *name;
 
         errno = 0;
-        ival = strtoul(val, NULL, 8);
+        ival = strtoul(val, NULL, base);
         if (errno) {
                 asprintf(&out, "conversion error(%s)", val);
                 return out;
@@ -487,17 +501,110 @@ static const char *print_mode(const char *val)
 	return out;
 }
 
+static const char *print_mode_short(const char *val)
+{
+        unsigned int ival;
+	char *out, buf[48];
+
+        errno = 0;
+        ival = strtoul(val, NULL, 16);
+        if (errno) {
+                asprintf(&out, "conversion error(%s)", val);
+                return out;
+        }
+
+        // check on special bits
+        buf[0] = 0;
+        if (S_ISUID & ival)
+                strcat(buf, ",suid");
+        if (S_ISGID & ival)
+                strcat(buf, ",sgid");
+        if (S_ISVTX & ival)
+                strcat(buf, ",sticky");
+
+	// and the read, write, execute flags in octal
+	if (buf[0] == 0)
+	        asprintf(&out, "0%03o", (S_IRWXU|S_IRWXG|S_IRWXO) & ival);
+	else
+	        asprintf(&out, "%s,%03o", buf, (S_IRWXU|S_IRWXG|S_IRWXO)&ival);
+	return out;
+}
+
+static const char *print_socket_domain(const char *val)
+{
+	int i;
+	char *out;
+        const char *str;
+
+	errno = 0;
+        i = strtoul(val, NULL, 16);
+	if (errno) {
+		asprintf(&out, "conversion error(%s)", val);
+		return out;
+	}
+        str = fam_i2s(i);
+        if (str == NULL) {
+                asprintf(&out, "unknown family(%s)", val);
+		return out;
+	} else
+		return strdup(str);
+}
+
+static const char *print_socket_type(const char *val)
+{
+	unsigned int type;
+	char *out;
+        const char *str;
+
+	errno = 0;
+        type = 0xFF & strtoul(val, NULL, 16);
+	if (errno) {
+		asprintf(&out, "conversion error(%s)", val);
+		return out;
+	}
+        str = sock_type_i2s(type);
+        if (str == NULL) {
+                asprintf(&out, "unknown type(%s)", val);
+		return out;
+	} else
+		return strdup(str);
+}
+
+static const char *print_socket_proto(const char *val)
+{
+	unsigned int proto;
+	char *out;
+        struct protoent *p;
+
+	errno = 0;
+        proto = strtoul(val, NULL, 16);
+	if (errno) {
+		asprintf(&out, "conversion error(%s)", val);
+		return out;
+	}
+        p = getprotobynumber(proto);
+        if (p == NULL) {
+                asprintf(&out, "unknown proto(%s)", val);
+		return out;
+	} else
+		return strdup(p->p_name);
+}
+
 static const char *print_sockaddr(const char *val)
 {
         int slen;
         const struct sockaddr *saddr;
         char name[NI_MAXHOST], serv[NI_MAXSERV];
         const char *host;
-        char *out;
+        char *out = NULL;
         const char *str;
 
         slen = strlen(val)/2;
         host = au_unescape((char *)val);
+	if (host == NULL) {
+                asprintf(&out, "malformed host(%s)", val);
+		return out;
+	}
         saddr = (struct sockaddr *)host;
 
 
@@ -677,6 +784,41 @@ static const char *print_capabilities(const char *val)
 	return out;
 }
 
+static const char *print_cap_bitmap(const char *val)
+{
+#define MASK(x) (1U << (x))
+	unsigned long long temp;
+	__u32 caps[2];
+	int i, found=0;
+	char *p, buf[600]; // 17 per cap * 33
+
+	errno = 0;
+	temp = strtoull(val, NULL, 16);
+	if (errno) {
+		char *out;
+                asprintf(&out, "conversion error(%s)", val);
+                return out;
+	}
+
+        caps[0] = temp & 0xFFFFFFFF;
+        caps[1] = (temp & 0xFFFFFFFF) >> 32;
+	p = buf;
+	for (i=0; i <= CAP_LAST_CAP; i++) {
+		if (MASK(i%32) & caps[i/32]) {
+			const char *s;
+			if (found)
+				p = stpcpy(p, ",");
+			s = cap_i2s(i);
+			if (s != NULL)
+				p = stpcpy(p, s);
+			found = 1;
+		}
+	}
+	if (found == 0)
+		return strdup("none");
+	return strdup(buf);
+}
+
 static const char *print_success(const char *val)
 {
         int res;
@@ -695,11 +837,19 @@ static const char *print_success(const char *val)
 		return strdup(val);
 }
 
-static const char *print_open_flags(int flags)
+static const char *print_open_flags(const char *val)
 {
 	size_t i;
+	unsigned int flags;
 	int cnt = 0;
-	char buf[144];
+	char *out, buf[144];
+
+	errno = 0;
+	flags = strtoul(val, NULL, 16);
+        if (errno) {
+		asprintf(&out, "conversion error(%s)", val);
+               	return out;
+       	}
 
 	buf[0] = 0;
         if ((flags & O_ACCMODE) == 0) {
@@ -723,11 +873,18 @@ static const char *print_open_flags(int flags)
 	return strdup(buf);
 }
 
-static const char *print_clone_flags(int flags)
+static const char *print_clone_flags(const char *val)
 {
-        size_t i;
+	unsigned int flags, i;
 	int cnt = 0;
-	char buf[352];
+	char *out, buf[352];
+
+	errno = 0;
+	flags = strtoul(val, NULL, 16);
+        if (errno) {
+		asprintf(&out, "conversion error(%s)", val);
+               	return out;
+       	}
 
 	buf[0] = 0;
         for (i=0; i<CLONE_FLAG_NUM_ENTRIES; i++) {
@@ -748,10 +905,18 @@ static const char *print_clone_flags(int flags)
 	return strdup(buf);
 }
 
-static const char *print_fcntl_cmd(int cmd)
+static const char *print_fcntl_cmd(const char *val)
 {
 	char *out;
 	const char *s;
+	int cmd;
+
+	errno = 0;
+	cmd = strtoul(val, NULL, 16);
+        if (errno) {
+		asprintf(&out, "conversion error(%s)", val);
+		return out;
+       	}
 
 	s = fcntl_i2s(cmd);
 	if (s != NULL)
@@ -760,10 +925,18 @@ static const char *print_fcntl_cmd(int cmd)
 	return out;
 }
 
-static const char *print_epoll_ctl(int cmd)
+static const char *print_epoll_ctl(const char *val)
 {
 	char *out;
 	const char *s;
+	int cmd;
+
+	errno = 0;
+	cmd = strtoul(val, NULL, 16);
+	if (errno) {
+		asprintf(&out, "conversion error(%s)", val);
+		return out;
+	}
 
 	s = epoll_ctl_i2s(cmd);
 	if (s != NULL)
@@ -772,38 +945,259 @@ static const char *print_epoll_ctl(int cmd)
 	return out;
 }
 
-static const char *print_seek(int cmd)
+static const char *print_clock_id(const char *val)
 {
+	int i;
+	char *out;
+
+	errno = 0;
+        i = strtoul(val, NULL, 16);
+	if (errno) {
+		asprintf(&out, "conversion error(%s)", val);
+		return out;
+	}
+	else if (i < 7) {
+		const char *s = clock_i2s(i);
+		if (s != NULL)
+			return strdup(s);
+	}
+	asprintf(&out, "unknown clk_id (%s)", val);
+	return out;
+}
+
+static const char *print_prot(const char *val, unsigned int is_mmap)
+{
+	unsigned int prot, i;
+	int cnt = 0, limit;
+	char buf[144];
+	char *out;
+
+	errno = 0;
+        prot = strtoul(val, NULL, 16);
+	if (errno) {
+		asprintf(&out, "conversion error(%s)", val);
+		return out;
+	}
+	buf[0] = 0;
+        if ((prot & 0x07) == 0) {
+		// Handle PROT_NONE specially
+                strcat(buf, "PROT_NONE");
+		return strdup(buf);
+        }
+	if (is_mmap)
+		limit = 4;
+	else
+		limit = 3;
+        for (i=0; i<limit; i++) {
+                if (prot_table[i].value & prot) {
+                        if (!cnt) {
+                                strcat(buf,
+				prot_strings + prot_table[i].offset);
+                                cnt++;
+                        } else {
+                                strcat(buf, "|");
+                                strcat(buf,
+				prot_strings + prot_table[i].offset);
+			}
+                }
+        }
+	return strdup(buf);
+}
+
+static const char *print_mmap(const char *val)
+{
+	unsigned int maps, i;
+	int cnt = 0;
+	char buf[144];
+	char *out;
+
+	errno = 0;
+        maps = strtoul(val, NULL, 16);
+	if (errno) {
+		asprintf(&out, "conversion error(%s)", val);
+		return out;
+	}
+	buf[0] = 0;
+        if ((maps & 0x0F) == 0) {
+		// Handle MAP_FILE specially
+                strcat(buf, "MAP_FILE");
+		cnt++;
+        }
+        for (i=0; i<MMAP_NUM_ENTRIES; i++) {
+                if (mmap_table[i].value & maps) {
+                        if (!cnt) {
+                                strcat(buf,
+				mmap_strings + mmap_table[i].offset);
+                                cnt++;
+                        } else {
+                                strcat(buf, "|");
+                                strcat(buf,
+				mmap_strings + mmap_table[i].offset);
+			}
+                }
+        }
+	return strdup(buf);
+}
+
+static const char *print_personality(const char *val)
+{
+        int pers, pers2;
 	char *out;
 	const char *s;
 
-	s = seek_i2s(cmd);
+        errno = 0;
+        pers = strtoul(val, NULL, 16);
+        if (errno) {
+                asprintf(&out, "conversion error(%s)", val);
+                return out;
+        }
+
+	pers2 = pers & ~ADDR_NO_RANDOMIZE;
+	s = person_i2s(pers2);
+	if (s != NULL) {
+		if (pers & ADDR_NO_RANDOMIZE) {
+			asprintf(&out, "%s|~ADDR_NO_RANDOMIZE", s);
+			return out;
+		} else
+			return strdup(s);
+	}
+	asprintf(&out, "unknown personality (%s)", val);
+	return out;
+}
+
+static const char *print_ptrace(const char *val)
+{
+        int trace;
+	char *out;
+	const char *s;
+
+        errno = 0;
+        trace = strtoul(val, NULL, 16);
+        if (errno) {
+                asprintf(&out, "conversion error(%s)", val);
+                return out;
+        }
+
+	s = ptrace_i2s(trace);
 	if (s != NULL)
 		return strdup(s);
-	asprintf(&out, "unknown seek whence (%d)", cmd);
+	asprintf(&out, "unknown ptrace (%s)", val);
 	return out;
+}
+
+static const char *print_mount(const char *val)
+{
+	unsigned int mounts, i;
+	int cnt = 0;
+	char buf[144];
+	char *out;
+
+	errno = 0;
+        mounts = strtoul(val, NULL, 16);
+	if (errno) {
+		asprintf(&out, "conversion error(%s)", val);
+		return out;
+	}
+	buf[0] = 0;
+        for (i=0; i<MOUNT_NUM_ENTRIES; i++) {
+                if (mount_table[i].value & mounts) {
+                        if (!cnt) {
+                                strcat(buf,
+				mount_strings + mount_table[i].offset);
+                                cnt++;
+                        } else {
+                                strcat(buf, "|");
+                                strcat(buf,
+				mount_strings + mount_table[i].offset);
+			}
+                }
+        }
+	return strdup(buf);
+}
+
+static const char *print_rlimit(const char *val)
+{
+	int i;
+	char *out;
+
+	errno = 0;
+        i = strtoul(val, NULL, 16);
+	if (errno) {
+		asprintf(&out, "conversion error(%s)", val);
+		return out;
+	}
+	else if (i < 17) {
+		const char *s = rlimit_i2s(i);
+		if (s != NULL)
+			return strdup(s);
+	}
+	asprintf(&out, "unknown rlimit (%s)", val);
+	return out;
+}
+
+static const char *print_recv(const char *val)
+{
+	unsigned int rec, i;
+	int cnt = 0;
+	char buf[144];
+	char *out;
+
+	errno = 0;
+        rec = strtoul(val, NULL, 16);
+	if (errno) {
+		asprintf(&out, "conversion error(%s)", val);
+		return out;
+	}
+	buf[0] = 0;
+        for (i=0; i<RECV_NUM_ENTRIES; i++) {
+                if (recv_table[i].value & rec) {
+                        if (!cnt) {
+                                strcat(buf,
+				recv_strings + recv_table[i].offset);
+                                cnt++;
+                        } else {
+                                strcat(buf, "|");
+                                strcat(buf,
+				recv_strings + recv_table[i].offset);
+			}
+                }
+        }
+	return strdup(buf);
 }
 
 static const char *print_a0(const char *val, const rnode *r)
 {
 	int machine = r->machine, syscall = r->syscall;
-	char *out;
 	const char *sys = audit_syscall_to_name(syscall, machine);
 	if (sys) {
-		if (strcmp(sys, "clone") == 0) {
-			int ival;
-
-			errno = 0;
-			ival = strtoul(val, NULL, 16);
-		        if (errno) {
-                		asprintf(&out, "conversion error(%s)", val);
-	                	return out;
-	        	}
-			return print_clone_flags(ival);
-		}  else if (strcmp(sys, "rt_sigaction") == 0) {
-                        return print_signals(val);
-                }
-
+		if (strcmp(sys, "rt_sigaction") == 0)
+                        return print_signals(val, 16);
+                else if (strcmp(sys, "setuid") == 0)
+			return print_uid(val, 16);
+                else if (strcmp(sys, "setreuid") == 0)
+			return print_uid(val, 16);
+                else if (strcmp(sys, "setresuid") == 0)
+			return print_uid(val, 16);
+                else if (strcmp(sys, "setfsuid") == 0)
+			return print_uid(val, 16);
+                else if (strcmp(sys, "setgid") == 0)
+			return print_gid(val, 16);
+                else if (strcmp(sys, "setregid") == 0)
+			return print_gid(val, 16);
+                else if (strcmp(sys, "setresgid") == 0)
+			return print_gid(val, 16);
+                else if (strcmp(sys, "setfsgid") == 0)
+			return print_gid(val, 16);
+                else if (strcmp(sys, "clock_settime") == 0)
+			return print_clock_id(val);
+                else if (strcmp(sys, "personality") == 0)
+			return print_personality(val);
+                else if (strcmp(sys, "ptrace") == 0)
+			return print_ptrace(val);
+                else if (strstr(sys, "etrlimit"))
+			return print_rlimit(val);
+                else if (strcmp(sys, "socket") == 0)
+			return print_socket_domain(val);
 	}
 	return strdup(val);
 }
@@ -811,40 +1205,40 @@ static const char *print_a0(const char *val, const rnode *r)
 static const char *print_a1(const char *val, const rnode *r)
 {
 	int machine = r->machine, syscall = r->syscall;
-	char *out;
 	const char *sys = audit_syscall_to_name(syscall, machine);
 	if (sys) {
-		if (strcmp(sys, "open") == 0) {
-			int ival;
-
-			errno = 0;
-			ival = strtoul(val, NULL, 16);
-		        if (errno) {
-                		asprintf(&out, "conversion error(%s)", val);
-	                	return out;
-	        	}
-			return print_open_flags(ival);
-		} else if (strncmp(sys, "fcntl", 5) == 0) {
-			int ival;
-
-			errno = 0;
-			ival = strtoul(val, NULL, 16);
-		        if (errno) {
-                		asprintf(&out, "conversion error(%s)", val);
-	                	return out;
-	        	}
-			return print_fcntl_cmd(ival);
-		} else if (strcmp(sys, "epoll_ctl") == 0) {
-			int ival;
-
-			errno = 0;
-			ival = strtoul(val, NULL, 16);
-			if (errno) {
-				asprintf(&out, "conversion error(%s)", val);
-				return out;
-			}
-			return print_epoll_ctl(ival);
-		}
+		if (strcmp(sys, "open") == 0)
+			return print_open_flags(val);
+		else if (strcmp(sys, "epoll_ctl") == 0)
+			return print_epoll_ctl(val);
+		else if (strcmp(sys, "chmod") == 0)
+			return print_mode_short(val);
+		else if (strcmp(sys, "fchmod") == 0)
+			return print_mode_short(val);
+		else if (strstr(sys, "chown"))
+			return print_uid(val, 16);
+                else if (strcmp(sys, "setreuid") == 0)
+			return print_uid(val, 16);
+                else if (strcmp(sys, "setresuid") == 0)
+			return print_uid(val, 16);
+                else if (strcmp(sys, "setregid") == 0)
+			return print_gid(val, 16);
+                else if (strcmp(sys, "setresgid") == 0)
+			return print_gid(val, 16);
+		else if (strcmp(sys, "kill") == 0)
+			return print_signals(val, 16);
+		else if (strcmp(sys, "tkill") == 0)
+			return print_signals(val, 16);
+		else if (strcmp(sys, "mkdir") == 0)
+			return print_mode_short(val);
+		else if (strcmp(sys, "creat") == 0)
+			return print_mode_short(val);
+		else if (strncmp(sys, "fcntl", 5) == 0)
+			return print_fcntl_cmd(val);
+		else if (strcmp(sys, "mknod") == 0)
+			return print_mode(val, 16);
+                else if (strcmp(sys, "socket") == 0)
+			return print_socket_type(val);
 	}
 	return strdup(val);
 }
@@ -867,7 +1261,7 @@ static const char *print_a2(const char *val, const rnode *r)
 			switch (r->a1)
 			{
 				case F_SETOWN:
-					return print_uid(val);
+					return print_uid(val, 16);
 				case F_SETFD:
 					if (ival == FD_CLOEXEC)
 						return strdup("FD_CLOEXEC");
@@ -878,22 +1272,114 @@ static const char *print_a2(const char *val, const rnode *r)
 				case F_NOTIFY:
 					break;
 			}
-		} else if (strcmp(sys, "lseek") == 0) {
-			int ival;
-
-			errno = 0;
-			ival = strtoul(val, NULL, 16);
-			if (errno) {
-				asprintf(&out, "conversion error(%s)", val);
-				return out;
-			}
-			return print_seek(ival);
-		}
+		} else if (strcmp(sys, "openat") == 0)
+			return print_open_flags(val);
+		else if (strcmp(sys, "fchmodat") == 0)
+			return print_mode_short(val);
+		else if (strstr(sys, "chown"))
+			return print_gid(val, 16);
+                else if (strcmp(sys, "setresuid") == 0)
+			return print_uid(val, 16);
+                else if (strcmp(sys, "setresgid") == 0)
+			return print_gid(val, 16);
+		else if (strcmp(sys, "tgkill") == 0)
+			return print_signals(val, 16);
+		else if (strcmp(sys, "mkdirat") == 0)
+			return print_mode_short(val);
+		else if (strcmp(sys, "mmap") == 0)
+			return print_prot(val, 1);
+		else if (strcmp(sys, "mprotect") == 0)
+			return print_prot(val, 0);
+                else if (strcmp(sys, "socket") == 0)
+			return print_socket_proto(val);
+		else if (strcmp(sys, "clone") == 0)
+			return print_clone_flags(val);
+                else if (strcmp(sys, "recvmsg") == 0)
+			return print_recv(val);
 	}
 	return strdup(val);
 }
 
-static const char *print_signals(const char *val)
+static const char *print_a3(const char *val, const rnode *r)
+{
+	int machine = r->machine, syscall = r->syscall;
+	const char *sys = audit_syscall_to_name(syscall, machine);
+	if (sys) {
+		if (strcmp(sys, "mmap") == 0)
+			return print_mmap(val);
+		else if (strcmp(sys, "mount") == 0)
+			return print_mount(val);
+                else if (strcmp(sys, "recv") == 0)
+			return print_recv(val);
+                else if (strcmp(sys, "recvfrom") == 0)
+			return print_recv(val);
+                else if (strcmp(sys, "recvmmsg") == 0)
+			return print_recv(val);
+	}
+	return strdup(val);
+}
+
+static const char *print_signals(const char *val, unsigned int base)
+{
+	int i;
+	char *out;
+
+	errno = 0;
+        i = strtoul(val, NULL, base);
+	if (errno) {
+		asprintf(&out, "conversion error(%s)", val);
+		return out;
+	}
+	else if (i < 32) {
+		const char *s = signal_i2s(i);
+		if (s != NULL)
+			return strdup(s);
+	}
+	asprintf(&out, "unknown signal (%s)", val);
+	return out;
+}
+
+static const char *print_nfproto(const char *val)
+{
+        int proto;
+	char *out;
+	const char *s;
+
+        errno = 0;
+        proto = strtoul(val, NULL, 10);
+        if (errno) {
+                asprintf(&out, "conversion error(%s)", val);
+                return out;
+        }
+
+	s = nfproto_i2s(proto);
+	if (s != NULL)
+		return strdup(s);
+	asprintf(&out, "unknown netfilter protocol (%s)", val);
+	return out;
+}
+
+static const char *print_icmptype(const char *val)
+{
+        int icmptype;
+	char *out;
+	const char *s;
+
+        errno = 0;
+        icmptype = strtoul(val, NULL, 10);
+        if (errno) {
+                asprintf(&out, "conversion error(%s)", val);
+                return out;
+        }
+
+	s = icmptype_i2s(icmptype);
+	if (s != NULL)
+		return strdup(s);
+	asprintf(&out, "unknown icmp type (%s)", val);
+	return out;
+}
+
+static const char *print_protocol(const char *val)
 {
 	int i;
 	char *out;
@@ -902,8 +1388,19 @@ static const char *print_signals(const char *val)
         i = strtoul(val, NULL, 10);
 	if (errno) 
 		asprintf(&out, "conversion error(%s)", val);
-	else
-		out = strdup(strsignal(i));
+	else {
+		struct protoent *p = getprotobynumber(i);
+		if (p)
+			out = strdup(p->p_name);
+		else
+			out = strdup("undefined protocol");
+	}
+	return out;
+}
+
+static const char *print_addr(const char *val)
+{
+	char *out = strdup(val);
 	return out;
 }
 
@@ -1051,6 +1548,14 @@ static const char *print_tty_data(const char *raw_data)
 	return buf.buf;
 }
 
+static const char *print_session(const char *val)
+{
+	if (strcmp(val, "4294967295") == 0)
+		return strdup("unset");
+	else
+		return strdup(val);
+}
+
 int lookup_type(const char *name)
 {
 	int i;
@@ -1063,19 +1568,21 @@ int lookup_type(const char *name)
 const char *interpret(const rnode *r)
 {
 	const nvlist *nv = &r->nv;
-	int type, comma = 0;
+	int type;
 	nvnode *n;
 	const char *out;
 	const char *name = nvlist_get_cur_name(nv);
 	const char *val = nvlist_get_cur_val(nv);
 
 	/* Do some fixups */
-	if (r->type == AUDIT_EXECVE && name[0] == 'a')
+	if (r->type == AUDIT_EXECVE && name[0] == 'a' && strcmp(name, "argc"))
 		type = AUPARSE_TYPE_ESCAPED;
 	else if (r->type == AUDIT_AVC && strcmp(name, "saddr") == 0)
 		type = -1;
 	else if (r->type == AUDIT_USER_TTY && strcmp(name, "msg") == 0)
 		type = AUPARSE_TYPE_ESCAPED;
+	else if (r->type == AUDIT_NETFILTER_PKT && strcmp(name, "saddr") == 0)
+		type = AUPARSE_TYPE_ADDR;
 	else if (strcmp(name, "acct") == 0) {
 		if (val[0] == '"')
 			type = AUPARSE_TYPE_ESCAPED;
@@ -1088,10 +1595,10 @@ const char *interpret(const rnode *r)
 
 	switch(type) {
 		case AUPARSE_TYPE_UID:
-			out = print_uid(val);
+			out = print_uid(val, 10);
 			break;
 		case AUPARSE_TYPE_GID:
-			out = print_gid(val);
+			out = print_gid(val, 10);
 			break;
 		case AUPARSE_TYPE_SYSCALL:
 			out = print_syscall(val, r);
@@ -1109,7 +1616,7 @@ const char *interpret(const rnode *r)
 			out = print_perm(val);
 			break;
 		case AUPARSE_TYPE_MODE:
-			out = print_mode(val);
+			out = print_mode(val,8);
 			break;
 		case AUPARSE_TYPE_SOCKADDR:
 			out = print_sockaddr(val);
@@ -1135,8 +1642,11 @@ const char *interpret(const rnode *r)
 		case AUPARSE_TYPE_A2:
 			out = print_a2(val, r);
 			break; 
+		case AUPARSE_TYPE_A3:
+			out = print_a3(val, r);
+			break; 
 		case AUPARSE_TYPE_SIGNAL:
-			out = print_signals(val);
+			out = print_signals(val, 10);
 			break; 
 		case AUPARSE_TYPE_LIST:
 			out = print_list(val);
@@ -1144,15 +1654,31 @@ const char *interpret(const rnode *r)
 		case AUPARSE_TYPE_TTY_DATA:
 			out = print_tty_data(val);
 			break;
+		case AUPARSE_TYPE_SESSION:
+			out = print_session(val);
+			break;
+		case AUPARSE_TYPE_CAP_BITMAP:
+			out = print_cap_bitmap(val);
+			break;
+		case AUPARSE_TYPE_NFPROTO:
+			out = print_nfproto(val);
+			break; 
+		case AUPARSE_TYPE_ICMPTYPE:
+			out = print_icmptype(val);
+			break; 
+		case AUPARSE_TYPE_PROTOCOL:
+			out = print_protocol(val);
+			break; 
+		case AUPARSE_TYPE_ADDR:
+			out = print_addr(val);
+			break;
+		case AUPARSE_TYPE_PERSONALITY:
+			out = print_personality(val);
+			break;
 		case AUPARSE_TYPE_UNCLASSIFIED:
-		default: {
-			char *out2;
-			if (comma)
-				asprintf(&out2, "%s,", val);
-			else
-				out2 = strdup(val);
-			out = out2;
-			}
+		default:
+			out = strdup(val);
+			break;
         }
 
 	n = nvlist_get_cur(nv);

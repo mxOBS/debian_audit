@@ -2,7 +2,7 @@ Change permittions-checking-errors into warning, so custom administrator has
 enougth rope to "shoot himself in the foot".
 --- a/src/auditd-config.c
 +++ b/src/auditd-config.c
-@@ -545,9 +545,11 @@ static int log_file_parser(struct nv_pai
+@@ -545,9 +545,11 @@
  		return 1;
  	}
  	if ( (buf.st_mode & (S_IXUSR|S_IWGRP|S_IXGRP|S_IRWXO)) ) {
@@ -15,24 +15,26 @@ enougth rope to "shoot himself in the foot".
  	}
  	if ( !(buf.st_mode & S_IWUSR) ) {
  		audit_msg(LOG_ERR, "audit log is not writable by owner");
-@@ -670,8 +672,10 @@ static int dispatch_parser(struct nv_pai
- 	}
- 	if ((buf.st_mode & (S_IRWXU|S_IRWXG|S_IRWXO)) !=
- 			   (S_IRWXU|S_IRGRP|S_IXGRP)) {
--		audit_msg(LOG_ERR, "%s permissions should be 0750", nv->value);
-+		audit_msg(LOG_WARNING, "%s permissions should be 0750", nv->value);
+@@ -672,9 +674,11 @@
+ 			   (S_IRWXU|S_IRGRP|S_IXGRP) && 
+ 	    (buf.st_mode & (S_IRWXU|S_IRWXG|S_IRWXO)) !=
+ 			   (S_IRWXU|S_IRGRP|S_IXGRP|S_IROTH|S_IXOTH)) {
+-		audit_msg(LOG_ERR, "%s permissions should be 0750 or 0755",
++		audit_msg(LOG_WARNING, "%s permissions should be 0750 or 0755",
+ 				nv->value);
 +#if 0
  		return 1;
 +#endif
  	}
  bypass:
  	free((void *)config->dispatcher);
-@@ -919,9 +923,11 @@ static int check_exe_name(const char *va
- 	}
- 	if ((buf.st_mode & (S_IRWXU|S_IRWXG|S_IRWXO)) !=
- 			   (S_IRWXU|S_IRGRP|S_IXGRP)) {
--		audit_msg(LOG_ERR, "%s permissions should be 0750 - line %d",
-+		audit_msg(LOG_WARNING, "%s permissions should be 0750 - line %d",
+@@ -926,10 +930,12 @@
+ 			   (S_IRWXU|S_IRGRP|S_IXGRP) &&
+ 	    (buf.st_mode & (S_IRWXU|S_IRWXG|S_IRWXO)) !=
+ 			   (S_IRWXU|S_IRGRP|S_IXGRP|S_IROTH|S_IXOTH)) {
+-		audit_msg(LOG_ERR,
++		audit_msg(LOG_WARNING,
+ 			"%s permissions should be 0750 or 0755 - line %d",
  			val, line);
 +#if 0
  		return -1;
@@ -40,3 +42,8 @@ enougth rope to "shoot himself in the foot".
  	}
  	return 0;
  }
+@@ -1663,4 +1669,3 @@
+ 				config->node_name);
+ 	return rc;
+ }
+-

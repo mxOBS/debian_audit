@@ -1,5 +1,5 @@
 /* msg_typetab.h --
- * Copyright 2005-07 Red Hat Inc., Durham, North Carolina.
+ * Copyright 2005-07,2009-11 Red Hat Inc., Durham, North Carolina.
  * All Rights Reserved.
  *
  * This library is free software; you can redistribute it and/or
@@ -28,7 +28,7 @@
  */
 //_S(AUDIT_GET,                      "GET"                           )
 //_S(AUDIT_SET,                      "SET"                           )
-_S(AUDIT_LIST,                       "LIST"                          )
+//_S(AUDIT_LIST,                     "LIST"                          )
 //_S(AUDIT_ADD,                      "ADD"                           )
 //_S(AUDIT_DEL,                      "DEL"                           )
 _S(AUDIT_USER,                       "USER"                          )
@@ -71,6 +71,8 @@ _S(AUDIT_GRP_AUTH,                   "GRP_AUTH"                      )
 _S(AUDIT_SYSTEM_BOOT,                "SYSTEM_BOOT"                   )
 _S(AUDIT_SYSTEM_SHUTDOWN,            "SYSTEM_SHUTDOWN"               )
 _S(AUDIT_SYSTEM_RUNLEVEL,            "SYSTEM_RUNLEVEL"               )
+_S(AUDIT_SERVICE_START,              "SERVICE_START"                 )
+_S(AUDIT_SERVICE_STOP,               "SERVICE_STOP"                  )
 _S(AUDIT_DAEMON_START,               "DAEMON_START"                  )
 _S(AUDIT_DAEMON_END,                 "DAEMON_END"                    )
 _S(AUDIT_DAEMON_ABORT,               "DAEMON_ABORT"                  )
@@ -102,6 +104,9 @@ _S(AUDIT_TTY,                        "TTY"                           )
 _S(AUDIT_EOE,                        "EOE"                           )
 _S(AUDIT_BPRM_FCAPS,                 "BPRM_FCAPS"                    )
 _S(AUDIT_CAPSET,                     "CAPSET"                        )
+_S(AUDIT_MMAP,                       "MMAP"                          )
+_S(AUDIT_NETFILTER_PKT,              "NETFILTER_PKT"                 )
+_S(AUDIT_NETFILTER_CFG,              "NETFILTER_CFG"                 )
 _S(AUDIT_AVC,                        "AVC"                           )
 _S(AUDIT_SELINUX_ERR,                "SELINUX_ERR"                   )
 _S(AUDIT_AVC_PATH,                   "AVC_PATH"                      )
@@ -181,6 +186,7 @@ _S(AUDIT_DEV_ALLOC,                  "DEV_ALLOC"                     )
 _S(AUDIT_DEV_DEALLOC,                "DEV_DEALLOC"                   )
 _S(AUDIT_FS_RELABEL,                 "FS_RELABEL"                    )
 _S(AUDIT_USER_MAC_POLICY_LOAD,       "USER_MAC_POLICY_LOAD"          )
+_S(AUDIT_ROLE_MODIFY,                "ROLE_MODIFY"                   )
 _S(AUDIT_CRYPTO_TEST_USER,           "CRYPTO_TEST_USER"              )
 _S(AUDIT_CRYPTO_PARAM_CHANGE_USER,   "CRYPTO_PARAM_CHANGE_USER"      )
 _S(AUDIT_CRYPTO_LOGIN,               "CRYPTO_LOGIN"                  )

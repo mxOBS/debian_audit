@@ -1,5 +1,5 @@
 # Makefile.am -- 
-# Copyright 2006-08 Red Hat Inc., Durham, North Carolina.
+# Copyright 2006-08,2011-12 Red Hat Inc., Durham, North Carolina.
 # All Rights Reserved.
 #
 # This library is free software; you can redistribute it and/or
@@ -42,18 +42,29 @@ libauparse_la_LDFLAGS = -Wl,-z,relro
 message.c:
 	cp ${top_srcdir}/lib/message.c .
 
-BUILT_SOURCES = captabs.h clone-flagtabs.h epoll_ctls.h famtabs.h \
-	fcntl-cmdtabs.h flagtabs.h ipctabs.h open-flagtabs.h \
-	seeks.h socktabs.h typetabs.h
-noinst_PROGRAMS = gen_captabs_h gen_clone-flagtabs_h gen_epoll_ctls_h \
-	gen_famtabs_h gen_fcntl-cmdtabs_h gen_flagtabs_h \
-	gen_ipctabs_h gen_open-flagtabs_h gen_seeks_h \
-	gen_socktabs_h gen_typetabs_h
+BUILT_SOURCES = captabs.h clocktabs.h clone-flagtabs.h epoll_ctls.h famtabs.h \
+	fcntl-cmdtabs.h flagtabs.h icmptypetabs.h ipctabs.h \
+	mmaptabs.h mounttabs.h nfprototabs.h open-flagtabs.h \
+	persontabs.h prottabs.h ptracetabs.h rlimittabs.h recvtabs.h \
+	signaltabs.h socktabs.h socktypetabs.h typetabs.h
+noinst_PROGRAMS = gen_captabs_h gen_clock_h gen_clone-flagtabs_h \
+	gen_epoll_ctls_h gen_famtabs_h \
+	gen_fcntl-cmdtabs_h gen_flagtabs_h \
+	gen_icmptypetabs_h gen_ipctabs_h gen_nfprototabs_h \
+	gen_mmaptabs_h gen_mounttabs_h \
+	gen_open-flagtabs_h gen_persontabs_h gen_prottabs_h \
+	gen_recvtabs_h gen_rlimit_h gen_ptracetabs_h \
+	gen_signals_h gen_socktabs_h gen_socktypetabs_h gen_typetabs_h
 
 gen_captabs_h_SOURCES = ../lib/gen_tables.c ../lib/gen_tables.h captab.h
 gen_captabs_h_CFLAGS = $(AM_CFLAGS) '-DTABLE_H="captab.h"'
 captabs.h: gen_captabs_h Makefile
 	./gen_captabs_h --i2s cap > $@
+
+gen_clock_h_SOURCES = ../lib/gen_tables.c ../lib/gen_tables.h clocktab.h
+gen_clock_h_CFLAGS = $(AM_CFLAGS) '-DTABLE_H="clocktab.h"'
+clocktabs.h: gen_clock_h Makefile
+	./gen_clock_h --i2s clock > $@
 
 gen_clone_flagtabs_h_SOURCES = ../lib/gen_tables.c ../lib/gen_tables.h \
 	clone-flagtab.h
@@ -83,10 +94,30 @@ gen_fcntl_cmdtabs_h_CFLAGS = $(AM_CFLAGS) '-DTABLE_H="fcntl-cmdtab.h"'
 fcntl-cmdtabs.h: gen_fcntl-cmdtabs_h Makefile
 	./gen_fcntl-cmdtabs_h --i2s fcntl > $@
 
+gen_icmptypetabs_h_SOURCES = ../lib/gen_tables.c ../lib/gen_tables.h icmptypetab.h
+gen_icmptypetabs_h_CFLAGS = $(AM_CFLAGS) '-DTABLE_H="icmptypetab.h"'
+icmptypetabs.h: gen_icmptypetabs_h Makefile
+	./gen_icmptypetabs_h --i2s icmptype > $@
+
 gen_ipctabs_h_SOURCES = ../lib/gen_tables.c ../lib/gen_tables.h ipctab.h
 gen_ipctabs_h_CFLAGS = $(AM_CFLAGS) '-DTABLE_H="ipctab.h"'
 ipctabs.h: gen_ipctabs_h Makefile
 	./gen_ipctabs_h --i2s ipc > $@
+
+gen_mmaptabs_h_SOURCES = ../lib/gen_tables.c ../lib/gen_tables.h mmaptab.h
+gen_mmaptabs_h_CFLAGS = $(AM_CFLAGS) '-DTABLE_H="mmaptab.h"'
+mmaptabs.h: gen_mmaptabs_h Makefile
+	./gen_mmaptabs_h --i2s-transtab mmap > $@
+
+gen_mounttabs_h_SOURCES = ../lib/gen_tables.c ../lib/gen_tables.h mounttab.h
+gen_mounttabs_h_CFLAGS = $(AM_CFLAGS) '-DTABLE_H="mounttab.h"'
+mounttabs.h: gen_mounttabs_h Makefile
+	./gen_mounttabs_h --i2s-transtab mount > $@
+
+gen_nfprototabs_h_SOURCES = ../lib/gen_tables.c ../lib/gen_tables.h nfprototab.h
+gen_nfprototabs_h_CFLAGS = $(AM_CFLAGS) '-DTABLE_H="nfprototab.h"'
+nfprototabs.h: gen_nfprototabs_h Makefile
+	./gen_nfprototabs_h --i2s nfproto > $@
 
 gen_open_flagtabs_h_SOURCES = ../lib/gen_tables.c ../lib/gen_tables.h \
 	open-flagtab.h
@@ -94,15 +125,45 @@ gen_open_flagtabs_h_CFLAGS = $(AM_CFLAGS) '-DTABLE_H="open-flagtab.h"'
 open-flagtabs.h: gen_open-flagtabs_h Makefile
 	./gen_open-flagtabs_h --i2s-transtab open_flag > $@
 
-gen_seeks_h_SOURCES = ../lib/gen_tables.c ../lib/gen_tables.h seek.h
-gen_seeks_h_CFLAGS = $(AM_CFLAGS) '-DTABLE_H="seek.h"'
-seeks.h: gen_seeks_h Makefile
-	./gen_seeks_h --i2s seek > $@
+gen_persontabs_h_SOURCES = ../lib/gen_tables.c ../lib/gen_tables.h persontab.h
+gen_persontabs_h_CFLAGS = $(AM_CFLAGS) '-DTABLE_H="persontab.h"'
+persontabs.h: gen_persontabs_h Makefile
+	./gen_persontabs_h --i2s person > $@
+
+gen_ptracetabs_h_SOURCES = ../lib/gen_tables.c ../lib/gen_tables.h ptracetab.h
+gen_ptracetabs_h_CFLAGS = $(AM_CFLAGS) '-DTABLE_H="ptracetab.h"'
+ptracetabs.h: gen_ptracetabs_h Makefile
+	./gen_ptracetabs_h --i2s ptrace > $@
+
+gen_prottabs_h_SOURCES = ../lib/gen_tables.c ../lib/gen_tables.h prottab.h
+gen_prottabs_h_CFLAGS = $(AM_CFLAGS) '-DTABLE_H="prottab.h"'
+prottabs.h: gen_prottabs_h Makefile
+	./gen_prottabs_h --i2s-transtab prot > $@
+
+gen_recvtabs_h_SOURCES = ../lib/gen_tables.c ../lib/gen_tables.h recvtab.h
+gen_recvtabs_h_CFLAGS = $(AM_CFLAGS) '-DTABLE_H="recvtab.h"'
+recvtabs.h: gen_recvtabs_h Makefile
+	./gen_recvtabs_h --i2s-transtab recv > $@
+
+gen_rlimit_h_SOURCES = ../lib/gen_tables.c ../lib/gen_tables.h rlimittab.h
+gen_rlimit_h_CFLAGS = $(AM_CFLAGS) '-DTABLE_H="rlimittab.h"'
+rlimittabs.h: gen_rlimit_h Makefile
+	./gen_rlimit_h --i2s rlimit > $@
+
+gen_signals_h_SOURCES = ../lib/gen_tables.c ../lib/gen_tables.h signaltab.h
+gen_signals_h_CFLAGS = $(AM_CFLAGS) '-DTABLE_H="signaltab.h"'
+signaltabs.h: gen_signals_h Makefile
+	./gen_signals_h --i2s signal > $@
 
 gen_socktabs_h_SOURCES = ../lib/gen_tables.c ../lib/gen_tables.h socktab.h
 gen_socktabs_h_CFLAGS = $(AM_CFLAGS) '-DTABLE_H="socktab.h"'
 socktabs.h: gen_socktabs_h Makefile
 	./gen_socktabs_h --i2s sock > $@
+
+gen_socktypetabs_h_SOURCES = ../lib/gen_tables.c ../lib/gen_tables.h socktypetab.h
+gen_socktypetabs_h_CFLAGS = $(AM_CFLAGS) '-DTABLE_H="socktypetab.h"'
+socktypetabs.h: gen_socktypetabs_h Makefile
+	./gen_socktypetabs_h --i2s sock_type > $@
 
 gen_typetabs_h_SOURCES = ../lib/gen_tables.c ../lib/gen_tables.h typetab.h
 gen_typetabs_h_CFLAGS = $(AM_CFLAGS) '-DTABLE_H="typetab.h"'

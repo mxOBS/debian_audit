@@ -1,5 +1,5 @@
 /* auditctl.c -- 
- * Copyright 2004-2009 Red Hat Inc., Durham, North Carolina.
+ * Copyright 2004-2012 Red Hat Inc., Durham, North Carolina.
  * All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -24,6 +24,7 @@
 #include "config.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #include <string.h>	/* strdup needs xopen define */
 #include <getopt.h>
 #include <time.h>
@@ -61,23 +62,14 @@ extern int delete_all_rules(int fd);
 static int fd = -1;
 static int list_requested = 0;
 static int add = AUDIT_FILTER_UNSET, del = AUDIT_FILTER_UNSET, action = -1;
-static int ignore = 0;
+static int ignore = 0, continue_error = 0;
 static int exclude = 0;
 static int multiple = 0;
-enum { OLD, NEW };
-int which;
-static struct audit_rule  rule;
 static struct audit_rule_data *rule_new = NULL;
 static char key[AUDIT_MAX_KEY_LEN+1];
 static int keylen;
 static int printed;
 static const char key_sep[2] = { AUDIT_KEY_SEPARATOR, 0 };
-
-/* External vars */
-extern int audit_archadded;
-extern int audit_syscalladded;
-extern unsigned int audit_elf;
-extern int audit_permadded;
 
 /*
  * This function will reset everything used for each loop when loading 
@@ -86,20 +78,19 @@ extern int audit_permadded;
 static int reset_vars(void)
 {
 	list_requested = 0;
-	audit_syscalladded = 0;
-	audit_permadded = 0;
-	audit_archadded = 0;
-	audit_elf = 0;
+	_audit_syscalladded = 0;
+	_audit_permadded = 0;
+	_audit_archadded = 0;
+	_audit_elf = 0;
 	add = AUDIT_FILTER_UNSET;
 	del = AUDIT_FILTER_UNSET;
 	action = -1;
 	exclude = 0;
-	which = OLD;
 	multiple = 0;
 
-	memset(&rule, 0, sizeof(rule));
 	free(rule_new);
-	rule_new = NULL;
+	rule_new = malloc(sizeof(struct audit_rule_data));
+	memset(rule_new, 0, sizeof(struct audit_rule_data));
 	if (fd < 0) {
 		if ((fd = audit_open()) < 0) {
 			fprintf(stderr, "Cannot open netlink audit socket\n");
@@ -107,29 +98,6 @@ static int reset_vars(void)
 		}
 	}
 	return 0;
-}
-
-static void upgrade_rule(void)
-{
-	int i;
-
-	rule_new=malloc(sizeof(struct audit_rule_data));
-	memset(rule_new, 0, sizeof(struct audit_rule_data));
-	memcpy(rule_new, &rule, sizeof(rule));
-	which = NEW;
-	if (rule_new->field_count == 0)
-		return;
-
-	// now go through fields and move legacy ops to fieldflags
-	for (i=0; i<rule_new->field_count; i++) {
-		uint32_t ops = rule_new->fields[i] & 
-				(AUDIT_NEGATE|AUDIT_OPERATORS);
-		rule_new->fields[i] &= ~(AUDIT_NEGATE|AUDIT_OPERATORS);
-		if (ops & AUDIT_NEGATE)
-			rule_new->fieldflags[i] = AUDIT_NOT_EQUAL;
-		else
-			rule_new->fieldflags[i] = AUDIT_EQUAL; 
-	}
 }
 
 static void usage(void)
@@ -140,9 +108,12 @@ static void usage(void)
      "    -A <l,a>            Add rule at beginning of <l>ist with <a>ction\n"
      "    -b <backlog>        Set max number of outstanding audit buffers\n"
      "                        allowed Default=64\n"
+     "    -c                  Continue through errors in rules\n"
+     "    -C f=f              Compare collected fields if available:\n"
+     "                        Field name, operator(=,!=), field name\n"
      "    -d <l,a>            Delete rule from <l>ist with <a>ction\n"
-     "                        l=task,entry,exit,user,watch,exclude\n"
-     "                        a=never,possible,always\n"
+     "                        l=task,exit,user,exclude\n"
+     "                        a=never,always\n"
      "    -D                  Delete all rules and watches\n"
      "    -e [0..2]           Set enabled flag\n"
      "    -f [0..2]           Set failure flag\n"
@@ -203,7 +174,7 @@ static int lookup_action(const char *str, int *act)
  * Returns 0 ok, 1 deprecated action, 2 rule error,
  * 3 multiple rule insert/delete
  */
-static int audit_rule_setup(char *opt, int *filter, int *act)
+static int audit_rule_setup(char *opt, int *filter, int *act, int lineno)
 {
 	int rc;
 	char *p;
@@ -241,6 +212,16 @@ static int audit_rule_setup(char *opt, int *filter, int *act)
 	/* Make sure we set both */
 	if (*filter == AUDIT_FILTER_UNSET || *act == -1)
 		return 2;
+
+	/* Consolidate rules on exit filter */
+	if (*filter == AUDIT_FILTER_ENTRY) {
+		*filter = AUDIT_FILTER_EXIT;
+		fprintf(stderr,
+		    "Warning - entry rules deprecated, changing to exit rule");
+		if (lineno)
+			fprintf(stderr, " in line %d", lineno);
+		fprintf(stderr, "\n");
+	}
 
 	return 0;
 }
@@ -350,8 +331,8 @@ static int audit_setup_perms(struct audit_rule_data *rule, const char *opt)
 		}
 	}
 
-	if (audit_update_watch_perms(rule, val) == 0) {
-		audit_permadded = 1;
+	if (audit_update_watch_perms(rule_new, val) == 0) {
+		_audit_permadded = 1;
 		return 1;
 	}
 	return -1;
@@ -441,50 +422,39 @@ static int equiv_parse(char *optarg, char **mp, char **sub)
 	return 0;
 }
 
-void audit_request_rule_list(int fd)
+int audit_request_rule_list(int fd)
 {
-	int rc;
-
-	/* Try out the new message type */
-	if ((rc = audit_request_rules_list_data(fd)) > 0) {
+	if (audit_request_rules_list_data(fd) > 0) {
 		list_requested = 1;
 		get_reply();
-	} else if (rc == -EINVAL) { /* Not supported...drop back to old one */
-		if (audit_request_rules_list(fd) > 0) {
-			list_requested = 1;
-			get_reply();
-		}
+		return 1;
 	}
+	return 0;
 }
 
 void check_rule_mismatch(int lineno, const char *option)
 {
-	struct audit_rule tmprule;
-	unsigned int old_audit_elf = audit_elf;
+	struct audit_rule_data tmprule;
+	unsigned int old_audit_elf = _audit_elf;
 	int rc = 0;
 
-	switch (audit_elf)
+	switch (_audit_elf)
 	{
 		case AUDIT_ARCH_X86_64:
-			audit_elf = AUDIT_ARCH_I386;
+			_audit_elf = AUDIT_ARCH_I386;
 			break;
 		case AUDIT_ARCH_PPC64:
-			audit_elf = AUDIT_ARCH_PPC;
+			_audit_elf = AUDIT_ARCH_PPC;
 			break;
 		case AUDIT_ARCH_S390X:
-			audit_elf = AUDIT_ARCH_S390;
+			_audit_elf = AUDIT_ARCH_S390;
 			break;
 	}
-	memset(&tmprule, 0, sizeof(struct audit_rule));
-	audit_rule_syscallbyname(&tmprule, option);
-	if (which == OLD) {
-		if (memcmp(tmprule.mask, rule.mask, AUDIT_BITMASK_SIZE))
-			rc = 1;
-	} else {
-		if (memcmp(tmprule.mask, rule_new->mask, AUDIT_BITMASK_SIZE))
-			rc = 1;
-	}
-	audit_elf = old_audit_elf;
+	memset(&tmprule, 0, sizeof(struct audit_rule_data));
+	audit_rule_syscallbyname_data(&tmprule, option);
+	if (memcmp(tmprule.mask, rule_new->mask, AUDIT_BITMASK_SIZE))
+		rc = 1;
+	_audit_elf = old_audit_elf;
 	if (rc) { 
 		fprintf(stderr, "WARNING - 32/64 bit syscall mismatch");
 		if (lineno)
@@ -509,7 +479,7 @@ static int setopt(int count, int lineno, char *vars[])
     keylen = AUDIT_MAX_KEY_LEN;
 
     while ((retval >= 0) && (c = getopt(count, vars,
-			"hislDvte:f:r:b:a:A:d:S:F:m:R:w:W:k:p:q:")) != EOF) {
+			"hicslDvtC:e:f:r:b:a:A:d:S:F:m:R:w:W:k:p:q:")) != EOF) {
 	int flags = AUDIT_FILTER_UNSET;
 	rc = 10;	// Init to something impossible to see if unused.
         switch (c) {
@@ -519,6 +489,11 @@ static int setopt(int count, int lineno, char *vars[])
 		break;
 	case 'i':
 		ignore = 1;
+		retval = -2;
+		break;
+	case 'c':
+		ignore = 1;
+		continue_error = 1;
 		retval = -2;
 		break;
         case 's':
@@ -613,16 +588,18 @@ static int setopt(int count, int lineno, char *vars[])
 				break;
 			}
 		}
-		audit_request_rule_list(fd);
-		retval = -2;
+		if (audit_request_rule_list(fd))
+			retval = -2;
+		else
+			retval = -1;
 		break;
         case 'a':
-		if (strstr(optarg, "task") && audit_syscalladded) {
+		if (strstr(optarg, "task") && _audit_syscalladded) {
 			fprintf(stderr, 
 				"Syscall auditing requested for task list\n");
 			retval = -1;
 		} else {
-			rc = audit_rule_setup(optarg, &add, &action);
+			rc = audit_rule_setup(optarg, &add, &action, lineno);
 			if (rc == 3) {
 				fprintf(stderr,
 		"Multiple rule insert/delete operations are not allowed\n");
@@ -641,12 +618,12 @@ static int setopt(int count, int lineno, char *vars[])
 		}
 		break;
         case 'A': 
-		if (strstr(optarg, "task") && audit_syscalladded) {
+		if (strstr(optarg, "task") && _audit_syscalladded) {
 			fprintf(stderr, 
 			   "Error: syscall auditing requested for task list\n");
 			retval = -1;
 		} else {
-			rc = audit_rule_setup(optarg, &add, &action);
+			rc = audit_rule_setup(optarg, &add, &action, lineno);
 			if (rc == 3) {
 				fprintf(stderr,
 		"Multiple rule insert/delete operations are not allowed\n");
@@ -666,7 +643,7 @@ static int setopt(int count, int lineno, char *vars[])
 		}
 		break;
         case 'd': 
-		rc = audit_rule_setup(optarg, &del, &action);
+		rc = audit_rule_setup(optarg, &del, &action, lineno);
 		if (rc == 3) {
 			fprintf(stderr,
 		"Multiple rule insert/delete operations are not allowed\n");
@@ -683,7 +660,7 @@ static int setopt(int count, int lineno, char *vars[])
 			retval = 1; /* success - please send */
 		break;
         case 'S': {
-		int unknown_arch = !audit_elf;
+		int unknown_arch = !_audit_elf;
 		/* Do some checking to make sure that we are not adding a
 		 * syscall rule to a list that does not make sense. */
 		if (((add & (AUDIT_FILTER_MASK|AUDIT_FILTER_UNSET)) ==
@@ -720,18 +697,14 @@ static int setopt(int count, int lineno, char *vars[])
 					    "Error looking up elf type");
 					return -1;
 				}
-				audit_elf = elf;
+				_audit_elf = elf;
 			}
 		}
-		if (which == OLD) 
-			rc = audit_rule_syscallbyname(&rule, optarg);
-		else
-			rc = audit_rule_syscallbyname(
-				(struct audit_rule *)rule_new, optarg);
+		rc = audit_rule_syscallbyname_data(rule_new, optarg);
 		switch (rc)
 		{
 			case 0:
-				audit_syscalladded = 1;
+				_audit_syscalladded = 1;
 				if (unknown_arch && add != AUDIT_FILTER_UNSET)
 					check_rule_mismatch(lineno, optarg);
 				break;
@@ -742,7 +715,7 @@ static int setopt(int count, int lineno, char *vars[])
 				break;
 			case -2:
 				fprintf(stderr, "Elf type unknown: 0x%x\n", 
-							audit_elf);
+							_audit_elf);
 				retval = -1;
 				break;
 		}}
@@ -760,33 +733,41 @@ static int setopt(int count, int lineno, char *vars[])
 			retval = -1;
 			break;
 		}
-		if (which == OLD) {
-			char *ptr = strdup(optarg);
-			rc = audit_rule_fieldpair(&rule, ptr, flags);
-			if (rc == -10)
-				upgrade_rule(); /* need to upgrade... */
-			free(ptr);
-		}
-		if (which == NEW) 
-			rc = audit_rule_fieldpair_data(&rule_new,optarg,flags);
 
+		rc = audit_rule_fieldpair_data(&rule_new,optarg,flags);
 		if (rc != 0) {
 			audit_number_to_errmsg(rc, optarg);
 			retval = -1;
 		} else {
-			if (which == NEW && rule_new->fields[rule_new->field_count-1] ==
+			if (rule_new->fields[rule_new->field_count-1] ==
 						AUDIT_PERM)
-				audit_permadded = 1;
+				_audit_permadded = 1;
 		}
 
+		break;
+	case 'C':
+		if (add != AUDIT_FILTER_UNSET)
+			flags = add & AUDIT_FILTER_MASK;
+		else if (del != AUDIT_FILTER_UNSET)
+			flags = del & AUDIT_FILTER_MASK;
+
+		rc = audit_rule_interfield_comp_data(&rule_new, optarg, flags);
+		if (rc != 0) {
+			audit_number_to_errmsg(rc, optarg);
+			retval = -1;
+		} else {
+			if (rule_new->fields[rule_new->field_count - 1] ==
+			    AUDIT_PERM)
+				_audit_permadded = 1;
+		}
 		break;
         case 'm':
 		if (count > 3) {
 			fprintf(stderr,
 	"The -m option must be only the only option and takes 1 parameter\n");
 			retval = -1;
-		} else if (audit_log_user_message( fd, AUDIT_USER, optarg, NULL, 
-				NULL, NULL, 1) <=0)
+		} else if (audit_log_user_message( fd, AUDIT_USER,
+					optarg, NULL, NULL, NULL, 1) <= 0)
 			retval = -1;
 		else
 			return -2;  // success - no reply for this
@@ -815,7 +796,7 @@ static int setopt(int count, int lineno, char *vars[])
 		}
 		retval = delete_all_rules(fd);
 		if (retval == 0) {
-			audit_request_rule_list(fd);
+			(void)audit_request_rule_list(fd);
 			key[0] = 0;
 			retval = -2;
 		}
@@ -829,8 +810,7 @@ static int setopt(int count, int lineno, char *vars[])
 		} else if (optarg) { 
 			add = AUDIT_FILTER_EXIT;
 			action = AUDIT_ALWAYS;
-			which = NEW;
-			audit_syscalladded = 1;
+			_audit_syscalladded = 1;
 			retval = audit_setup_watch_name(&rule_new, optarg);
 		} else {
 			fprintf(stderr, "watch option needs a path\n");	
@@ -841,8 +821,7 @@ static int setopt(int count, int lineno, char *vars[])
 		if (optarg) { 
 			del = AUDIT_FILTER_EXIT;
 			action = AUDIT_ALWAYS;
-			which = NEW;
-			audit_syscalladded = 1;
+			_audit_syscalladded = 1;
 			retval = audit_setup_watch_name(&rule_new, optarg);
 		} else {
 			fprintf(stderr, "watch option needs a path\n");	
@@ -850,7 +829,7 @@ static int setopt(int count, int lineno, char *vars[])
 		}
 		break;
 	case 'k':
-		if (!(audit_syscalladded || audit_permadded ) ||
+		if (!(_audit_syscalladded || _audit_permadded ) ||
 				(add==AUDIT_FILTER_UNSET &&
 					del==AUDIT_FILTER_UNSET)) {
 			fprintf(stderr,
@@ -889,17 +868,11 @@ static int setopt(int count, int lineno, char *vars[])
 		} else if (!optarg) {
 			fprintf(stderr, "permission option needs a filter\n");
 			retval = -1;
-		} else {
-			if (which == OLD) {
-				fprintf(stderr,
-				"You must give a watch prior to perms\n");
-				retval = -1;
-			} else 
-				retval = audit_setup_perms(rule_new, optarg);
-		}
+		} else 
+			retval = audit_setup_perms(rule_new, optarg);
 		break;
         case 'q':
-		if (audit_syscalladded) {
+		if (_audit_syscalladded) {
 			fprintf(stderr, 
 			   "Syscall auditing requested for make equivalent\n");
 			retval = -1;
@@ -959,10 +932,7 @@ static int setopt(int count, int lineno, char *vars[])
 	asprintf(&cmd, "key=%s", key);
 	if (cmd) {
 		/* Add this to the rule */
-		int ret;
-		if (which == OLD)
-			upgrade_rule();
-		ret = audit_rule_fieldpair_data(&rule_new, cmd, flags);
+		int ret = audit_rule_fieldpair_data(&rule_new, cmd, flags);
 		if (ret < 0)
 			retval = -1;
 		free(cmd);
@@ -987,6 +957,66 @@ static char *get_line(FILE *f, char *buf)
 	}
 	return NULL;
 }
+
+
+void preprocess(char *buf)
+{
+	unsigned int i = 0;
+	bool esc_ctx = false;
+
+	while (buf[i]) {
+		if (buf[i] == '\\' && esc_ctx == false)
+			esc_ctx = true;
+		else {
+			if (esc_ctx == true) {
+				if (buf[i] == ' ') {
+					buf[i] = 0x07;
+					buf[i - 1] = 0x07;
+				} else if (buf[i] == '\\') {
+					buf[i] = 0x04;
+					buf[i - 1] = 0x04;
+				}
+
+				esc_ctx = false;
+			}
+		}
+
+		i++;
+	}
+}
+
+
+void postprocess(char *buf)
+{
+	char *str = strdup(buf);
+	char *pos1 = str;
+	char *pos2 = buf;
+
+	if (!str)
+		return;
+    
+	while (*pos1) {
+		if (*pos1 == 0x07) {
+			*pos2 = ' ';
+			pos1 += 2;
+			pos2++;
+			continue;
+		} else if (*pos1 == 0x04) {
+			*pos2 = '\\';
+			pos1 += 2;
+			pos2++;
+			continue;
+		}
+
+		*pos2 = *pos1;
+		pos2++;
+		pos1++;
+	}
+
+	*pos2 = 0;
+	free(str);
+}
+
 
 /*
  * This function reads the given file line by line and executes the rule.
@@ -1037,7 +1067,7 @@ static int fileopt(const char *file)
 		return 1;
 	}
 
-        f = fdopen(tfd, "r");
+        f = fdopen(tfd, "rm");
         if (f == NULL) {
                 fprintf(stderr, "Error - fdopen failed (%s)\n",
                         strerror(errno));
@@ -1058,9 +1088,12 @@ static int fileopt(const char *file)
 			lineno++;
 			continue;
 		}
+		
+		preprocess(buf);
 		ptr = strtok(buf, " ");
 		if (ptr == NULL)
 			break;
+		
 		/* allow comments */
 		if (ptr[0] == '#') {
 			lineno++;
@@ -1070,8 +1103,10 @@ static int fileopt(const char *file)
 		options[i++] = "auditctl";
 		options[i++] = ptr;
 		while( (ptr=strtok(NULL, " ")) && i<NUM_OPTIONS-1 ) {
+		        postprocess(ptr);
 			options[i++] = ptr;
 		}
+		
 		options[i] = NULL;
 
 		/* Parse it */
@@ -1098,6 +1133,8 @@ static int fileopt(const char *file)
 					fclose(f);
 					return -1;
 				}
+				if (continue_error)
+					continue_error = -1;
 			}
 		}
 		lineno++;
@@ -1118,7 +1155,7 @@ int main(int argc, char *argv[])
 	}
 #ifndef DEBUG
 	/* Make sure we are root */
-	if (getuid() != 0) {
+	if (geteuid() != 0) {
 		fprintf(stderr, "You must be root to run this program.\n");
 		return 4;
 	}
@@ -1129,21 +1166,28 @@ int main(int argc, char *argv[])
 		if (audit_is_enabled(fd) == 2) {
 			fprintf(stderr,
 				"The audit system is in immutable "
-				"mode, no rules loaded\n");
+				"mode, no rule changes allowed\n");
 			return 0;
 		} else if (errno == ECONNREFUSED) {
 			fprintf(stderr, "The audit system is disabled\n");
 			return 0;
 		} else if (fileopt(argv[2]))
 			return 1;
-		else
+		else {
+			if (continue_error < 0)
+				return 1;
 			return 0;
+		}
 	} else {
-		if (reset_vars())
+		if (reset_vars()) {
+			free(rule_new);
 			return 1;
+		}
 		retval = setopt(argc, 0, argv);
-		if (retval == -3)
+		if (retval == -3) {
+			free(rule_new);
 			return 0;
+		}
 	}
 
 	if (add != AUDIT_FILTER_UNSET || del != AUDIT_FILTER_UNSET) {
@@ -1151,14 +1195,18 @@ int main(int argc, char *argv[])
 		if (audit_is_enabled(fd) == 2) {
 			fprintf(stderr,
 				"The audit system is in immutable "
-				"mode, no rules loaded\n");
+				"mode, no rule changes allowed\n");
+			free(rule_new);
 			return 0;
 		} else if (errno == ECONNREFUSED) {
 			fprintf(stderr, "The audit system is disabled\n");
+			free(rule_new);
 			return 0;
 		}
 	}
-	return handle_request(retval);
+	retval = handle_request(retval);
+	free(rule_new);
+	return retval;
 }
 
 /*
@@ -1172,7 +1220,7 @@ int main(int argc, char *argv[])
 static int handle_request(int status)
 {
 	if (status == 0) {
-		if (audit_syscalladded) {
+		if (_audit_syscalladded) {
 			fprintf(stderr, "Error - no list specified\n");
 			return -1;
 		}
@@ -1184,69 +1232,50 @@ static int handle_request(int status)
 		if (add != AUDIT_FILTER_UNSET) {
 			// if !task add syscall any if not specified
 			if ((add & AUDIT_FILTER_MASK) != AUDIT_FILTER_TASK && 
-					audit_syscalladded != 1) {
-				if (which == OLD)
-					audit_rule_syscallbyname(&rule, "all");
-				else
+					_audit_syscalladded != 1) {
 					audit_rule_syscallbyname_data(
 							rule_new, "all");
 			}
-			if (which == OLD) {
-				rc = audit_add_rule(fd, &rule, add, action);
-			} else {
-				set_aumessage_mode(MSG_QUIET, DBG_NO);
-				rc = audit_add_rule_data(fd, rule_new,
-								 add, action);
-				set_aumessage_mode(MSG_STDERR, DBG_NO);
-				/* Retry for legacy kernels */
-				if (rc < 0) {
-					if (errno == EINVAL &&
-					rule_new->fields[0] == AUDIT_DIR) {
-						rule_new->fields[0] =
-								AUDIT_WATCH;
-						rc = audit_add_rule_data(fd,
-								rule_new,
-								add, action);
-					} else {
-						fprintf(stderr,
+			set_aumessage_mode(MSG_QUIET, DBG_NO);
+			rc = audit_add_rule_data(fd, rule_new, add, action);
+			set_aumessage_mode(MSG_STDERR, DBG_NO);
+			/* Retry for legacy kernels */
+			if (rc < 0) {
+				if (errno == EINVAL &&
+				rule_new->fields[0] == AUDIT_DIR) {
+					rule_new->fields[0] = AUDIT_WATCH;
+					rc = audit_add_rule_data(fd, rule_new,
+							add, action);
+				} else {
+					fprintf(stderr,
 				"Error sending add rule data request (%s)\n",
-						errno == EEXIST ?
-						"Rule exists" : strerror(-rc));
-					}
+					errno == EEXIST ?
+					"Rule exists" : strerror(-rc));
 				}
 			}
 		}
 		else if (del != AUDIT_FILTER_UNSET) {
 			if ((del & AUDIT_FILTER_MASK) != AUDIT_FILTER_TASK && 
-					audit_syscalladded != 1) {
-				if (which == OLD)
-					audit_rule_syscallbyname(&rule, "all");
-				else
+					_audit_syscalladded != 1) {
 					audit_rule_syscallbyname_data(
 							rule_new, "all");
 			}
-			if (which == OLD)
-				rc = audit_delete_rule(fd, &rule, del, action);
-			else {
-				set_aumessage_mode(MSG_QUIET, DBG_NO);
-				rc = audit_delete_rule_data(fd, rule_new,
+			set_aumessage_mode(MSG_QUIET, DBG_NO);
+			rc = audit_delete_rule_data(fd, rule_new,
 								 del, action);
-				set_aumessage_mode(MSG_STDERR, DBG_NO);
-				/* Retry for legacy kernels */
-				if (rc < 0) {
-					if (errno == EINVAL &&
+			set_aumessage_mode(MSG_STDERR, DBG_NO);
+			/* Retry for legacy kernels */
+			if (rc < 0) {
+				if (errno == EINVAL &&
 					rule_new->fields[0] == AUDIT_DIR) {
-						rule_new->fields[0] =
-								AUDIT_WATCH;
-						rc = audit_delete_rule_data(fd,
-								rule_new,
+					rule_new->fields[0] = AUDIT_WATCH;
+					rc = audit_delete_rule_data(fd,rule_new,
 								del, action);
-					} else {
-						fprintf(stderr,
+				} else {
+					fprintf(stderr,
 			       "Error sending delete rule data request (%s)\n",
-						errno == EEXIST ?
-						"Rule exists" : strerror(-rc));
-					}
+					errno == EEXIST ?
+					"Rule exists" : strerror(-rc));
 				}
 			}
 		} else {
@@ -1317,13 +1346,8 @@ int key_match(struct audit_reply *rep)
 		return 1;
 
 	// At this point, we have a key
-	// Old records don't have keys
-	if (rep->type == AUDIT_LIST)
-		return 0;
-
-	for (i = 0; i < rep->rule->field_count; i++) {
-		int field = rep->rule->fields[i] &
-					~AUDIT_OPERATORS & ~AUDIT_NEGATE;
+	for (i = 0; i < rep->ruledata->field_count; i++) {
+		int field = rep->ruledata->fields[i] & ~AUDIT_OPERATORS;
 		if (field == AUDIT_FILTERKEY) {
 			char *keyptr;
 			asprintf(&keyptr, "%.*s", rep->ruledata->values[i],
@@ -1357,7 +1381,7 @@ static int audit_print_reply(struct audit_reply *rep)
 	size_t boffset;
 	int show_syscall;
 
-	audit_elf = 0; 
+	_audit_elf = 0; 
 	switch (rep->type) {
 		case NLMSG_NOOP:
 			return 1;
@@ -1380,7 +1404,6 @@ static int audit_print_reply(struct audit_reply *rep)
 			rep->status->backlog);
 			printed = 1;
 			return 0;
-		case AUDIT_LIST:
 		case AUDIT_LIST_RULES:
 			list_requested = 0;
 			boffset = 0;
@@ -1389,39 +1412,35 @@ static int audit_print_reply(struct audit_reply *rep)
 				return 1;
 			printed = 1;
 			printf("%s: %s,%s", audit_msg_type_to_name(rep->type),
-				audit_flag_to_name((int)rep->rule->flags),
-				audit_action_to_name(rep->rule->action));
+				audit_flag_to_name((int)rep->ruledata->flags),
+				audit_action_to_name(rep->ruledata->action));
 
-			for (i = 0; i < rep->rule->field_count; i++) {
+			for (i = 0; i < rep->ruledata->field_count; i++) {
 				const char *name;
-				int op;
-				int field = rep->rule->fields[i] &
-					~AUDIT_OPERATORS & ~AUDIT_NEGATE;
-				if (rep->type == AUDIT_LIST_RULES) {
-					op = rep->ruledata->fieldflags[i] &
-					(AUDIT_OPERATORS | AUDIT_NEGATE);
-				} else {
-					op = rep->rule->fields[i] &
-					    (AUDIT_OPERATORS | AUDIT_NEGATE);
-				}
+				int op = rep->ruledata->fieldflags[i] &
+						AUDIT_OPERATORS;
+				int field = rep->ruledata->fields[i] &
+						~AUDIT_OPERATORS;
                 
 				name = audit_field_to_name(field);
 				if (name) {
 					if (strcmp(name, "arch") == 0) { 
-						audit_elf =rep->rule->values[i];
+						_audit_elf =
+						    rep->ruledata->values[i];
 						printf(" %s%s%u", name, 
-							audit_operator_to_symbol(op),
-							(unsigned)rep->rule->values[i]);
+						  audit_operator_to_symbol(op),
+					    (unsigned)rep->ruledata->values[i]);
 					}
 					else if (strcmp(name, "msgtype") == 0) {
-						if (!audit_msg_type_to_name(rep->rule->values[i]))
+						if (!audit_msg_type_to_name(
+						      rep->ruledata->values[i]))
 							printf(" %s%s%d", name,
 								audit_operator_to_symbol(op),
-								rep->rule->values[i]);
+								rep->ruledata->values[i]);
 						else {
 							printf(" %s%s%s", name,
 								audit_operator_to_symbol(op),
-								audit_msg_type_to_name(rep->rule->values[i]));
+								audit_msg_type_to_name(rep->ruledata->values[i]));
 						}
 					} else if ((field >= AUDIT_SUBJ_USER &&
 						  field <= AUDIT_OBJ_LEV_HIGH)
@@ -1461,7 +1480,7 @@ static int audit_print_reply(struct audit_reply *rep)
 						free(rkey);
 					} else if (field == AUDIT_PERM) {
 						char perms[5];
-						int val=rep->rule->values[i];
+						int val=rep->ruledata->values[i];
 						perms[0] = 0;
 						if (val & AUDIT_PERM_READ)
 							strcat(perms, "r");
@@ -1478,38 +1497,118 @@ static int audit_print_reply(struct audit_reply *rep)
 						printf(" %s%s%u", name, 
 							audit_operator_to_symbol(op),
 							rep->ruledata->values[i]);
+					} else if (field == AUDIT_FIELD_COMPARE) {
+						switch (rep->ruledata->values[i])
+						{
+						case AUDIT_COMPARE_UID_TO_OBJ_UID:
+							printf(" uid%sobj_uid",audit_operator_to_symbol(op));
+							break;
+						case AUDIT_COMPARE_GID_TO_OBJ_GID:
+							printf(" gid%sobj_gid",audit_operator_to_symbol(op));
+							break;
+						case AUDIT_COMPARE_EUID_TO_OBJ_UID:
+							printf(" euid%sobj_uid",audit_operator_to_symbol(op));
+							break;
+						case AUDIT_COMPARE_EGID_TO_OBJ_GID:
+							printf(" egid%sobj_gid",audit_operator_to_symbol(op));
+							break;
+						case AUDIT_COMPARE_AUID_TO_OBJ_UID:
+							printf(" auid%sobj_uid",audit_operator_to_symbol(op));
+							break;
+						case AUDIT_COMPARE_SUID_TO_OBJ_UID:
+							printf(" suid%sobj_uid",audit_operator_to_symbol(op));
+							break;
+						case AUDIT_COMPARE_SGID_TO_OBJ_GID:
+							printf(" sgid%sobj_gid",audit_operator_to_symbol(op));
+							break;
+						case AUDIT_COMPARE_FSUID_TO_OBJ_UID:
+							printf(" fsuid%sobj_uid",audit_operator_to_symbol(op));
+							break;
+						case AUDIT_COMPARE_FSGID_TO_OBJ_GID:
+							printf(" fsgid%sobj_gid",audit_operator_to_symbol(op));
+							break;
+						case AUDIT_COMPARE_UID_TO_AUID:
+							printf(" uid%sauid",audit_operator_to_symbol(op));
+							break;
+						case AUDIT_COMPARE_UID_TO_EUID:
+							printf(" uid%seuid",audit_operator_to_symbol(op));
+							break;
+						case AUDIT_COMPARE_UID_TO_FSUID:
+							printf(" uid%sfsuid",audit_operator_to_symbol(op));
+							break;
+						case AUDIT_COMPARE_UID_TO_SUID:
+							printf(" uid%ssuid",audit_operator_to_symbol(op));
+							break;
+						case AUDIT_COMPARE_AUID_TO_FSUID:
+							printf(" auid%sfsuid",audit_operator_to_symbol(op));
+							break;
+						case AUDIT_COMPARE_AUID_TO_SUID:
+							printf(" auid%ssuid",audit_operator_to_symbol(op));
+							break;
+						case AUDIT_COMPARE_AUID_TO_EUID:
+							printf(" auid%seuid",audit_operator_to_symbol(op));
+							break;
+						case AUDIT_COMPARE_EUID_TO_SUID:
+							printf(" euid%ssuid",audit_operator_to_symbol(op));
+							break;
+						case AUDIT_COMPARE_EUID_TO_FSUID:
+							printf(" euid%sfsuid",audit_operator_to_symbol(op));
+							break;
+						case AUDIT_COMPARE_SUID_TO_FSUID:
+							printf(" suid%sfsuid",audit_operator_to_symbol(op));
+							break;
+						case AUDIT_COMPARE_GID_TO_EGID:
+							printf(" gid%segid",audit_operator_to_symbol(op));
+							break;
+						case AUDIT_COMPARE_GID_TO_FSGID:
+							printf(" gid%sfsgid",audit_operator_to_symbol(op));
+							break;
+						case AUDIT_COMPARE_GID_TO_SGID:
+							printf(" gid%ssgid",audit_operator_to_symbol(op));
+							break;
+						case AUDIT_COMPARE_EGID_TO_FSGID:
+							printf(" egid%sfsgid",audit_operator_to_symbol(op));
+							break;
+						case AUDIT_COMPARE_EGID_TO_SGID:
+							printf(" egid%ssgid",audit_operator_to_symbol(op));
+							break;
+						case AUDIT_COMPARE_SGID_TO_FSGID:
+							printf(" sgid%sfsgid",audit_operator_to_symbol(op));
+							break;
+						}
 					} else {
 						// Signed items
 						printf(" %s%s%d", name, 
 							audit_operator_to_symbol(op),
-							rep->rule->values[i]);
+							rep->ruledata->values[i]);
 					}
 				} else { 
-					printf(" f%d%s%d", rep->rule->fields[i],
+					printf(" f%d%s%d", rep->ruledata->fields[i],
 						audit_operator_to_symbol(op),
-						rep->rule->values[i]);
+						rep->ruledata->values[i]);
 				}
 				/* Avoid printing value if the field type is 
 				 * known to return a string. */
-				if (rep->rule->values[i] && 
+				if (rep->ruledata->values[i] && 
 						(field < AUDIT_SUBJ_USER ||
 						 field > AUDIT_SUBJ_CLR) &&
 						field != AUDIT_WATCH &&
 						field != AUDIT_FILTERKEY &&
-						field != AUDIT_PERM)
-					printf(" (0x%x)", rep->rule->values[i]);
+						field != AUDIT_PERM &&
+						field != AUDIT_FIELD_COMPARE)
+					printf(" (0x%x)", rep->ruledata->values[i]);
 			}
 			if (show_syscall &&
-				((rep->rule->flags & AUDIT_FILTER_MASK) != 
+				((rep->ruledata->flags & AUDIT_FILTER_MASK) != 
 						AUDIT_FILTER_USER) &&
-				((rep->rule->flags & AUDIT_FILTER_MASK) !=
+				((rep->ruledata->flags & AUDIT_FILTER_MASK) !=
 						AUDIT_FILTER_TASK) &&
-				((rep->rule->flags & AUDIT_FILTER_MASK) !=
+				((rep->ruledata->flags & AUDIT_FILTER_MASK) !=
 						AUDIT_FILTER_EXCLUDE)) {
 				printf(" syscall=");
 				for (sparse = 0, i = 0; 
 					i < (AUDIT_BITMASK_SIZE-1); i++) {
-					if (rep->rule->mask[i] != (uint32_t)~0)
+					if (rep->ruledata->mask[i] != (uint32_t)~0)
 						sparse = 1;
 				}
 				if (!sparse) {
@@ -1518,12 +1617,12 @@ static int audit_print_reply(struct audit_reply *rep)
 					i < AUDIT_BITMASK_SIZE * 32; i++) {
 					int word = AUDIT_WORD(i);
 					int bit  = AUDIT_BIT(i);
-					if (rep->rule->mask[word] & bit) {
+					if (rep->ruledata->mask[word] & bit) {
 						const char *ptr;
-						if (audit_elf)
+						if (_audit_elf)
 							machine = 
 							audit_elf_to_machine(
-								audit_elf);
+								_audit_elf);
 						if (machine < 0)
 							ptr = NULL;
 						else

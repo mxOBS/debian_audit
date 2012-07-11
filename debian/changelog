@@ -1,3 +1,16 @@
+audit (1:2.2.1-1) experimental; urgency=low
+
+  * Non-maintainer upload (with maintainer's blessing)
+  * New upstream release
+  * Refit patches
+  * debian/control: bump Standards-Version (no changes)
+  * debian/control: bump versioned build dep on debhelper to 9
+  * debian/control: add build dep on dpkg-dev >= 1.16.1~ to get
+    dpkg-buildflags support for hardening
+  * debian/compat: bump up to 9
+
+ -- Andrew Pollock <apollock@google.com>  Wed, 11 Jul 2012 16:53:40 -0700
+
 audit (1:1.7.18-1.1) unstable; urgency=low
 
   * Non-maintainer upload.

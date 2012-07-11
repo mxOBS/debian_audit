@@ -29,7 +29,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <regex.h>
 #include <stdio_ext.h>
 
 static int debug = 0;
@@ -71,9 +70,14 @@ static int setup_log_file_array(auparse_state_t *au)
 		num++;
 		snprintf(filename, len, "%s.%d", config.log_file, num);
 	} while (1);
+
+	if (num == 0) {
+		fprintf(stderr, "No log file\n");
+		free_config(&config);
+		return 1;
+	}
 	num--;
 	tmp = malloc((num+2)*sizeof(char *));
-
 
         /* Got it, now process logs from last to first */
 	if (num > 0)
@@ -180,7 +184,7 @@ auparse_state_t *auparse_init(ausource_t source, const void *b)
 			break;
 		case AUSOURCE_DESCRIPTOR:
 			n = (long)b;
-			au->in = fdopen(n, "r");
+			au->in = fdopen(n, "rm");
 			break;
 		case AUSOURCE_FILE_POINTER:
 			au->in = (FILE *)b;
@@ -190,7 +194,7 @@ auparse_state_t *auparse_init(ausource_t source, const void *b)
 			break;
 		default:
 			errno = EINVAL;
-			return NULL;
+			goto bad_exit;
 			break;
 	}
 	au->source = source;
@@ -205,7 +209,6 @@ auparse_state_t *auparse_init(ausource_t source, const void *b)
 	au->expr = NULL;
 	au->find_field = NULL;
 	au->search_where = AUSEARCH_STOP_EVENT;
-	au->regex_valid = 0;
 
 	return au;
 bad_exit:
@@ -218,6 +221,11 @@ bad_exit:
 void auparse_add_callback(auparse_state_t *au, auparse_callback_ptr callback,
 			  void *user_data, user_destroy user_destroy_func)
 {
+	if (au == NULL) {
+		errno = EINVAL;
+		return;
+	}
+
 	if (au->callback_user_data_destroy) {
 		(*au->callback_user_data_destroy)(au->callback_user_data);
 		au->callback_user_data = NULL;
@@ -343,10 +351,6 @@ static int ausearch_add_item_internal(auparse_state_t *au, const char *field,
 	if (field == NULL)
 		goto err_out;
 
-	// Do not allow regex to get replaced this way
-	if (au->regex_valid != 0)
-		goto err_out;
-
 	// Make sure how is within range
 	if (how < AUSEARCH_RULE_CLEAR || how > AUSEARCH_RULE_AND)
 		goto err_out;
@@ -421,10 +425,6 @@ found_op:
 	if (milli >= 1000)
 		goto err_out;
 
-	// Do not allow regex to get replaced this way
-	if (au->regex_valid != 0)
-		goto err_out;
-
 	// Make sure how is within range
 	if (how < AUSEARCH_RULE_CLEAR || how > AUSEARCH_RULE_AND)
 		goto err_out;
@@ -447,9 +447,6 @@ int ausearch_add_expression(auparse_state_t *au, const char *expression,
 {
 	struct expr *expr;
 
-	// Do not allow regex to get replaced this way
-	if (au->regex_valid != 0)
-		goto err_einval;
 	if (how < AUSEARCH_RULE_CLEAR || how > AUSEARCH_RULE_AND)
 		goto err_einval;
 
@@ -470,25 +467,20 @@ err:
 	return -1;
 }
 
-int ausearch_add_regex(auparse_state_t *au, const char *expr)
+int ausearch_add_regex(auparse_state_t *au, const char *regexp)
 {
-	int rc;
+	struct expr *expr;
 
 	// Make sure there's an expression
+	if (regexp == NULL)
+		goto err_out;
+
+	expr = expr_create_regexp_expression(regexp);
 	if (expr == NULL)
-		goto err_out;
-
-	if (au->regex_valid != 0 || au->expr != NULL)
-		goto err_out;
-
-	// Compile expression now to make sure the expression is correct
-	rc = regcomp(&au->regex, expr, REG_EXTENDED|REG_NOSUB);
-	if (rc) {
-		goto err_out;
-	}
-	au->regex_valid = 1;
-
-	return 0; 
+		return -1;
+	if (add_expr(au, expr, AUSEARCH_RULE_AND) != 0)
+		return -1; /* expr is freed by add_expr() */
+	return 0;
 
 err_out:
 	errno = EINVAL;
@@ -508,10 +500,6 @@ int ausearch_set_stop(auparse_state_t *au, austop_t where)
 
 void ausearch_clear(auparse_state_t *au)
 {
-	if (au->regex_valid != 0) {
-		regfree(&au->regex);
-		au->regex_valid = 0;
-	}
 	if (au->expr != NULL) {
 		expr_free(au->expr);
 		au->expr = NULL;
@@ -702,13 +690,16 @@ static int extract_timestamp(const char *b, au_event_t *e)
 	int rc = 1;
 
         e->host = NULL;
-	tmp = strndupa(b, 80);
+	if (*b == 'n')
+		tmp = strndupa(b, 340);
+	else
+		tmp = strndupa(b, 80);
 	ptr = strtok(tmp, " ");
 	if (ptr) {
 		// Optionally grab the node - may or may not be included
 		if (*ptr == 'n') {
 			e->host = strdup(ptr+5);
-			ptr = strtok(NULL, " "); // Bump along to the next one
+			(void)strtok(NULL, " "); // Bump along to the next one
 		}
 		// at this point we have type=
 		ptr = strtok(NULL, " ");
@@ -810,7 +801,7 @@ static int retrieve_next_line(auparse_state_t *au)
 				}
 				au->line_number = 0;
 				au->in = fopen(au->source_list[au->list_idx],
-									"r");
+									"rm");
 				if (au->in == NULL)
 					return -1;
 				__fsetlocking(au->in, FSETLOCKING_BYCALLER);
@@ -828,7 +819,7 @@ static int retrieve_next_line(auparse_state_t *au)
 					if (au->source_list[au->list_idx]) {
 						au->in = fopen(
 						  au->source_list[au->list_idx],
-						  "r");
+						  "rm");
 						if (au->in == NULL)
 							return -1;
 						__fsetlocking(au->in,
@@ -901,16 +892,6 @@ static int ausearch_compare(auparse_state_t *au)
 {
 	rnode *r;
 
-	if (au->regex_valid != 0) {
-		int rc;
-
-		r = aup_list_get_cur(&au->le);
-		rc = regexec(&au->regex, r->record, 0, NULL, 0);
-		if (rc == 0)
-			return 1;
-		else
-			return 0;
-	}
 	r = aup_list_get_cur(&au->le);
 	if (r)
 		return expr_eval(au, r, au->expr);
@@ -923,7 +904,7 @@ int ausearch_next_event(auparse_state_t *au)
 {
 	int rc;
 
-	if (au->expr == NULL && au->regex_valid == 0) {
+	if (au->expr == NULL) {
 		errno = EINVAL;
 		return -1;
 	}

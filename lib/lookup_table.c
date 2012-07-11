@@ -1,5 +1,5 @@
 /* lookup_table.c -- 
- * Copyright 2004-2008 Red Hat Inc., Durham, North Carolina.
+ * Copyright 2004-2008,2012 Red Hat Inc., Durham, North Carolina.
  * All Rights Reserved.
  *
  * This library is free software; you can redistribute it and/or
@@ -34,8 +34,12 @@
 #include "gen_tables.h"
 #include "private.h"
 
+#ifndef NO_TABLES
 #ifdef WITH_ALPHA
 #include "alpha_tables.h"
+#endif
+#ifdef WITH_ARMEB
+#include "armeb_tables.h"
 #endif
 #include "i386_tables.h"
 #include "ia64_tables.h"
@@ -43,14 +47,19 @@
 #include "s390_tables.h"
 #include "s390x_tables.h"
 #include "x86_64_tables.h"
-#include "actiontabs.h"
 #include "errtabs.h"
-#include "fieldtabs.h"
-#include "flagtabs.h"
 #include "ftypetabs.h"
-#include "machinetabs.h"
+#include "fieldtabs.h"
+#endif
 #include "msg_typetabs.h"
+#include "actiontabs.h"
+#include "flagtabs.h"
+#include "machinetabs.h"
 #include "optabs.h"
+
+#ifndef EM_ARM
+#define EM_ARM  40
+#endif
 
 struct int_transtab {
     int        key;
@@ -68,22 +77,31 @@ static const struct int_transtab elftab[] = {
 #ifdef WITH_ALPHA
     { MACH_ALPHA,   AUDIT_ARCH_ALPHA  }
 #endif
+#ifdef WITH_ARMEB
+    { MACH_ARMEB,   AUDIT_ARCH_ARMEB  }
+#endif
 };
 #define AUDIT_ELF_NAMES (sizeof(elftab)/sizeof(elftab[0]))
 
 int audit_name_to_field(const char *field)
 {
+#ifndef NO_TABLES
 	int res;
 
 	if (field_s2i(field, &res) != 0)
 		return res;
+#endif
 	return -1;
 }
 hidden_def(audit_name_to_field)
 
 const char *audit_field_to_name(int field)
 {
+#ifndef NO_TABLES
 	return field_i2s(field);
+#else
+	return NULL;
+#endif
 }
 
 int audit_name_to_syscall(const char *sc, int machine)
@@ -92,6 +110,7 @@ int audit_name_to_syscall(const char *sc, int machine)
 
 	switch (machine)
 	{
+#ifndef NO_TABLES
 		case MACH_X86:
 			found = i386_syscall_s2i(sc, &res);
 			break;
@@ -116,6 +135,12 @@ int audit_name_to_syscall(const char *sc, int machine)
 			found = alpha_syscall_s2i(sc, &res);
 			break;
 #endif
+#ifdef WITH_ARMEB
+	        case MACH_ARMEB:
+			found = armeb_syscall_s2i(sc, &res);
+			break;
+#endif
+#endif
 		default:
 			return -1;
 	}
@@ -127,6 +152,7 @@ hidden_def(audit_name_to_syscall)
 
 const char *audit_syscall_to_name(int sc, int machine)
 {
+#ifndef NO_TABLES
 	switch (machine)
 	{
 		case MACH_X86:
@@ -146,7 +172,12 @@ const char *audit_syscall_to_name(int sc, int machine)
 	        case MACH_ALPHA:
 			return alpha_syscall_i2s(sc);
 #endif
+#ifdef WITH_ARMEB
+	        case MACH_ARMEB:
+			return armeb_syscall_i2s(sc);
+#endif
 	}
+#endif
 	return NULL;
 }
 
@@ -205,6 +236,7 @@ int audit_name_to_msg_type(const char *msg_type)
 		errno = 0;
 		return strtol(msg_type, NULL, 10);
 	}
+
 	return -1;
 }
 hidden_def(audit_name_to_msg_type)
@@ -253,11 +285,6 @@ hidden_def(audit_elf_to_machine)
 
 const char *audit_operator_to_symbol(int op)
 {
-	/* Convert legacy ops */
-	if (op == 0)
-		op = AUDIT_EQUAL;
-	else if (op & AUDIT_NEGATE)
-		op = AUDIT_NOT_EQUAL;
 	return op_i2s(op);
 }
 hidden_def(audit_operator_to_symbol)
@@ -265,6 +292,7 @@ hidden_def(audit_operator_to_symbol)
 /* This function returns 0 on error, otherwise the converted value */
 int audit_name_to_errno(const char *error)
 {
+#ifndef NO_TABLES
 	int rc, minus = 1;
 
 	if (*error == '-') {
@@ -275,30 +303,43 @@ int audit_name_to_errno(const char *error)
 		rc = 0;
 
 	return rc*minus;
+#else
+	return 0;
+#endif
 }
 hidden_def(audit_name_to_errno)
 
 /* This function does not handle negative numbers yet */
 const char *audit_errno_to_name(int error)
 {
+#ifndef NO_TABLES
 	if (error < 0)
 		return NULL;
 
         return err_i2s(error);
+#else
+	return NULL;
+#endif
 }
 
 int audit_name_to_ftype(const char *name)
 {
 	int res;
 
+#ifndef NO_TABLES
 	if (ftype_s2i(name, &res) != 0)
 		return res;
+#endif
 	return -1;
 }
 hidden_def(audit_name_to_ftype)
 
 const char *audit_ftype_to_name(int ftype)
 {
+#ifndef NO_TABLES
 	return ftype_i2s(ftype);
+#else
+	return NULL;
+#endif
 }
 
