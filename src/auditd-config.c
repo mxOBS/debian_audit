@@ -669,8 +669,11 @@ static int dispatch_parser(struct nv_pair *nv, int line,
 		return 1;
 	}
 	if ((buf.st_mode & (S_IRWXU|S_IRWXG|S_IRWXO)) !=
-			   (S_IRWXU|S_IRGRP|S_IXGRP)) {
-		audit_msg(LOG_ERR, "%s permissions should be 0750", nv->value);
+			   (S_IRWXU|S_IRGRP|S_IXGRP) && 
+	    (buf.st_mode & (S_IRWXU|S_IRWXG|S_IRWXO)) !=
+			   (S_IRWXU|S_IRGRP|S_IXGRP|S_IROTH|S_IXOTH)) {
+		audit_msg(LOG_ERR, "%s permissions should be 0750 or 0755",
+				nv->value);
 		return 1;
 	}
 bypass:
@@ -920,8 +923,11 @@ static int check_exe_name(const char *val, int line)
 		return -1;
 	}
 	if ((buf.st_mode & (S_IRWXU|S_IRWXG|S_IRWXO)) !=
-			   (S_IRWXU|S_IRGRP|S_IXGRP)) {
-		audit_msg(LOG_ERR, "%s permissions should be 0750 - line %d",
+			   (S_IRWXU|S_IRGRP|S_IXGRP) &&
+	    (buf.st_mode & (S_IRWXU|S_IRWXG|S_IRWXO)) !=
+			   (S_IRWXU|S_IRGRP|S_IXGRP|S_IROTH|S_IXOTH)) {
+		audit_msg(LOG_ERR,
+			"%s permissions should be 0750 or 0755 - line %d",
 			val, line);
 		return -1;
 	}
@@ -1298,7 +1304,7 @@ static int tcp_max_per_addr_parser(struct nv_pair *nv, int line,
 	/* Check its range.  While this value is technically
 	   unlimited, it's limited by the kernel, and we limit it here
 	   for sanity. */
-	if (i > 16) {
+	if (i > 1024) {
 		audit_msg(LOG_ERR, 
 			"Error - converted number (%s) is too large - line %d",
 			nv->value, line);

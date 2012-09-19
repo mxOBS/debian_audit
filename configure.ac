@@ -1,7 +1,7 @@
 dnl
 define([AC_INIT_NOTICE],
 [### Generated automatically using autoconf version] AC_ACVERSION [
-### Copyright 2005-11 Steve Grubb <sgrubb@redhat.com>
+### Copyright 2005-12 Steve Grubb <sgrubb@redhat.com>
 ###
 ### Permission is hereby granted, free of charge, to any person obtaining a
 ### copy of this software and associated documentation files (the "Software"),
@@ -29,7 +29,7 @@ define([AC_INIT_NOTICE],
 ])
 
 AC_REVISION($Revision: 1.3 $)dnl
-AC_INIT(audit,2.1.3)
+AC_INIT(audit,2.2.1)
 AC_PREREQ(2.12)dnl
 AM_CONFIG_HEADER(config.h)
 
@@ -40,7 +40,6 @@ AC_CANONICAL_TARGET
 AM_INIT_AUTOMAKE
 AM_PROG_LIBTOOL
 AC_SUBST(LIBTOOL_DEPS)
-AM_PATH_PYTHON
 OLDLIBS="$LIBS"
 m4_include([src/libev/libev.m4])
 libev_LIBS="$LIBS"
@@ -63,6 +62,7 @@ AC_C_INLINE
 AC_CHECK_SIZEOF([unsigned int])
 AC_CHECK_SIZEOF([unsigned long])
 AM_PROG_CC_C_O
+AC_CHECK_DECLS([MS_DIRSYNC], [], [], [[#include <sys/mount.h>]])
 
 ALLWARNS=""
 ALLDEBUG="-g"
@@ -78,6 +78,31 @@ if test x"$GCC" = x"yes"; then
              ;;
     esac
 fi
+
+AC_MSG_CHECKING(whether to create python bindings)
+AC_ARG_WITH(python,
+AS_HELP_STRING([--with-python],[enable building python bindings]),
+use_python=$withval,
+use_python=auto)
+if test x$use_python = xno ; then
+	python_found="no"
+	AC_MSG_RESULT(no)
+else
+AC_MSG_RESULT(testing)
+AM_PATH_PYTHON
+if test -f /usr/include/python${am_cv_python_version}/Python.h ; then
+	python_found="yes"
+	AC_MSG_NOTICE(Python bindings will be built)
+else
+	python_found="no"
+	if test x$use_python = xyes ; then
+		AC_MSG_ERROR([Python explicitly required and python headers found])
+	else
+		AC_MSG_WARN("Python headers not found - python bindings will not be made")
+	fi
+fi
+fi
+AM_CONDITIONAL(HAVE_PYTHON, test ${python_found} = "yes")
 
 #gssapi
 AC_ARG_ENABLE(gssapi_krb5,
@@ -133,10 +158,9 @@ use_alpha=$withval,
 use_alpha=no)
 if test x$use_alpha != xno ; then
       AC_DEFINE(WITH_ALPHA,1,[Define if you want to enable Alpha processor support.])
-else
-	AC_MSG_RESULT(no)
 fi
 AM_CONDITIONAL(USE_ALPHA, test x$use_alpha = xyes)
+AC_MSG_RESULT($use_alpha)
 
 AC_MSG_CHECKING(whether to include arm eabi processor support)
 AC_ARG_WITH(armeb,
@@ -145,10 +169,9 @@ use_armeb=$withval,
 use_armeb=no)
 if test x$use_armeb != xno ; then
       AC_DEFINE(WITH_ARMEB,1,[Define if you want to enable Arm eabi processor support.])
-else
-	AC_MSG_RESULT(no)
 fi
 AM_CONDITIONAL(USE_ARMEB, test x$use_armeb = xyes)
+AC_MSG_RESULT($use_armeb)
 
 AC_MSG_CHECKING(whether to use apparmor)
 AC_ARG_WITH(apparmor,
@@ -157,17 +180,17 @@ use_apparmor=$withval,
 use_apparmor=no)
 if test x$use_apparmor != xno ; then
       AC_DEFINE(WITH_APPARMOR,1,[Define if you want to enable AppArmor events.])
-else
-	AC_MSG_RESULT(no)
 fi
+AC_MSG_RESULT($use_apparmor)
 
+AC_MSG_CHECKING(whether to use prelude)
 AC_ARG_WITH(prelude,
 AS_HELP_STRING([--with-prelude],[enable prelude IDS support]),
 use_prelude=$withval,
 use_prelude=no)
+AC_MSG_RESULT($use_prelude)
 if test x$use_prelude = xno ; then
 	have_prelude=no;
-	AC_MSG_RESULT(no)
 else
       AC_CHECK_LIB(prelude, prelude_init,
                  have_prelude=yes, have_prelude=no)
@@ -176,7 +199,7 @@ else
       else
 	LIBPRELUDE_CFLAGS=`libprelude-config --pthread-cflags 2>/dev/null`
 	LIBPRELUDE_LDFLAGS=`libprelude-config --ldflags 2>/dev/null`
-
+        AC_MSG_RESULT(yes)
       fi
 fi
 AM_CONDITIONAL(HAVE_PRELUDE, test x$have_prelude = xyes)
@@ -227,11 +250,11 @@ LIBCAP_NG_PATH
 
 AC_SUBST(DEBUG)
 AC_SUBST(LIBWRAP_LIBS)
-AC_SUBST(libev_LIBS)
+#AC_SUBST(libev_LIBS)
 AC_SUBST(LIBPRELUDE_CFLAGS)
 AC_SUBST(LIBPRELUDE_LDFLAGS)
 
-AC_OUTPUT(Makefile lib/Makefile lib/test/Makefile auparse/Makefile auparse/test/Makefile src/Makefile src/mt/Makefile src/libev/Makefile src/test/Makefile swig/Makefile docs/Makefile init.d/Makefile audisp/Makefile audisp/plugins/Makefile audisp/plugins/builtins/Makefile audisp/plugins/prelude/Makefile audisp/plugins/remote/Makefile audisp/plugins/zos-remote/Makefile bindings/Makefile bindings/python/Makefile tools/Makefile tools/aulast/Makefile tools/aulastlog/Makefile tools/ausyscall/Makefile)
+AC_OUTPUT(Makefile lib/Makefile lib/test/Makefile auparse/Makefile auparse/test/Makefile src/Makefile src/mt/Makefile src/libev/Makefile src/test/Makefile swig/Makefile docs/Makefile init.d/Makefile audisp/Makefile audisp/plugins/Makefile audisp/plugins/builtins/Makefile audisp/plugins/prelude/Makefile audisp/plugins/remote/Makefile audisp/plugins/zos-remote/Makefile bindings/Makefile bindings/python/Makefile tools/Makefile tools/aulast/Makefile tools/aulastlog/Makefile tools/ausyscall/Makefile tools/auvirt/Makefile)
 
 echo .
 echo "

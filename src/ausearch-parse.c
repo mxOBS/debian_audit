@@ -1,6 +1,7 @@
 /*
 * ausearch-parse.c - Extract interesting fields and check for match
 * Copyright (c) 2005-08, 2011 Red Hat Inc., Durham, North Carolina.
+* Copyright (c) 2011 IBM Corp. 
 * All Rights Reserved. 
 *
 * This software may be freely redistributed and/or modified under the
@@ -19,6 +20,7 @@
 *
 * Authors:
 *   Steve Grubb <sgrubb@redhat.com>
+*   Marcelo Henrique Cerri <mhcerri@br.ibm.com>
 */
 
 #include "config.h"
@@ -545,8 +547,10 @@ static int common_path_parser(search_items *s, char *path)
 			if ((sn.str[0] == '.') && ((sn.str[1] == '.') ||
 				(sn.str[1] == '/')) && s->cwd) {
 				char *tmp = malloc(PATH_MAX);
-				if (tmp == NULL)
+				if (tmp == NULL) {
+					free(sn.str);
 					return 3;
+				}
 				snprintf(tmp, PATH_MAX,
 					"%s/%s", s->cwd, sn.str);
 				free(sn.str);
@@ -715,7 +719,7 @@ static int parse_user(const lnode *n, search_items *s)
 	str = strstr(term, "auid=");
 	if (str == NULL) { // Try the older one
 		str = strstr(term, "loginuid=");
-		if (str == NULL) 
+		if (str == NULL)
 			return 7;
 		ptr = str + 9;
 	} else
@@ -765,9 +769,45 @@ static int parse_user(const lnode *n, search_items *s)
 				return 13;
 		}
 	}
-	// get uid - something has uid after auid ??
+	if (event_vmname) {
+		str = strstr(term, "vm=");
+		if (str) {
+			str += 3;
+			if (*str == '"') {
+				str++;
+				term = strchr(str, '"');
+				if (term == NULL)
+					return 23;
+			       *term = 0;
+				s->vmname = strdup(str);
+				*term = '"';
+			} else
+				s->vmname = unescape(str);
+		}
+	}
+	if (event_uuid) {
+		str = strstr(term, "uuid=");
+		if (str) {
+			str += 5;
+			term = str;
+			while (*term != ' ' && *term != ':')
+				term++;
+			if (term == str)
+				return 24;
+			saved = *term;
+			*term = 0;
+			s->uuid = strdup(str);
+			*term = saved;
+		}
+	}
+	// get uid - some records the second uid is what we want.
+	// USER_LOGIN for example.
 	str = strstr(term, "uid=");
-	if (str != NULL) {
+	if (str) {
+		if (*(str - 1) == 'a' || *(str - 1) == 's' || *(str - 1) == 'u')
+			goto skip;
+		if (!(*(str - 1) == '\'' || *(str - 1) == ' '))
+			return 25;
 		ptr = str + 4;
 		term = ptr;
 		while (isdigit(*term))
@@ -783,6 +823,7 @@ static int parse_user(const lnode *n, search_items *s)
 			return 15;
 		*term = saved;
 	}
+skip:
 	mptr = term + 1;
 
 	if (event_comm) {
@@ -878,6 +919,41 @@ static int parse_user(const lnode *n, search_items *s)
 			}
 		}
 	}
+	if (event_filename) {
+		// dont do this search unless needed
+		str = strstr(mptr, "cwd=");
+		if (str) {
+			str += 4;
+			if (*str == '"') {
+				str++;
+				term = strchr(str, '"');
+				if (term == NULL)
+					return 20;
+				*term = 0;
+				s->cwd = strdup(str);
+				*term = '"';
+			} else {
+				char *end = str;
+				int legacy = 0;
+
+				while (*end != ' ') {
+					if (!isxdigit(*end)) {
+						legacy = 1;
+					}
+					end++;
+				}
+				term = end;
+				if (!legacy)
+					s->cwd = unescape(str);
+				else {
+					saved = *term;
+					*term = 0;
+					s->cwd = strdup(str);
+					*term = saved;
+				}
+			}
+		}
+	}
 	if (event_terminal) {
 		// dont do this search unless needed
 		str = strstr(mptr, "terminal=");
@@ -903,7 +979,7 @@ static int parse_user(const lnode *n, search_items *s)
 				str++;
 				term = strchr(str, '"');
 				if (term == NULL)
-					return 20;
+					return 26;
 				*term = 0;
 				s->exe = strdup(str);
 				*term = '"';
@@ -957,6 +1033,7 @@ static int parse_user(const lnode *n, search_items *s)
 			*term = ')';
 		}
 	}
+	/* last return code used = 24 */
 	return 0;
 }
 
@@ -1156,8 +1233,7 @@ static int parse_daemon2(const lnode *n, search_items *s)
 			free(s->hostname);
 			s->hostname = strdup(str);
 			*term = saved;
-		} else
-			term = n->message; 
+		}
 	}
 
 	if (event_success != S_UNSET) {
@@ -1324,6 +1400,44 @@ static int parse_integrity(const lnode *n, search_items *s)
 		*term = ' ';
 	}
 
+	// ses
+	if (event_session_id != -2 ) {
+		str = strstr(term, "ses=");
+		if (str) {
+			ptr = str + 4;
+			term = strchr(ptr, ' ');
+			if (term == NULL)
+				return 10;
+			*term = 0;
+			errno = 0;
+			s->session_id = strtoul(ptr, NULL, 10);
+			if (errno)
+				return 11;
+			*term = ' ';
+		}
+	}
+
+	if (event_subject) {
+		// scontext
+		str = strstr(term, "subj=");
+		if (str) {
+			str += 5;
+			term = strchr(str, ' ');
+			if (term == NULL)
+				return 12;
+			*term = 0;
+			if (audit_avc_init(s) == 0) {
+				anode an;
+
+				anode_init(&an);
+				an.scontext = strdup(str);
+				alist_append(s->avc, &an);
+				*term = ' ';
+			} else
+				return 13;
+		}
+	}
+
 	str = strstr(term, "comm=");
 	if (str) {
 		str += 5;
@@ -1418,13 +1532,17 @@ static int parse_avc(const lnode *n, search_items *s)
 		if (str) {
 			str = str + 4;
 			term = strchr(str, ' ');
-			if (term == NULL)
-				return 3;
+			if (term == NULL) {
+				rc = 3;
+				goto err;
+			}
 			*term = 0;
 			errno = 0;
 			s->pid = strtoul(str, NULL, 10);
-			if (errno)
-				return 4;
+			if (errno) {
+				rc = 4;
+				goto err;
+			}
 			*term = ' ';
 		}
 	}

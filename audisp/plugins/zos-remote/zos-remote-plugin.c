@@ -219,6 +219,7 @@ push_event(auparse_state_t * au, auparse_cb_event_t cb_event_type,
          * 'originating' audit record
          */
         sprintf(logString, "Linux (%s): type: %s", node, orig_type);
+	free(node);
 
         /* 
          * Start writing to BER element.
@@ -490,6 +491,10 @@ int main(int argc, char *argv[])
 
                 /* initialize auparse */
                 au = auparse_init(AUSOURCE_FEED, 0);               /* 2 */
+                if (au == NULL) {
+                        log_err("Error - exiting due to auparse init errors");
+                        return -1;
+                }
                 
                 /* 
                  * Block signals for everyone,

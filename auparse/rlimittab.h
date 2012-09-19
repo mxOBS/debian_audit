@@ -1,6 +1,5 @@
-
-/* seek.h --
- * Copyright 2008 Red Hat Inc., Durham, North Carolina.
+/* rlimittab.h --
+ * Copyright 2012 Red Hat Inc., Durham, North Carolina.
  * All Rights Reserved.
  *
  * This library is free software; you can redistribute it and/or
@@ -19,9 +18,23 @@
  *
  * Authors:
  *      Steve Grubb <sgrubb@redhat.com>
+ * Location: include/asm-generic/resource.h
  */
 
-_S(0,		"SEEK_SET" )
-_S(1,		"SEEK_CUR" )
-_S(2,		"SEEK_END" )
+ _S(0, "RLIMIT_CPU")
+ _S(1, "RLIMIT_FSIZE")
+ _S(2, "RLIMIT_DATA")
+ _S(3, "RLIMIT_STACK")
+ _S(4, "RLIMIT_CORE")
+ _S(5, "RLIMIT_RSS")
+ _S(6, "RLIMIT_NPROC")
+ _S(7, "RLIMIT_NOFILE")
+ _S(8, "RLIMIT_MEMLOCK")
+ _S(9, "RLIMIT_AS")
+ _S(10,"RLIMIT_LOCKS")
+ _S(11,"RLIMIT_SIGPENDING")
+ _S(12,"RLIMIT_MSGQUEUE")
+ _S(13,"RLIMIT_NICE")
+ _S(14,"RLIMIT_RTPRIO")
+ _S(15,"RLIMIT_RTTIME")
 

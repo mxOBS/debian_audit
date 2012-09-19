@@ -1,5 +1,5 @@
 /* x86_64_table.h --
- * Copyright 2005-11 Red Hat Inc., Durham, North Carolina.
+ * Copyright 2005-12 Red Hat Inc., Durham, North Carolina.
  * All Rights Reserved.
  *
  * This library is free software; you can redistribute it and/or
@@ -308,7 +308,7 @@ _S(284, "eventfd")
 _S(285, "fallocate")
 _S(286, "timerfd_settime")
 _S(287, "timerfd_gettime")
-_S(288, "paccept")
+_S(288, "accept4")
 _S(289, "signalfd4")
 _S(290, "eventfd2")
 _S(291, "epoll_create1")
@@ -329,3 +329,6 @@ _S(305, "clock_adjtime")
 _S(306, "syncfs")
 _S(307, "sendmmsg")
 _S(308, "setns")
+_S(309, "getcpu")
+_S(310, "process_vm_readv")
+_S(311, "process_vm_writev")

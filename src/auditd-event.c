@@ -57,7 +57,7 @@ struct auditd_consumer_data {
 static void *event_thread_main(void *arg); 
 static void handle_event(struct auditd_consumer_data *data);
 static void write_to_log(const char *buf, struct auditd_consumer_data *data);
-static void check_log_file_size(int lfd, struct auditd_consumer_data *data);
+static void check_log_file_size(struct auditd_consumer_data *data);
 static void check_space_left(int lfd, struct daemon_conf *config);
 static void do_space_left_action(struct daemon_conf *config, int admin);
 static void do_disk_full_action(struct daemon_conf *config);
@@ -79,6 +79,7 @@ static void reconfigure(struct auditd_consumer_data *data);
 /* Local Data */
 static struct auditd_consumer_data consumer_data;
 static pthread_t event_thread;
+static unsigned int disk_err_warning = 0;
 static int fs_space_warning = 0;
 static int fs_admin_space_warning = 0;
 static int fs_space_left = 1;
@@ -86,6 +87,7 @@ static int logging_suspended = 0;
 static const char *SINGLE = "1";
 static const char *HALT = "0";
 static char *format_buf = NULL;
+static off_t log_size = 0;
 
 
 void shutdown_events(void)
@@ -136,7 +138,7 @@ int init_event(struct daemon_conf *config)
 	}
 
 	if (config->daemonize == D_BACKGROUND) {
-		check_log_file_size(consumer_data.log_fd, &consumer_data);
+		check_log_file_size(&consumer_data);
 		check_excess_logs(&consumer_data);
 		check_space_left(consumer_data.log_fd, config);
 	}
@@ -255,6 +257,7 @@ void resume_logging(void)
 {
 	logging_suspended = 0; 
 	fs_space_left = 1;
+	disk_err_warning = 0;
 	fs_space_warning = 0;
 	fs_admin_space_warning = 0;
 	audit_msg(LOG_ERR, "Audit daemon is attempting to resume logging.");
@@ -420,63 +423,57 @@ static void write_to_log(const char *buf, struct auditd_consumer_data *data)
 			// actionable. There may be some temporary condition
 			// that the system recovers from. The real error
 			// occurs on write.
-			check_log_file_size(data->log_fd, data);
+			log_size += rc;
+			check_log_file_size(data);
 			check_space_left(data->log_fd, config);
 		}
 
 		if (fs_space_warning)
 			ack_type = AUDIT_RMW_TYPE_DISKLOW;
 		send_ack(data, ack_type, msg);
+		disk_err_warning = 0;
 	}
 }
 
-static void check_log_file_size(int lfd, struct auditd_consumer_data *data)
+static void check_log_file_size(struct auditd_consumer_data *data)
 {
-	int rc;
 	struct daemon_conf *config = data->config;
-	struct stat st;
 
-	/* get file size */
-	rc = fstat(lfd, &st);
-	if (rc == 0) {
-		/* did we cross the size limit? */
-		unsigned long sz = st.st_size / MEGABYTE;
-		if (sz >= config->max_log_size && 
-				(config->daemonize == D_BACKGROUND)) {
-			switch (config->max_log_size_action)
-			{
-				case SZ_IGNORE:
-					break;
-				case SZ_SYSLOG:
-					audit_msg(LOG_ERR,
+	/* did we cross the size limit? */
+	off_t sz = log_size / MEGABYTE;
+
+	if (sz >= config->max_log_size && (config->daemonize == D_BACKGROUND)) {
+		switch (config->max_log_size_action)
+		{
+			case SZ_IGNORE:
+				break;
+			case SZ_SYSLOG:
+				audit_msg(LOG_ERR,
 			    "Audit daemon log file is larger than max size");
-					break;
-				case SZ_SUSPEND:
-					audit_msg(LOG_ERR,
+				break;
+			case SZ_SUSPEND:
+				audit_msg(LOG_ERR,
 		    "Audit daemon is suspending logging due to logfile size.");
-					logging_suspended = 1;
-					break;
-				case SZ_ROTATE:
-					if (data->config->num_logs > 1) {
-						audit_msg(LOG_NOTICE,
+				logging_suspended = 1;
+				break;
+			case SZ_ROTATE:
+				if (data->config->num_logs > 1) {
+					audit_msg(LOG_NOTICE,
 					    "Audit daemon rotating log files");
 						rotate_logs(data, 0);
-					}
-					break;
-				case SZ_KEEP_LOGS:
-					audit_msg(LOG_NOTICE,
+				}
+				break;
+			case SZ_KEEP_LOGS:
+				audit_msg(LOG_NOTICE,
 			    "Audit daemon rotating log files with keep option");
 					shift_logs(data);
-					break;
-				default:
-					audit_msg(LOG_ALERT, 
+				break;
+			default:
+				audit_msg(LOG_ALERT, 
   "Audit daemon log file is larger than max size and unknown action requested");
-					break;
-			}
+				break;
 		}
-	} else 
-		audit_msg(LOG_ERR, "Unable to fstat log file (%s)",
-			strerror(errno));
+	}
 }
 
 static void check_space_left(int lfd, struct daemon_conf *config)
@@ -614,19 +611,23 @@ static void do_disk_full_action(struct daemon_conf *config)
 	} 
 }
 
-static void do_disk_error_action(const char * func, struct daemon_conf *config, int err)
+static void do_disk_error_action(const char * func, struct daemon_conf *config,
+	int err)
 {
 	char text[128];
-
-	snprintf(text, sizeof(text), 
-	    "%s: Audit daemon detected an error writing an event to disk (%s)",
-		func, strerror(err));
-	audit_msg(LOG_ALERT, "%s", text);
 
 	switch (config->disk_error_action)
 	{
 		case FA_IGNORE:
-		case FA_SYSLOG: /* Message is syslogged above */
+			break;
+		case FA_SYSLOG:
+			if (disk_err_warning < 5) {
+				snprintf(text, sizeof(text), 
+			    "%s: Audit daemon detected an error writing an event to disk (%s)",
+					func, strerror(err));
+				audit_msg(LOG_ALERT, "%s", text);
+				disk_err_warning++;
+			}
 			break;
 		case FA_EXEC:
 			safe_exec(config->disk_error_exe);
@@ -862,6 +863,7 @@ retry:
 			close(lfd);
 			lfd = open(data->config->log_file, 
 				O_WRONLY|O_APPEND|O_NOFOLLOW);
+			log_size = 0;
 		} else if (errno == ENFILE) {
 			// All system descriptors used, try again...
 			goto retry;
@@ -869,6 +871,17 @@ retry:
 		if (lfd < 0) {
 			audit_msg(LOG_ERR, "Couldn't open log file %s (%s)",
 				data->config->log_file, strerror(errno));
+			return 1;
+		}
+	} else {
+		// Get initial size
+		struct stat st;
+
+		int rc = fstat(lfd, &st);
+		if (rc == 0)
+			 log_size = st.st_size;
+		else {
+			close(lfd);
 			return 1;
 		}
 	}
@@ -1066,6 +1079,7 @@ static void reconfigure(struct auditd_consumer_data *data)
 	oconf->disk_error_action = nconf->disk_error_action;
 	free((char *)oconf->disk_error_exe);
 	oconf->disk_error_exe = nconf->disk_error_exe;
+	disk_err_warning = 0;
 
 	// numlogs is next
 	oconf->num_logs = nconf->num_logs;
@@ -1202,7 +1216,7 @@ static void reconfigure(struct auditd_consumer_data *data)
 
 	if (need_size_check) {
 		logging_suspended = 0;
-		check_log_file_size(data->log_fd, data);
+		check_log_file_size(data);
 	}
 
 	// flush technique
@@ -1232,7 +1246,7 @@ static void reconfigure(struct auditd_consumer_data *data)
 						saved_errno);
 		} else {
 			logging_suspended = 0;
-			check_log_file_size(data->log_fd, data);
+			check_log_file_size(data);
 		}
 	}
 

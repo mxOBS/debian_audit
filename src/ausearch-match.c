@@ -1,6 +1,7 @@
 /*
 * ausearch-match.c - Extract interesting fields and check for match
 * Copyright (c) 2005-08, 2011 Red Hat Inc., Durham, North Carolina.
+* Copyright (c) 2011 IBM Corp.
 * All Rights Reserved. 
 *
 * This software may be freely redistributed and/or modified under the
@@ -19,6 +20,7 @@
 *
 * Authors:
 *   Steve Grubb <sgrubb@redhat.com>
+*   Marcelo Henrique Cerri <mhcerri@br.ibm.com>
 */
 
 #include "config.h"
@@ -126,10 +128,10 @@ int match(llist *l)
 				// Done all the easy compares, now do the 
 				// string searches.
 				if (event_filename) {
-					if (l->s.filename == NULL)
+					int found = 0;
+					if (l->s.filename == NULL && l->s.cwd == NULL)
 						return 0;
-					else {
-						int found = 0;
+					if (l->s.filename) {
 						const snode *sn;
 						slist *sptr = l->s.filename;
 
@@ -145,7 +147,14 @@ int match(llist *l)
 								break;
 							}
 						} while ((sn=slist_next(sptr)));
-						if (!found)
+
+						if (!found && l->s.cwd == NULL)
+							return 0;
+					}
+					if (l->s.cwd && !found) {
+						/* Check cwd, too */
+						if (strmatch(event_filename,
+								l->s.cwd) == 0)
 							return 0;
 					}
 				}
@@ -201,6 +210,20 @@ int match(llist *l)
 							return 0;
 					}
 				}				
+				if (event_vmname) {
+					if (l->s.vmname == NULL)
+						return 0;
+					if (strmatch(event_vmname,
+							l->s.vmname) == 0)
+						return 0;
+				}
+				if (event_uuid) {
+					if (l->s.uuid == NULL)
+						return 0;
+					if (strmatch(event_uuid,
+							l->s.uuid) == 0)
+						return 0;
+				}
 				if (context_match(l) == 0)
 					return 0;
 				return 1;

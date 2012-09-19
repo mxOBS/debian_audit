@@ -70,9 +70,14 @@ static int setup_log_file_array(auparse_state_t *au)
 		num++;
 		snprintf(filename, len, "%s.%d", config.log_file, num);
 	} while (1);
+
+	if (num == 0) {
+		fprintf(stderr, "No log file\n");
+		free_config(&config);
+		return 1;
+	}
 	num--;
 	tmp = malloc((num+2)*sizeof(char *));
-
 
         /* Got it, now process logs from last to first */
 	if (num > 0)
@@ -189,7 +194,7 @@ auparse_state_t *auparse_init(ausource_t source, const void *b)
 			break;
 		default:
 			errno = EINVAL;
-			return NULL;
+			goto bad_exit;
 			break;
 	}
 	au->source = source;
@@ -216,6 +221,11 @@ bad_exit:
 void auparse_add_callback(auparse_state_t *au, auparse_callback_ptr callback,
 			  void *user_data, user_destroy user_destroy_func)
 {
+	if (au == NULL) {
+		errno = EINVAL;
+		return;
+	}
+
 	if (au->callback_user_data_destroy) {
 		(*au->callback_user_data_destroy)(au->callback_user_data);
 		au->callback_user_data = NULL;
@@ -680,7 +690,10 @@ static int extract_timestamp(const char *b, au_event_t *e)
 	int rc = 1;
 
         e->host = NULL;
-	tmp = strndupa(b, 80);
+	if (*b == 'n')
+		tmp = strndupa(b, 340);
+	else
+		tmp = strndupa(b, 80);
 	ptr = strtok(tmp, " ");
 	if (ptr) {
 		// Optionally grab the node - may or may not be included

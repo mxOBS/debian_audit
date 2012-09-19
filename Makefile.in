@@ -57,6 +57,7 @@ POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
 target_triplet = @target@
+@HAVE_PYTHON_TRUE@am__append_1 = swig
 subdir = .
 DIST_COMMON = README $(am__configure_deps) $(srcdir)/Makefile.am \
 	$(srcdir)/Makefile.in $(srcdir)/config.h.in \
@@ -89,7 +90,8 @@ AM_RECURSIVE_TARGETS = $(RECURSIVE_TARGETS:-recursive=) \
 	distdir dist dist-all distcheck
 ETAGS = etags
 CTAGS = ctags
-DIST_SUBDIRS = $(SUBDIRS)
+DIST_SUBDIRS = lib auparse src/mt src/libev src audisp tools bindings \
+	init.d docs swig
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
 distdir = $(PACKAGE)-$(VERSION)
 top_distdir = $(distdir)
@@ -230,7 +232,6 @@ includedir = @includedir@
 infodir = @infodir@
 install_sh = @install_sh@
 libdir = @libdir@
-libev_LIBS = @libev_LIBS@
 libexecdir = @libexecdir@
 localedir = @localedir@
 localstatedir = @localstatedir@
@@ -257,9 +258,8 @@ target_vendor = @target_vendor@
 top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
-SUBDIRS = lib auparse src/mt src/libev src audisp tools swig bindings init.d \
-	docs
-
+SUBDIRS = lib auparse src/mt src/libev src audisp tools bindings \
+	init.d docs $(am__append_1)
 EXTRA_DIST = ChangeLog AUTHORS NEWS README INSTALL audit.spec \
 	contrib/capp.rules contrib/nispom.rules contrib/lspp.rules \
 	contrib/stig.rules contrib/skeleton.c contrib/avc_snap \

@@ -54,7 +54,7 @@ static int insert_rule(int audit_fd, const char *field)
 	int action = AUDIT_ALWAYS;
 	struct audit_rule_data *rule = malloc(sizeof(struct audit_rule_data));
 	int machine = audit_detect_machine();
-	char *t_field = strdup(field);
+	char *t_field = NULL;
 
 	if (rule == NULL)
 		goto err;
@@ -87,6 +87,7 @@ static int insert_rule(int audit_fd, const char *field)
 		rc |= audit_rule_syscallbyname_data(rule, "readlink");
 		rc |= audit_rule_syscallbyname_data(rule, "readlinkat");
 		rc |= audit_rule_syscallbyname_data(rule, "execve");
+		rc |= audit_rule_syscallbyname_data(rule, "name_to_handle_at");
 
 		if (machine != MACH_X86 && machine != MACH_S390X && 
 						machine != MACH_S390) {
@@ -95,6 +96,7 @@ static int insert_rule(int audit_fd, const char *field)
 			rc |= audit_rule_syscallbyname_data(rule, "accept");
 			rc |= audit_rule_syscallbyname_data(rule, "sendto");
 			rc |= audit_rule_syscallbyname_data(rule, "recvfrom");
+			rc |= audit_rule_syscallbyname_data(rule, "accept4");
 		}
 
 		rc |= audit_rule_syscallbyname_data(rule, "sendfile");
@@ -102,6 +104,7 @@ static int insert_rule(int audit_fd, const char *field)
 		rc = audit_rule_syscallbyname_data(rule, "all");
 	if (rc < 0)
 		goto err;
+	t_field = strdup(field);
 	rc = audit_rule_fieldpair_data(&rule, t_field, flags);
 	free(t_field);
 	if (rc < 0)
@@ -113,8 +116,9 @@ static int insert_rule(int audit_fd, const char *field)
 	// Now if i386, lets add its network rules
 	if (machine == MACH_X86 || machine == MACH_S390X ||
 						machine == MACH_S390) {
-		int i, a0[5] = { SYS_CONNECT, SYS_BIND, SYS_ACCEPT, SYS_SENDTO, SYS_RECVFROM };
-		for (i=0; i<5; i++) {
+		int i, a0[6] = { SYS_CONNECT, SYS_BIND, SYS_ACCEPT, SYS_SENDTO,
+				 SYS_RECVFROM, SYS_ACCEPT4 };
+		for (i=0; i<6; i++) {
 			char pair[32];
 
 			memset(rule, 0, sizeof(struct audit_rule_data));

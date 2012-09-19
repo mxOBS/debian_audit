@@ -1,6 +1,6 @@
 /*
 * ausearch-lookup.c - Lookup values to something more readable
-* Copyright (c) 2005-06 Red Hat Inc., Durham, North Carolina.
+* Copyright (c) 2005-06,2011-12 Red Hat Inc., Durham, North Carolina.
 * All Rights Reserved. 
 *
 * This software may be freely redistributed and/or modified under the
@@ -96,6 +96,7 @@ const char *aulookup_syscall(llist *l, char *buf, size_t size)
 	return buf;
 }
 
+// See include/linux/net.h
 static struct nv_pair socktab[] = {
 	{SYS_SOCKET, "socket"},
 	{SYS_BIND, "bind"},
@@ -113,7 +114,10 @@ static struct nv_pair socktab[] = {
 	{SYS_SETSOCKOPT, "setsockopt"},
 	{SYS_GETSOCKOPT, "getsockopt"},
 	{SYS_SENDMSG, "sendmsg"},
-	{SYS_RECVMSG, "recvmsg"}
+	{SYS_RECVMSG, "recvmsg"},
+	{SYS_ACCEPT4, "accept4"},
+	{SYS_RECVMMSG, "recvmmsg"},
+	{20, "sendmmsg"}
 };
 #define SOCK_NAMES (sizeof(socktab)/sizeof(socktab[0]))
 
@@ -133,6 +137,7 @@ const char *aulookup_socketcall(long sc)
 #define SEMOP            1
 #define SEMGET           2
 #define SEMCTL           3
+#define SEMTIMEDOP	 4
 #define MSGSND          11
 #define MSGRCV          12
 #define MSGGET          13
@@ -149,6 +154,7 @@ static struct nv_pair ipctab[] = {
         {SEMOP, "semop"},
         {SEMGET, "semget"},
         {SEMCTL, "semctl"},
+        {SEMTIMEDOP, "semtimedop"},
         {MSGSND, "msgsnd"},
         {MSGRCV, "msgrcv"},
         {MSGGET, "msgget"},
@@ -309,7 +315,7 @@ static unsigned char x2c(unsigned char *buf)
 }
 
 /* returns a freshly malloc'ed and converted buffer */
-char *unescape(char *buf)
+char *unescape(const char *buf)
 {
 	int len, i;
 	char saved, *ptr = buf, *str;

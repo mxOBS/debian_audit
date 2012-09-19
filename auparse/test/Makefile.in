@@ -195,7 +195,6 @@ includedir = @includedir@
 infodir = @infodir@
 install_sh = @install_sh@
 libdir = @libdir@
-libev_LIBS = @libev_LIBS@
 libexecdir = @libexecdir@
 localedir = @localedir@
 localstatedir = @localstatedir@
@@ -501,15 +500,15 @@ uninstall-am:
 check: auparse_test
 	test "$(top_srcdir)" = "$(top_builddir)" || \
 			cp $(top_srcdir)/auparse/test/test*.log .
-		cp ${top_builddir}/swig/.libs/_audit.so ${top_builddir}/swig
 	LC_ALL=C \
 	./auparse_test > auparse_test.cur
 	diff -u $(top_srcdir)/auparse/test/auparse_test.ref auparse_test.cur
-	PYTHONPATH=${top_builddir}/bindings/python/.libs/:${top_builddir}/swig:${top_builddir}/swig/.libs \
-	LD_LIBRARY_PATH=${top_builddir}/auparse/.libs \
-		srcdir=$(srcdir) $(srcdir)/auparse_test.py \
-		| $(drop_srcdir) > auparse_test.cur
-	diff -u $(top_srcdir)/auparse/test/auparse_test.ref.py auparse_test.cur
+@HAVE_PYTHON_TRUE@	cp ${top_builddir}/swig/.libs/_audit.so ${top_builddir}/swig
+@HAVE_PYTHON_TRUE@	PYTHONPATH=${top_builddir}/bindings/python/.libs/:${top_builddir}/swig:${top_builddir}/swig/.libs \
+@HAVE_PYTHON_TRUE@	LD_LIBRARY_PATH=${top_builddir}/auparse/.libs \
+@HAVE_PYTHON_TRUE@		srcdir=$(srcdir) $(srcdir)/auparse_test.py \
+@HAVE_PYTHON_TRUE@		| $(drop_srcdir) > auparse_test.cur
+@HAVE_PYTHON_TRUE@	diff -u $(top_srcdir)/auparse/test/auparse_test.ref.py auparse_test.cur
 	echo -e "===================\nAuparse Test Passes\n==================="
 
 diffcheck: auparse_test
@@ -519,27 +518,28 @@ diffcheck: auparse_test
 memcheck: auparse_test
 	valgrind --leak-check=yes --show-reachable=yes ./auparse_test 
 
-pycheck: auparse_test.py ${top_builddir}/bindings/python/build/*/auparse.so
-	PYTHONPATH=${top_builddir}/bindings/python/.libs/:${top_builddir}/swig:${top_builddir}/swig/.libs \
-	LD_LIBRARY_PATH=${top_builddir}/auparse/.libs \
-		srcdir=$(srcdir) $(srcdir)/auparse_test.py
+pycheck: auparse_test.py
+@HAVE_PYTHON_TRUE@	PYTHONPATH=${top_builddir}/bindings/python/.libs/:${top_builddir}/swig:${top_builddir}/swig/.libs \
+@HAVE_PYTHON_TRUE@	LD_LIBRARY_PATH=${top_builddir}/auparse/.libs \
+@HAVE_PYTHON_TRUE@		srcdir=$(srcdir) $(srcdir)/auparse_test.py
 
-pydiffcheck: auparse_test.py ${top_builddir}/bindings/python/build/*/auparse.so
-	PYTHONPATH=${top_builddir}/bindings/python/.libs/:${top_builddir}/swig:${top_builddir}/swig/.libs \
-	LD_LIBRARY_PATH=${top_builddir}/auparse/.libs \
-		srcdir=$(srcdir) $(srcdir)/auparse_test.py \
-		| $(drop_srcdir) > auparse_test.cur
-	diff $(srcdir)/auparse_test.ref auparse_test.cur
+pydiffcheck: auparse_test.py 
+@HAVE_PYTHON_TRUE@	PYTHONPATH=${top_builddir}/bindings/python/.libs/:${top_builddir}/swig:${top_builddir}/swig/.libs \
+@HAVE_PYTHON_TRUE@	LD_LIBRARY_PATH=${top_builddir}/auparse/.libs \
+@HAVE_PYTHON_TRUE@		srcdir=$(srcdir) $(srcdir)/auparse_test.py \
+@HAVE_PYTHON_TRUE@		| $(drop_srcdir) > auparse_test.cur
+@HAVE_PYTHON_TRUE@	diff $(srcdir)/auparse_test.ref auparse_test.cur
 
-pymemcheck: auparse_test.py ${top_builddir}/bindings/python/build/*/auparse.so
-	PYTHONPATH=${top_builddir}/bindings/python/.libs/:${top_builddir}/swig:${top_builddir}/swig/.libs \
-	LD_LIBRARY_PATH=${top_builddir}/auparse/.libs srcdir=$(srcdir) valgrind --leak-check=yes --show-reachable=yes python $(srcdir)/auparse_test.py
+pymemcheck: auparse_test.py
+@HAVE_PYTHON_TRUE@	PYTHONPATH=${top_builddir}/bindings/python/.libs/:${top_builddir}/swig:${top_builddir}/swig/.libs \
+@HAVE_PYTHON_TRUE@	LD_LIBRARY_PATH=${top_builddir}/auparse/.libs srcdir=$(srcdir) valgrind --leak-check=yes --show-reachable=yes python $(srcdir)/auparse_test.py
 
-${top_builddir}/bindings/python/build/*/auparse.so: ${top_srcdir}/bindings/python/auparse_python.c
-	cd ${top_builddir}/bindings/python && make
+@HAVE_PYTHON_TRUE@${top_builddir}/bindings/python/build/*/auparse.so: ${top_srcdir}/bindings/python/auparse_python.c
+@HAVE_PYTHON_TRUE@	cd ${top_builddir}/bindings/python && make
+
 clean-generic:
 	$(RM) *.cur
-	$(RM) ${top_builddir}/swig/_audit.so
+@HAVE_PYTHON_TRUE@	$(RM) ${top_builddir}/swig/_audit.so
 	test "$(top_srcdir)" = "$(top_builddir)" || $(RM) test*.log
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
