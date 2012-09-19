@@ -1,5 +1,5 @@
 # Process this file with autoconf to produce a configure script.
-AC_INIT([system-config-audit], [0.4.7], [mitr@redhat.com])
+AC_INIT([system-config-audit], [0.4.8], [mitr@redhat.com])
 AC_COPYRIGHT(
 [Copyright (C) 2007 Red Hat, Inc.  All rights reserved.
 

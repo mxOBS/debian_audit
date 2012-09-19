@@ -1,3 +1,8 @@
+Changes in release 0.4.8:
+* Add support for -F dir and -F filetype.
+* Don't use -w for complex watch rules.
+* Minor UI fixes.
+
 Changes in release 0.4.7:
 * Fix parsing and output of "user" rules.
 * Add support for multiple keys per rule, and for the special IDS keys.

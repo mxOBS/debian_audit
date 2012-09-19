@@ -40,10 +40,12 @@ class _WatchTable(RuleTable):
         counts = {}
         for f in rule.fields:
             counts[f.var] = counts.get(f.var, 0) + 1
-        if (counts.get(audit.AUDIT_WATCH, 0) > 1 or
+        if ((counts.get(audit.AUDIT_DIR, 0)
+             + counts.get(audit.AUDIT_WATCH, 0)) > 1 or
             counts.get(audit.AUDIT_PERM, 0) > 1):
-            return 'Duplicate watch or perm field'
-        if not set(counts.iterkeys()).issubset(set((audit.AUDIT_FILTERKEY,
+            return 'Duplicate dir/watch or perm field'
+        if not set(counts.iterkeys()).issubset(set((audit.AUDIT_DIR,
+                                                    audit.AUDIT_FILTERKEY,
                                                     audit.AUDIT_PERM,
                                                     audit.AUDIT_WATCH))):
             return 'Unexpected fields in watch table'
@@ -65,7 +67,7 @@ class _WatchTable(RuleTable):
     def _update_row(self, it, rule):
         self._row_set_filter_key(it, 1, rule)
         for field in rule.fields:
-            if field.var == audit.AUDIT_WATCH:
+            if field.var in (audit.AUDIT_DIR, audit.AUDIT_WATCH):
                 text = field.value
                 break
         else:

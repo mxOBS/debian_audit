@@ -25,11 +25,12 @@ import lists
 __all__ = ('ParsingError',
            'audit_machine_id',
            'connect_and_run',
+           'filetype_string',
            'is_ids_key', 'is_row_separator',
            'key_string',
            'modal_error_dialog', 'msgtype_string',
-           'parse_elf', 'parse_ids_key', 'parse_msgtype', 'parse_syscall',
-           'parse_unsigned',
+           'parse_elf', 'parse_filetype', 'parse_ids_key', 'parse_msgtype',
+           'parse_syscall', 'parse_unsigned',
            'set_combo_entry_text', 'set_sensitive_all', 'syscall_string',
            'tree_model_delete', 'tree_model_move_down', 'tree_model_move_up',
            'write_new_file')
@@ -165,6 +166,17 @@ def parse_elf(string):
                 raise ParsingError(_('Unknown architecture "%s"') % string)
     return m
 
+def parse_filetype(string):
+    '''Parse file type string.
+
+    Return file type ID.  Raise ParsingError on error.
+
+    '''
+    v = audit.audit_name_to_ftype(string)
+    if v == -1:
+        raise ParsingError(_('Unknown file type "%s"') % string)
+    return v
+
 def is_ids_key(s):
     '''Return True if s is in the namespace reserved for IDS keys.'''
     return s.startswith('ids-')
@@ -234,6 +246,12 @@ def parse_unsigned(string):
 def keys_string(keys):
     '''Return a string representing keys.'''
     return _(', ').join(keys)
+
+def filetype_string(filetype):
+    '''Return a string representing filetype.'''
+    s = audit.audit_ftype_to_name(filetype)
+    assert s is not None
+    return s
 
 def msgtype_string(msgtype):
     '''Return a string representing msgtype.'''

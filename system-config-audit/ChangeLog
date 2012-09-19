@@ -1,3 +1,35 @@
+2008-05-21  Miloslav Trmač  <mitr@redhat.com>
+
+	* configure.ac: Release 0.4.8.
+	* NEWS: Update.
+
+	* src/system-config-audit.glade: Fix positioning of field help in
+	rule_dialog.
+
+	* src/audit_rules.py (Rule.command_text): Only use -w if no -F nor -S
+	options are used.  Don't output "-S all" with -w.
+
+	* src/rule_dialog.py (RuleDialog.__rule_arch_focus_out.callback): Don't
+	return focus to the text box.
+
+	* src/field_help.py (__field_help): Add help for AUDIT_FILETYPE.
+	* src/lists.py (field_vars): Add AUDIT_DIR, AUDIT_FILETYPE.
+	(event_types): Add more event types.
+	(file_types, file_type_names, sorted_file_type_names): New variables.
+	* src/util.py (parse_filetype, filetype_string): New functions.
+	* src/audit_rules.py (Field.option_text, Rule.validate)
+	(Rule.command_text AuditRules.__interpret_line)
+	* src/rule_list_dialog.py (_EntryTable.excluded_fields)
+	* src/watch_list_dialog.py (_WatchTable._validate_rule)
+	(_WatchTable._update_row)
+	* src/watch_dialog.py (WatchDialog._load_rule): Treat AUDIT_DIR like
+	AUDIT_WATCH.
+	* src/audit_rules.py (AuditRules.__interpret_line)
+	* src/watch_dialog.py (WatchDialog._save_rule): Use AUDIT_DIR if
+	the path is an existing directory.
+	* src/audit_rules.py (_FileTypeFieldType): New class.
+	(Field.__field_type_map): Add AUDIT_DIR, AUDIT_FILETYPE.
+
 2008-05-15  Miloslav Trmač  <mitr@redhat.com>
 
 	* configure.ac: Release 0.4.7.

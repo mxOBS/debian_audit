@@ -39,6 +39,7 @@
 
 #include "libaudit.h"
 #include "private.h"
+#include "errormsg.h"
 
 /* #defines for the audit failure query  */
 #define CONFIG_FILE "/etc/libaudit.conf"
@@ -75,6 +76,7 @@ static const struct nv_list failure_actions[] =
   { NULL,		0 }
 };
 
+int audit_permadded hidden = 0;
 int audit_archadded hidden = 0;
 int audit_syscalladded hidden = 0;
 unsigned int audit_elf hidden = 0U;
@@ -579,6 +581,8 @@ int audit_add_watch_dir(int type, struct audit_rule_data **rulep,
 	rule->fieldflags[1] = AUDIT_EQUAL;
 	rule->values[1] = AUDIT_PERM_READ | AUDIT_PERM_WRITE |
 				AUDIT_PERM_EXEC | AUDIT_PERM_ATTR;
+	
+	audit_permadded = 1;
 
 	return  0;
 }
@@ -661,6 +665,7 @@ int audit_make_equivalent(int fd, const char *mount_point,
 		audit_msg(audit_priority(errno),
 			"Error sending make_equivalent command (%s)",
 			strerror(-rc));
+	free(cmd);
 	return rc;
 }
 
@@ -817,8 +822,14 @@ int audit_rule_fieldpair_data(struct audit_rule_data **rulep, const char *pair,
 		op = AUDIT_BIT_MASK;
 	}
 
-	if (v == NULL || f == v)
+	if (v == NULL)
 		return -1;
+	
+	if (*f == 0)
+		return -22;
+
+	if (*v == 0)
+		return -20;
 
 	if ((field = audit_name_to_field(f)) < 0) 
 		return -2;
@@ -836,19 +847,14 @@ int audit_rule_fieldpair_data(struct audit_rule_data **rulep, const char *pair,
 		case AUDIT_SUID:
 		case AUDIT_FSUID:
 		case AUDIT_LOGINUID:
-			vlen = strlen(v);
 			if (isdigit((char)*(v))) 
-				rule->values[rule->field_count] = 
-					strtol(v, NULL, 0);
-			else if (vlen >= 2 && *(v)=='-' && 
-						(isdigit((char)*(v+1)))) 
 				rule->values[rule->field_count] = 
 					strtol(v, NULL, 0);
 			else {
 				if (audit_name_to_uid(v, 
 					&rule->values[rule->field_count])) {
 					audit_msg(LOG_ERR, "Unknown user: %s",
-						pair);
+						v);
 					return -2;
 				}
 			}
@@ -864,12 +870,14 @@ int audit_rule_fieldpair_data(struct audit_rule_data **rulep, const char *pair,
 				if (audit_name_to_gid(v, 
 					&rule->values[rule->field_count])) {
 					audit_msg(LOG_ERR, "Unknown group: %s",
-						pair);
+						v);
 					return -2;
 				}
 			}
 			break;
 		case AUDIT_EXIT:
+			if (flags != AUDIT_FILTER_EXIT)
+				return -7;
 			vlen = strlen(v);
 			if (isdigit((char)*(v))) 
 				rule->values[rule->field_count] = 
@@ -911,6 +919,9 @@ int audit_rule_fieldpair_data(struct audit_rule_data **rulep, const char *pair,
 			 * but exit */
 			if (flags != AUDIT_FILTER_EXIT)
 				return -7;
+			if (field == AUDIT_WATCH || field == AUDIT_DIR)
+				audit_permadded = 1;
+
 			/* fallthrough */
 		case AUDIT_SUBJ_USER:
 		case AUDIT_SUBJ_ROLE:
@@ -918,6 +929,8 @@ int audit_rule_fieldpair_data(struct audit_rule_data **rulep, const char *pair,
 		case AUDIT_SUBJ_SEN:
 		case AUDIT_SUBJ_CLR:
 		case AUDIT_FILTERKEY:
+			if (field == AUDIT_FILTERKEY && !(audit_syscalladded || audit_permadded))
+                                return -19;
 			vlen = strlen(v);
 			if (field == AUDIT_FILTERKEY &&
 					vlen > AUDIT_MAX_KEY_LEN)
@@ -936,6 +949,7 @@ int audit_rule_fieldpair_data(struct audit_rule_data **rulep, const char *pair,
 				rule = *rulep;
 			}
 			strncpy(&rule->buf[offset], v, vlen);
+
 			break;
 		case AUDIT_ARCH:
 			if (audit_syscalladded) 
@@ -1061,15 +1075,17 @@ int audit_rule_fieldpair_data(struct audit_rule_data **rulep, const char *pair,
 			}
 			break;
 		case AUDIT_FILETYPE:
+			if (flags != AUDIT_FILTER_EXIT && flags != AUDIT_FILTER_ENTRY)
+				return -17;
 			rule->values[rule->field_count] = 
 				audit_name_to_ftype(v);
-			if (rule->values[rule->field_count] < 0) {
+			if ((int)rule->values[rule->field_count] < 0) {
 				return -16;
 			}
 			break;
 		case AUDIT_DEVMAJOR...AUDIT_INODE:
-		case AUDIT_SUCCESS...AUDIT_SUCCESS:
-			if (flags == AUDIT_FILTER_ENTRY)
+		case AUDIT_SUCCESS:
+			if (flags != AUDIT_FILTER_EXIT)
 				return -7;
 			/* fallthrough */
 		default:
@@ -1077,6 +1093,17 @@ int audit_rule_fieldpair_data(struct audit_rule_data **rulep, const char *pair,
 				if (!(op == AUDIT_NEGATE || op == AUDIT_EQUAL))
 					return -13;
 			}
+
+			if (field == AUDIT_PPID && flags != AUDIT_FILTER_EXIT 
+				&& flags != AUDIT_FILTER_ENTRY)
+				return -17;
+			
+			if (flags == AUDIT_FILTER_EXCLUDE)
+				return -18;
+
+			if (!isdigit((char)*(v)))
+				return -21;
+
 			rule->values[rule->field_count] = strtol(v, NULL, 0);
 			break;
 	}
@@ -1123,3 +1150,31 @@ int audit_detect_machine(void)
 	return -1;
 }
 hidden_def(audit_detect_machine)
+
+void audit_number_to_errmsg(int errnumber, const char *opt)
+{
+	unsigned int i;
+	
+	for (i = 0; i < sizeof(err_msgtab)/sizeof(struct msg_tab); i++) {
+		if (err_msgtab[i].key == errnumber) {
+			switch (err_msgtab[i].position)
+			{
+				case 0:
+					fprintf(stderr, "%s\n",
+						err_msgtab[i].cvalue);
+					break;
+				case 1:
+					fprintf(stderr, "%s %s\n", opt,
+						err_msgtab[i].cvalue);
+					break;
+				case 2:
+					fprintf(stderr, "%s %s\n",
+						err_msgtab[i].cvalue, opt);
+					break;
+				default:
+					break;
+			}
+			return;
+		}
+	}
+}

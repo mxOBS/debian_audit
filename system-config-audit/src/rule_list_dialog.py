@@ -49,7 +49,7 @@ class _ExitTable(RuleTable):
 class _EntryTable(RuleTable):
     _column_titles = (N_('Key'), N_('System Calls'), N_('Condition'),
                       N_('Action'))
-    excluded_fields = ((audit.AUDIT_EXIT, audit.AUDIT_SUCCESS,
+    excluded_fields = ((audit.AUDIT_DIR, audit.AUDIT_EXIT, audit.AUDIT_SUCCESS,
                         audit.AUDIT_WATCH) + _ExitTable.excluded_fields)
 
     @staticmethod

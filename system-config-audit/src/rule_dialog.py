@@ -355,11 +355,12 @@ class RuleDialog(DialogBase):
             self.__rule_arch_changed()
         except util.ParsingError, e:
             # Changing the focus within a focus change callback looks evil,
-            # defer it until it is safe.
+            # defer it until it is safe.  Don't return focus to
+            # self.rule_arch.child, because that wouldn't allow the user to
+            # choose another architecture from the combo box.
             def callback():
                 self._modal_error_dialog(str(e))
                 self.rule_notebook.set_current_page(0)
-                self.rule_arch.child.grab_focus()
                 return False
             gobject.idle_add(callback)
         return False

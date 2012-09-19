@@ -60,14 +60,14 @@ extern int delete_all_rules(int fd);
 /* Global vars */
 static int fd = -1;
 static int list_requested = 0;
-static int add = AUDIT_FILTER_UNSET, del = AUDIT_FILTER_UNSET, action = 0;
+static int add = AUDIT_FILTER_UNSET, del = AUDIT_FILTER_UNSET, action = -1;
 static int ignore = 0;
 static int exclude = 0, msgtype_cnt = 0;
+static int multiple = 0;
 enum { OLD, NEW };
 int which;
 static struct audit_rule  rule;
 static struct audit_rule_data *rule_new = NULL;
-int audit_permadded;
 static char key[AUDIT_MAX_KEY_LEN+1];
 static int keylen;
 static int printed;
@@ -77,6 +77,7 @@ static const char key_sep[2] = { AUDIT_KEY_SEPARATOR, 0 };
 extern int audit_archadded;
 extern int audit_syscalladded;
 extern unsigned int audit_elf;
+extern int audit_permadded;
 
 /*
  * This function will reset everything used for each loop when loading 
@@ -91,10 +92,11 @@ static int reset_vars(void)
 	audit_elf = 0;
 	add = AUDIT_FILTER_UNSET;
 	del = AUDIT_FILTER_UNSET;
-	action = 0;
+	action = -1;
 	exclude = 0;
 	msgtype_cnt = 0;
 	which = OLD;
+	multiple = 0;
 
 	memset(&rule, 0, sizeof(rule));
 	free(rule_new);
@@ -165,30 +167,80 @@ static void usage(void)
      );
 }
 
-/* Returns 0 ok, 1 deprecated action, 2 error */
-static int audit_rule_setup(const char *opt, int *flags, int *act)
+static int lookup_filter(const char *str, int *filter)
 {
-	if (strstr(opt, "task")) 
-		*flags = AUDIT_FILTER_TASK;
-	else if (strstr(opt, "entry"))
-		*flags = AUDIT_FILTER_ENTRY;
-	else if (strstr(opt, "exit"))
-		*flags = AUDIT_FILTER_EXIT;
-	else if (strstr(opt, "user"))
-		*flags = AUDIT_FILTER_USER;
-	else if (strstr(opt, "exclude")) {
-		*flags = AUDIT_FILTER_EXCLUDE;
+	if (strcmp(str, "task") == 0) 
+		*filter = AUDIT_FILTER_TASK;
+	else if (strcmp(str, "entry") == 0)
+		*filter = AUDIT_FILTER_ENTRY;
+	else if (strcmp(str, "exit") == 0)
+		*filter = AUDIT_FILTER_EXIT;
+	else if (strcmp(str, "user") == 0)
+		*filter = AUDIT_FILTER_USER;
+	else if (strcmp(str, "exclude") == 0) {
+		*filter = AUDIT_FILTER_EXCLUDE;
 		exclude = 1;
 	} else
 		return 2;
-	if (strstr(opt, "never"))
+	return 0;
+}
+
+static int lookup_action(const char *str, int *act)
+{
+	if (strcmp(str, "never") == 0)
 		*act = AUDIT_NEVER;
-	else if (strstr(opt, "possible"))
+	else if (strcmp(str, "possible") == 0)
 		return 1;
-	else if (strstr(opt, "always"))
+	else if (strcmp(str, "always") == 0)
 		*act = AUDIT_ALWAYS;
 	else
 		return 2;
+	return 0;
+}
+
+/*
+ * Returns 0 ok, 1 deprecated action, 2 rule error,
+ * 3 multiple rule insert/delete
+ */
+static int audit_rule_setup(char *opt, int *filter, int *act)
+{
+	int rc;
+	char *p;
+
+	if (++multiple != 1)
+		return 3;
+
+	p = strchr(opt, ',');
+	if (p == NULL || strchr(p+1, ','))
+		return 2;
+	*p = 0;
+
+	/* Try opt both ways */
+	if (lookup_filter(opt, filter) == 2) {
+		rc = lookup_action(opt, act);
+		if (rc != 0) {
+			*p = ',';
+			return rc;
+		}
+	}
+
+	/* Repair the string */
+	*p = ',';
+	opt = p+1;
+
+	/* If flags are empty, p+1 must be the filter */
+	if (*filter == AUDIT_FILTER_UNSET)
+		lookup_filter(opt, filter);
+	else {
+		rc = lookup_action(opt, act);
+		if (rc != 0)
+			return rc;
+	}
+
+	/* Make sure we set both */
+	if (*filter == AUDIT_FILTER_UNSET || *act == -1)
+		return 2;
+
 	return 0;
 }
 
@@ -307,6 +359,8 @@ static int audit_setup_perms(struct audit_rule_data *rule, const char *opt)
 /* 0 success, -1 failure */
 static int lookup_itype(const char *kind)
 {
+        if (strcmp(kind, "sys") == 0)
+                return 0;
         if (strcmp(kind, "file") == 0)
                 return 0;
         if (strcmp(kind, "exec") == 0)
@@ -530,7 +584,11 @@ static int setopt(int count, char *vars[])
 			retval = -1;
 		} else {
 			rc = audit_rule_setup(optarg, &add, &action);
-			if (rc > 1) {
+			if (rc == 3) {
+				fprintf(stderr,
+		"Multiple rule insert/delete operations are not allowed\n");
+				retval = -1;
+			} else if (rc == 2) {
 				fprintf(stderr, 
 					"Append rule - bad keyword %s\n",
 					optarg);
@@ -550,7 +608,11 @@ static int setopt(int count, char *vars[])
 			retval = -1;
 		} else {
 			rc = audit_rule_setup(optarg, &add, &action);
-			if (rc > 1) {
+			if (rc == 3) {
+				fprintf(stderr,
+		"Multiple rule insert/delete operations are not allowed\n");
+				retval = -1;
+			} else if (rc == 2) {
 				fprintf(stderr,
 				"Add rule - bad keyword %s\n", optarg);
 				retval = -1;
@@ -566,7 +628,11 @@ static int setopt(int count, char *vars[])
 		break;
         case 'd': 
 		rc = audit_rule_setup(optarg, &del, &action);
-		if (rc > 1) {
+		if (rc == 3) {
+			fprintf(stderr,
+		"Multiple rule insert/delete operations are not allowed\n");
+			retval = -1;
+		} else if (rc == 2) {
 			fprintf(stderr, "Delete rule - bad keyword %s\n", 
 				optarg);
 			retval = -1;
@@ -670,109 +736,16 @@ static int setopt(int count, char *vars[])
 		}
 		if (which == NEW) 
 			rc = audit_rule_fieldpair_data(&rule_new,optarg,flags);
-//FIXME: make this a function
-		switch (rc)
-		{
-			case 0:
-				if (which == OLD && 
-				    	rule.fields[rule.field_count-1] ==
+
+		if (rc != 0) {
+			audit_number_to_errmsg(rc, optarg);
+			retval = -1;
+		} else {
+			if (which == NEW && rule_new->fields[rule_new->field_count-1] ==
 						AUDIT_PERM)
-					audit_permadded = 1;
-				else if (which == NEW &&
-				    rule_new->fields[rule_new->field_count-1] ==
-						AUDIT_PERM)
-					audit_permadded = 1;
-				break;
-			case -1:
-				fprintf(stderr, "-F missing = for %s\n", 
-					optarg);
-				retval = -1;
-				break;
-			case -2:
-				fprintf(stderr, "-F unknown field: %s\n", 
-					optarg);
-				retval = -1;
-				break;
-			case -3:
-				fprintf(stderr, 
-					"-F %s must be before -S\n", 
-					optarg);
-				retval = -1;
-				break;
-			case -4:
-				fprintf(stderr, 
-					"-F %s machine type not found\n", 
-					optarg);
-				retval = -1;
-				break;
-			case -5:
-				fprintf(stderr, 
-					"-F %s elf mapping not found\n", 
-					optarg);
-				retval = -1;
-				break;
-			case -6:
-				fprintf(stderr, 
-			"-F %s requested bit level not supported by machine\n", 
-					optarg);
-				retval = -1;
-				break;
-			case -7:
-				fprintf(stderr,
-			 "Field %s cannot be checked at syscall entry\n",
-					 optarg);
-				retval = -1;
-				break;
-			case -8:
-				fprintf(stderr, 
-					"-F unknown message type - %s\n",
-					 optarg);
-				retval = -1;
-				break;
-			case -9:
-				fprintf(stderr,
-		 "msgtype field can only be used with exclude filter list\n");
-				retval = -1;
-				break;
-			case -10:
-				fprintf(stderr,
-					"Failed upgrading rule\n");
-				retval = -1;
-			case -11:
-				fprintf(stderr,
-					"String value too long\n");
-				retval = -1;
-				break;
-			case -12:
-				fprintf(stderr,
-			"Only msgtype field can be used with exclude filter\n");
-				retval = -1;
-				break;
-			case -13:
-				fprintf(stderr,
-			"Field (%s) only takes = or != operators\n", optarg);
-				retval = -1;
-				break;
-			case -14:
-				fprintf(stderr,
-				"Permission (%s) can only contain \'rwxa\n",
-					optarg);
-				retval = -1;
-				break;
-			case -15:
-				fprintf(stderr, 
-					"-F unknown errno - %s\n", optarg);
-				retval = -1;
-				break;
-			case -16:
-				fprintf(stderr, 
-					"-F unknown file type - %s\n", optarg);
-				retval = -1;
-				break;
-			default:
-				retval = -1;
-				break;
+				audit_permadded = 1;
 		}
+
 		break;
         case 'm':
 		if (audit_log_user_message( fd, AUDIT_USER, optarg, NULL, 
@@ -1089,39 +1062,31 @@ int main(int argc, char *argv[])
 
 	set_aumessage_mode(MSG_STDERR, DBG_NO);
 
+	if (argc == 1) {
+		usage();
+		return 1;
+	}
+#ifndef DEBUG
+	/* Make sure we are root */
+	if (getuid() != 0) {
+		fprintf(stderr, "You must be root to run this program.\n");
+		return 4;
+	}
+#endif
 	/* Check where the rules are coming from: commandline or file */
 	if ((argc == 3) && (strcmp(argv[1], "-R") == 0)) {
-#ifndef DEBUG
-		/* Make sure we are root */
-		if (getuid() != 0) {
-			fprintf(stderr, 
-				"You must be root to run this program.\n");
-			return 4;
-		}
-#endif
 		if (fileopt(argv[2]))
 			return 1;
 		else
 			return 0;
 	} else {
-		if (argc == 1) {
-			usage();
-			return 1;
-		}
-#ifndef DEBUG
-		/* Make sure we are root */
-		if (getuid() != 0) {
-			fprintf(stderr, 
-				"You must be root to run this program.\n");
-			return 4;
-		}
-#endif
 		if (reset_vars())
 			return 1;
 		retval = setopt(argc, argv);
 		if (retval == -3)
 			return 0;
 	}
+
 	return handle_request(retval);
 }
 
@@ -1300,8 +1265,7 @@ int key_match(struct audit_reply *rep)
 		}
 		if (((field >= AUDIT_SUBJ_USER && field <= AUDIT_OBJ_LEV_HIGH)
                      && field != AUDIT_PPID) || field == AUDIT_WATCH ||
-			field == AUDIT_WATCH || field == AUDIT_DIR ||
-			field == AUDIT_FILTERKEY) {
+			field == AUDIT_DIR || field == AUDIT_FILTERKEY) {
 				boffset += rep->ruledata->values[i];
 		}
 	}
@@ -1338,7 +1302,7 @@ static int audit_print_reply(struct audit_reply *rep)
 			return 0;
 		case AUDIT_GET:
 			printf("AUDIT_STATUS: enabled=%d flag=%d pid=%d"
-			" rate_limit=%d backlog_limit=%d lost=%d backlog=%d\n",
+			" rate_limit=%d backlog_limit=%d lost=%d backlog=%u\n",
 			rep->status->enabled, rep->status->failure,
 			rep->status->pid, rep->status->rate_limit,
 			rep->status->backlog_limit, rep->status->lost,
@@ -1462,7 +1426,9 @@ static int audit_print_reply(struct audit_reply *rep)
 				((rep->rule->flags & AUDIT_FILTER_MASK) != 
 						AUDIT_FILTER_USER) &&
 				((rep->rule->flags & AUDIT_FILTER_MASK) !=
-						AUDIT_FILTER_TASK)) {
+						AUDIT_FILTER_TASK) &&
+				((rep->rule->flags & AUDIT_FILTER_MASK) !=
+						AUDIT_FILTER_EXCLUDE)) {
 				printf(" syscall=");
 				for (sparse = 0, i = 0; 
 					i < (AUDIT_BITMASK_SIZE-1); i++) {

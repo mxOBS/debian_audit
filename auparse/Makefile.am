@@ -1,5 +1,5 @@
 # Makefile.am -- 
-# Copyright 2006-07 Red Hat Inc., Durham, North Carolina.
+# Copyright 2006-08 Red Hat Inc., Durham, North Carolina.
 # All Rights Reserved.
 #
 # This library is free software; you can redistribute it and/or
@@ -22,9 +22,9 @@
 
 SUBDIRS = test
 CLEANFILES = $(BUILT_SOURCES)
-CONFIG_CLEAN_FILES = Makefile.in *.loT *.rej *.orig
+CONFIG_CLEAN_FILES = *.loT *.rej *.orig
 AM_CFLAGS = -fPIC -DPIC -D_GNU_SOURCE -g
-INCLUDES = -I. -I.. -I../src -I../lib -I${top_srcdir}/lib
+INCLUDES = -I. -I${top_srcdir} -I${top_srcdir}/src -I${top_srcdir}/lib
 LIBS =
 lib_LTLIBRARIES = libauparse.la
 include_HEADERS = auparse.h auparse-defs.h
@@ -32,10 +32,11 @@ libauparse_la_SOURCES = nvpair.c interpret.c nvlist.c ellist.c		\
 	auparse.c auditd-config.c message.c data_buf.c auparse-defs.h	\
 	data_buf.h nvlist.h auparse.h ellist.h				\
 	internal.h nvpair.h rnode.h interpret.h				\
-	private.h expression.c expression.h $(BUILT_SOURCES)
+	private.h expression.c expression.h tty_named_keys.h
+nodist_libauparse_la_SOURCES = $(BUILT_SOURCES)
 
-libauparse_la_LIBADD = ${top_srcdir}/lib/libaudit.la
-libauparse_la_DEPENDENCIES = $(libauparse_la_SOURCES) ../config.h
+libauparse_la_LIBADD = ${top_builddir}/lib/libaudit.la
+libauparse_la_DEPENDENCIES = $(libauparse_la_SOURCES) ${top_builddir}/config.h
 libauparse_la_LDFLAGS = -Wl,-z,relro
 
 message.c:

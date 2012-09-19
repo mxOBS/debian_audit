@@ -9,8 +9,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: system-config-audit 0.1\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2008-05-15 17:53+0200\n"
-"PO-Revision-Date: 2008-05-15 17:54+0200\n"
+"POT-Creation-Date: 2008-05-21 02:16+0200\n"
+"PO-Revision-Date: 2008-05-21 02:16+0200\n"
 "Last-Translator: Miloslav Trmač <mitr@redhat.com>\n"
 "Language-Team: Czech\n"
 "MIME-Version: 1.0\n"
@@ -18,61 +18,61 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=3; plural=(n==1) ? 0 : (n>=2 && n<=4) ? 1 : 2;\n"
 
-#: ../../po/../src/audit_rules.py:77
+#: ../../po/../src/audit_rules.py:78
 #, python-format
 msgid "Unknown user \"%s\""
 msgstr "Neznámý uživatel „%s“"
 
-#: ../../po/../src/audit_rules.py:105
+#: ../../po/../src/audit_rules.py:106
 #, python-format
 msgid "Unknown group \"%s\""
 msgstr "Neznámá skupina „%s“"
 
-#: ../../po/../src/audit_rules.py:150
+#: ../../po/../src/audit_rules.py:168
 #, python-format
 msgid "Key value \"%s\" too long"
 msgstr "Hodnota klíče „%s“ je příliš dlouhá"
 
-#: ../../po/../src/audit_rules.py:152
+#: ../../po/../src/audit_rules.py:170
 #, python-format
 msgid "Invalid IDS key \"%s\""
 msgstr "Neplatný klíč IDS „%s“"
 
-#: ../../po/../src/audit_rules.py:159
+#: ../../po/../src/audit_rules.py:177
 msgid "Architecture can not be changed after system calls are selected"
 msgstr "Achitekturu nelze měnit po volbě volání systému"
 
-#: ../../po/../src/audit_rules.py:162 ../../po/../src/audit_rules.py:244
+#: ../../po/../src/audit_rules.py:180 ../../po/../src/audit_rules.py:262
 #, python-format
 msgid "The only valid operators for \"%s\" are \"=\" and \"!=\""
 msgstr "Jediné platné operátory pro „%s“ jsou „=“ a  „!=“"
 
-#: ../../po/../src/audit_rules.py:184
+#: ../../po/../src/audit_rules.py:202
 #, python-format
 msgid "The only valid operator for \"%s\" is \"=\""
 msgstr "Jediný platný operátor pro „%s“ je „=“"
 
-#: ../../po/../src/audit_rules.py:197
+#: ../../po/../src/audit_rules.py:215
 #, python-format
 msgid "Unknown permission \"%(char)c\" in \"%(perms)s\""
 msgstr "Neznámé oprávnění „%(char)c“ v „%(perms)s“"
 
-#: ../../po/../src/audit_rules.py:225
+#: ../../po/../src/audit_rules.py:243
 #, python-format
 msgid "Invalid integer value \"%s\""
 msgstr "Neplatná hodnota celého čísla „%s“"
 
-#: ../../po/../src/audit_rules.py:315
+#: ../../po/../src/audit_rules.py:335
 #, python-format
 msgid "Unknown field \"%s\""
 msgstr "Neznámé pole „%s“"
 
-#: ../../po/../src/audit_rules.py:319
+#: ../../po/../src/audit_rules.py:339
 #, python-format
 msgid "Unknown operator \"%s\""
 msgstr "Neznámý operátor „%s“"
 
-#: ../../po/../src/audit_rules.py:338
+#: ../../po/../src/audit_rules.py:358
 #, python-format
 msgid "Operator missing in \"%s\""
 msgstr "V „%s“ chybí operátor"
@@ -127,61 +127,68 @@ msgstr ""
 msgid "Device minor number"
 msgstr ""
 
-#: ../../po/../src/field_help.py:48
+#. audit.AUDIT_DIR is handled specially in the GUI
+#: ../../po/../src/field_help.py:49
 msgid "Effective group ID"
 msgstr ""
 
-#: ../../po/../src/field_help.py:49
+#: ../../po/../src/field_help.py:50
 msgid "Effective user ID"
 msgstr ""
 
-#: ../../po/../src/field_help.py:50
+#: ../../po/../src/field_help.py:51
 msgid "Exit value from a syscall"
 msgstr ""
 
-#. audit.AUDIT_FILTERKEY is handled specially in the GUI
 #: ../../po/../src/field_help.py:52
+msgid ""
+"The target file's type.  Can be either file, dir, socket, symlink, char, "
+"block, or fifo."
+msgstr ""
+
+#. audit.AUDIT_FILTERKEY is handled specially in the GUI
+#: ../../po/../src/field_help.py:55
 msgid "File system group ID"
 msgstr ""
 
-#: ../../po/../src/field_help.py:53
+#: ../../po/../src/field_help.py:56
 msgid "File system user ID"
 msgstr ""
 
-#: ../../po/../src/field_help.py:54
+#: ../../po/../src/field_help.py:57
 msgid "Group ID"
 msgstr ""
 
-#: ../../po/../src/field_help.py:55
+#: ../../po/../src/field_help.py:58
 msgid "Inode number"
 msgstr "Číslo inode"
 
-#: ../../po/../src/field_help.py:56
+#: ../../po/../src/field_help.py:59
 msgid "ID of the user in whose login session the process is running"
 msgstr ""
 
 #. audit.AUDIT_MSGTYPE has a special version of the dialog
-#: ../../po/../src/field_help.py:59
+#: ../../po/../src/field_help.py:62
 msgid "Resource's SELinux high level"
 msgstr ""
 
-#: ../../po/../src/field_help.py:60
+#: ../../po/../src/field_help.py:63
 msgid "Resource's SELinux low level"
 msgstr ""
 
-#: ../../po/../src/field_help.py:61
+#: ../../po/../src/field_help.py:64
 msgid "Resource's SELinux role"
 msgstr ""
 
-#: ../../po/../src/field_help.py:62
+#: ../../po/../src/field_help.py:65
 msgid "Resource's SELinux type"
 msgstr ""
 
-#: ../../po/../src/field_help.py:63
+#: ../../po/../src/field_help.py:66
 msgid "Resource's SELinux user"
 msgstr ""
 
-#: ../../po/../src/field_help.py:64
+#: ../../po/../src/field_help.py:67
 msgid ""
 "Permission filter for file operations.  r=read, w=write, x=execute, "
 "a=attribute change.  These permissions are not the standard file "
@@ -190,55 +197,55 @@ msgid ""
 "looked at to see what permission was requested."
 msgstr ""
 
-#: ../../po/../src/field_help.py:71
+#: ../../po/../src/field_help.py:74
 msgid "OS personality number"
 msgstr ""
 
-#: ../../po/../src/field_help.py:72
+#: ../../po/../src/field_help.py:75
 msgid "Process ID"
 msgstr ""
 
-#: ../../po/../src/field_help.py:73
+#: ../../po/../src/field_help.py:76
 msgid "Parent's process ID"
 msgstr ""
 
-#: ../../po/../src/field_help.py:74
+#: ../../po/../src/field_help.py:77
 msgid "Set group ID"
 msgstr ""
 
-#: ../../po/../src/field_help.py:75
+#: ../../po/../src/field_help.py:78
 msgid "Program's SELinux clearance"
 msgstr ""
 
-#: ../../po/../src/field_help.py:76
+#: ../../po/../src/field_help.py:79
 msgid "Program's SELinux role"
 msgstr ""
 
-#: ../../po/../src/field_help.py:77
+#: ../../po/../src/field_help.py:80
 msgid "Program's SELinux sensitivity"
 msgstr ""
 
-#: ../../po/../src/field_help.py:78
+#: ../../po/../src/field_help.py:81
 msgid "Program's SELinux type"
 msgstr ""
 
-#: ../../po/../src/field_help.py:79
+#: ../../po/../src/field_help.py:82
 msgid "Program's SELinux user"
 msgstr ""
 
-#: ../../po/../src/field_help.py:80
+#: ../../po/../src/field_help.py:83
 msgid "If the exit value is >= 0, this is 1, otherwise it is 0."
 msgstr ""
 
-#: ../../po/../src/field_help.py:82
+#: ../../po/../src/field_help.py:85
 msgid "Set user ID"
 msgstr ""
 
-#: ../../po/../src/field_help.py:83
+#: ../../po/../src/field_help.py:86
 msgid "User ID"
 msgstr ""
 
-#: ../../po/../src/field_help.py:88
+#: ../../po/../src/field_help.py:91
 msgid "No help available"
 msgstr "Nápověda není k dispozici"
 
@@ -379,32 +386,32 @@ msgid "Total key length is too long"
 msgstr "Celková délka klíče je příliš dlouhá"
 
 #. From code in src/auditctl.c
-#: ../../po/../src/lists.py:138
+#: ../../po/../src/lists.py:166
 msgid "Information only"
 msgstr "Jen pro informaci"
 
-#: ../../po/../src/lists.py:139
+#: ../../po/../src/lists.py:167
 msgid "Low"
 msgstr "Nízká"
 
-#: ../../po/../src/lists.py:140
+#: ../../po/../src/lists.py:168
 msgid "Medium"
 msgstr "Střední"
 
-#: ../../po/../src/lists.py:141
+#: ../../po/../src/lists.py:169
 msgid "High"
 msgstr "Vysoká"
 
 #. From code in src/auditctl.c
-#: ../../po/../src/lists.py:143
+#: ../../po/../src/lists.py:171
 msgid "File watch"
 msgstr "Sledování souboru"
 
-#: ../../po/../src/lists.py:144
+#: ../../po/../src/lists.py:172
 msgid "Execution watch"
 msgstr "Sledování spouštění"
 
-#: ../../po/../src/lists.py:145
+#: ../../po/../src/lists.py:173
 msgid "Executable created"
 msgstr "Vytvořen spustitelný soubor"
 
@@ -516,7 +523,7 @@ msgstr "Podmínka"
 msgid "The system call list must not be empty"
 msgstr "Seznam volání systému nesmí být prázdný"
 
-#: ../../po/../src/rule_dialog.py:290 ../../po/../src/watch_dialog.py:137
+#: ../../po/../src/rule_dialog.py:290 ../../po/../src/watch_dialog.py:142
 msgid "No key"
 msgstr "Žádný klíč"
 
@@ -968,7 +975,7 @@ msgstr ""
 msgid "Trusted Application Events"
 msgstr "Události důvěryhodných aplikací"
 
-#: ../src/system-config-audit.glade.h:90 ../../po/../src/watch_dialog.py:47
+#: ../src/system-config-audit.glade.h:90 ../../po/../src/watch_dialog.py:48
 msgid "Watched File"
 msgstr "Sledovaný soubor"
 
@@ -1152,52 +1159,57 @@ msgstr "Libovolný typ"
 msgid "Type"
 msgstr "Typ"
 
-#: ../../po/../src/util.py:149
+#: ../../po/../src/util.py:150
 #, python-format
 msgid "Unknown architecture %d"
 msgstr "Neznámá architektura %d"
 
-#: ../../po/../src/util.py:157
+#: ../../po/../src/util.py:158
 msgid "64-bit architecture not supported"
 msgstr "64-bitová architektura není podporována"
 
-#: ../../po/../src/util.py:161
+#: ../../po/../src/util.py:162
 msgid "32-bit architecture not supported"
 msgstr "32-bitová architektura není podporována"
 
-#: ../../po/../src/util.py:165
+#: ../../po/../src/util.py:166
 #, python-format
 msgid "Unknown architecture \"%s\""
 msgstr "Neznámá architektura „%s“"
 
-#: ../../po/../src/util.py:201
+#: ../../po/../src/util.py:177
+#, python-format
+msgid "Unknown file type \"%s\""
+msgstr "Neznámý typ souboru „%s“"
+
+#: ../../po/../src/util.py:213
 #, python-format
 msgid "Unknown message type \"%s\""
 msgstr "Neznámý typ zprávy „%s“"
 
-#: ../../po/../src/util.py:215
+#: ../../po/../src/util.py:227
 #, python-format
 msgid "Unknown system call \"%s\""
 msgstr "Neznámé volání systému „%s“"
 
-#: ../../po/../src/util.py:217
+#: ../../po/../src/util.py:229
 msgid "System call number must be non-negative"
 msgstr "Číslo volání systému musí být nezáporné"
 
-#: ../../po/../src/util.py:229
+#: ../../po/../src/util.py:241
 #, python-format
 msgid "Invalid number \"%s\""
 msgstr "Neplatné číslo „%s“"
 
-#: ../../po/../src/util.py:231
+#: ../../po/../src/util.py:243
 msgid "Value must be non-negative"
 msgstr "Hodnota musí být nezáporná"
 
-#: ../../po/../src/util.py:236
+#: ../../po/../src/util.py:248
 msgid ", "
 msgstr ", "
 
-#: ../../po/../src/watch_dialog.py:128
+#: ../../po/../src/watch_dialog.py:133
 msgid "The watched file path must not be empty"
 msgstr "Cesta ke sledovanému souboru nesmí být prázdná"
 
