@@ -91,6 +91,8 @@ void shutdown_events(void)
 	/* Give it 5 seconds to clear the queue */
 	alarm(5);
 	pthread_join(event_thread, NULL);	
+	free((void *)format_buf);
+	fclose(consumer_data.log_file);
 }
 
 int init_event(struct daemon_conf *config)
@@ -163,11 +165,17 @@ void enqueue_event(struct auditd_reply_list *rep)
 			buf = format_raw(&rep->reply, consumer_data.config);
 			break;
 		case LF_NOLOG:
-			return;
+			// We need the rotate event to get enqueued
+			if (rep->reply.type != AUDIT_DAEMON_ROTATE ) {
+				free(rep);
+				return;
+			}
+			break;
 		default:
 			audit_msg(LOG_ERR, 
 				  "Illegal log format detected %d", 
 				  consumer_data.config->log_format);
+			free(rep);
 			return;
 		}
 
@@ -278,7 +286,8 @@ static void *event_thread_main(void *arg)
 		if (data->tail == data->head)
 			data->tail = NULL;
 		data->head = data->head->next;
-		if (data->head == NULL && stop)
+		if (data->head == NULL && stop &&
+					cur->reply.type == AUDIT_DAEMON_END)
 			stop_req = 1;
 		pthread_mutex_unlock(&data->queue_lock);
 
@@ -288,11 +297,8 @@ static void *event_thread_main(void *arg)
 			free((void *)cur->reply.message);
 		} 
 		free(cur);
-		if (stop_req) {
-			free((void *)format_buf);
-			fclose(data->log_file);
+		if (stop_req)
 			break;
-		}
 	}
 	return NULL;
 }
@@ -321,6 +327,8 @@ static void handle_event(struct auditd_consumer_data *data)
 		}
 	} else if (data->head->reply.type == AUDIT_DAEMON_ROTATE) {
 		rotate_logs_now(data);
+		if (consumer_data.config->log_format == LF_NOLOG)
+			return;
 	}
 	if (!logging_suspended) {
 

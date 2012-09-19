@@ -1,5 +1,5 @@
 /* auditctl.c -- 
- * Copyright 2004-2008 Red Hat Inc., Durham, North Carolina.
+ * Copyright 2004-2009 Red Hat Inc., Durham, North Carolina.
  * All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -62,7 +62,7 @@ static int fd = -1;
 static int list_requested = 0;
 static int add = AUDIT_FILTER_UNSET, del = AUDIT_FILTER_UNSET, action = -1;
 static int ignore = 0;
-static int exclude = 0, msgtype_cnt = 0;
+static int exclude = 0;
 static int multiple = 0;
 enum { OLD, NEW };
 int which;
@@ -94,16 +94,17 @@ static int reset_vars(void)
 	del = AUDIT_FILTER_UNSET;
 	action = -1;
 	exclude = 0;
-	msgtype_cnt = 0;
 	which = OLD;
 	multiple = 0;
 
 	memset(&rule, 0, sizeof(rule));
 	free(rule_new);
 	rule_new = NULL;
-	if ((fd = audit_open()) < 0) {
-		fprintf(stderr, "Cannot open netlink audit socket\n");
-		return 1;
+	if (fd < 0) {
+		if ((fd = audit_open()) < 0) {
+			fprintf(stderr, "Cannot open netlink audit socket\n");
+			return 1;
+		}
 	}
 	return 0;
 }
@@ -758,15 +759,6 @@ static int setopt(int count, int lineno, char *vars[])
 			retval = -1;
 			break;
 		}
-		if (strncmp(optarg, "msgtype=", 7) == 0) {
-			if (msgtype_cnt) {
-				fprintf(stderr, 
-				    "Only one msgtype may be given per rule\n");
-				retval = -1;
-				break;
-			} else
-				msgtype_cnt++;
-		}
 		if (which == OLD) {
 			char *ptr = strdup(optarg);
 			rc = audit_rule_fieldpair(&rule, ptr, flags);
@@ -1124,7 +1116,13 @@ int main(int argc, char *argv[])
 #endif
 	/* Check where the rules are coming from: commandline or file */
 	if ((argc == 3) && (strcmp(argv[1], "-R") == 0)) {
-		if (fileopt(argv[2]))
+		fd = audit_open();
+		if (audit_is_enabled(fd) == 2) {
+			fprintf(stderr,
+				"The audit system is in immutable "
+				"mode, no rules loaded\n");
+			return 0;
+		} else if (fileopt(argv[2]))
 			return 1;
 		else
 			return 0;
@@ -1136,6 +1134,15 @@ int main(int argc, char *argv[])
 			return 0;
 	}
 
+	if (add != AUDIT_FILTER_UNSET || del != AUDIT_FILTER_UNSET) {
+		fd = audit_open();
+		if (audit_is_enabled(fd) == 2) {
+			fprintf(stderr,
+				"The audit system is in immutable "
+				"mode, no rules loaded\n");
+			return 0;
+		}
+	}
 	return handle_request(retval);
 }
 
