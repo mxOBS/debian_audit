@@ -1,4 +1,4 @@
-.TH "AUSEARCH_ADD_ITEM" "3" "Feb 2007" "Red Hat" "Linux Audit API"
+.TH "AUSEARCH_ADD_ITEM" "3" "Nov 2007" "Red Hat" "Linux Audit API"
 .SH NAME
 ausearch_add_item \- build up search rule
 .SH "SYNOPSIS"
@@ -8,7 +8,7 @@ int ausearch_add_item(auparse_state_t *au, const char *field, const char *op, co
 
 .SH "DESCRIPTION"
 
-ausearch_add_item adds one search condition to the audit search API. The search conditions can then be used to scan logs, files, or buffers for something of interest. The field value is the field name that the value will be checked for. The op variable describes what kind of check is to be done. Legal op values are:
+ausearch_add_item adds one search condition to the current audit search expression. The search conditions can then be used to scan logs, files, or buffers for something of interest. The field value is the field name that the value will be checked for. The op variable describes what kind of check is to be done. Legal op values are:
 
 .RS
 .TP
@@ -22,20 +22,24 @@ ausearch_add_item adds one search condition to the audit search API. The search 
  locate the field name and check that the value associated with it is NOT equal to the value given in this rule.
 .RE
 
-The how value determines how this search condition will be stored internally. The possible values are:
+The value parameter is compared to the uninterpreted field value.
+
+The how value determines how this search condition will affect the existing search expression if one is already defined. The possible values are:
 .RS
 .TP
 .I AUSEARCH_RULE_CLEAR
-When this is used, it clears any previous search condition and inserts it as the first one.
+Clear the current search expression, if any, and use only this search condition.
 .TP
 .I AUSEARCH_RULE_OR
-When this is used, it means that the results of its evaluation will be "or"ed with other search conditions.
+If a search expression
+.I E
+is already configured, replace it by \fB(\fIE\fB || \fIthis_search_condition\fB)\fR.
 .TP
 .I AUSEARCH_RULE_AND
-When this is used, it means that the results of its evaluation will be "and"ed with other search conditions.
+If a search expression
+.I E
+is already configured, replace it by \fB(\fIE\fB && \fIthis_search_condition\fB)\fR.
 .RE
-
-All search conditions must be the same type, you cannot mix "and" and "or".
 
 .SH "RETURN VALUE"
 
@@ -43,10 +47,14 @@ Returns -1 if an error occurs; otherwise, 0 for success.
 
 .SH "SEE ALSO"
 
+.BR ausearch_add_expression (3),
+.BR ausearch_add_interpreted_item (3),
+.BR ausearch_add_timestamp_item (3),
 .BR ausearch_add_regex (3), 
 .BR ausearch_set_stop (3), 
 .BR ausearch_clear (3), 
-.BR ausearch_next_event (3).
+.BR ausearch_next_event (3),
+.BR ausearch-expression (5).
 
 .SH AUTHOR
 Steve Grubb

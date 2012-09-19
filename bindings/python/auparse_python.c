@@ -17,6 +17,7 @@ auparse_timestamp_compare: because AuEvent calls this via the cmp operator
 
 */
 
+static int debug = 0;
 static PyObject *NoParserError = NULL;
 
 /*===========================================================================
@@ -42,24 +43,6 @@ AuEvent_dealloc(AuEvent* self)
     self->ob_type->tp_free((PyObject*)self);
 }
 
-#if 0
-static PyObject *
-AuEvent_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
-{
-    AuEvent *self;
-
-    self = (AuEvent *)type->tp_alloc(type, 0);
-    if (self != NULL) {
-        self->sec    = NULL;
-        self->milli  = NULL;
-        self->serial = NULL;
-        self->host   = NULL;
-    }
-
-    return (PyObject *)self;
-}
-#endif
-
 static int
 AuEvent_compare(PyObject *obj1, PyObject *obj2)
 {
@@ -74,8 +57,8 @@ AuEvent_get_sec(AuEvent *self, void *closure)
 {
     if (self->sec == NULL) {
         if ((self->sec = PyInt_FromLong(self->event.sec)) == NULL) return NULL;
-        Py_INCREF(self->sec);
     }
+    Py_INCREF(self->sec);
     return self->sec;
 }
 
@@ -84,8 +67,8 @@ AuEvent_get_milli(AuEvent *self, void *closure)
 {
     if (self->milli == NULL) {
         if ((self->milli = PyInt_FromLong(self->event.milli)) == NULL) return NULL;
-        Py_INCREF(self->milli);
     }
+    Py_INCREF(self->milli);
     return self->milli;
 }
 
@@ -94,8 +77,8 @@ AuEvent_get_serial(AuEvent *self, void *closure)
 {
     if (self->serial == NULL) {
         if ((self->serial = PyInt_FromLong(self->event.serial)) == NULL) return NULL;
-        Py_INCREF(self->serial);
     }
+    Py_INCREF(self->serial);
     return self->serial;
 }
 
@@ -105,7 +88,9 @@ AuEvent_get_host(AuEvent *self, void *closure)
     if (self->event.host == NULL) {
         Py_RETURN_NONE;
     } else {
-        if ((self->host = PyString_FromString(self->event.host)) == NULL) return NULL;
+	if (self->host == NULL) {
+	    if ((self->host = PyString_FromString(self->event.host)) == NULL) return NULL;
+	}
         Py_INCREF(self->host);
         return self->host;
     }
@@ -234,11 +219,43 @@ typedef struct {
     auparse_state_t *au;
 } AuParser;
 
+typedef struct {
+    AuParser *py_AuParser;
+    PyObject *func;
+    PyObject *user_data;
+} CallbackData;
+
+void callback_data_destroy(void *user_data)
+{
+    CallbackData *cb = (CallbackData *)user_data;
+
+    if (debug) printf("<< callback_data_destroy\n");
+    if (cb) {
+        Py_DECREF(cb->func);
+        Py_XDECREF(cb->user_data);
+        PyMem_Del(cb);
+    }
+}
+
+static void auparse_callback(auparse_state_t *au, auparse_cb_event_t cb_event_type, void *user_data)
+{
+    CallbackData *cb = (CallbackData *)user_data;
+    PyObject *arglist;
+    PyObject *result;
+
+    arglist = Py_BuildValue("OiO", cb->py_AuParser, cb_event_type, cb->user_data);
+    result = PyEval_CallObject(cb->func, arglist);
+    Py_DECREF(arglist);
+    Py_XDECREF(result);
+}
+
 static void
 AuParser_dealloc(AuParser* self)
 {
-    // FIXME printf("<< AuParser_dealloc: self=%p au=%p\n", self, self->au);
-    if (self->au != NULL) auparse_destroy(self->au);
+    if (debug) printf("<< AuParser_dealloc: self=%p au=%p\n", self, self->au);
+    if (self->au != NULL) {
+        auparse_destroy(self->au);
+    }
     self->ob_type->tp_free((PyObject*)self);
 }
 
@@ -302,7 +319,7 @@ AuParser_init(AuParser *self, PyObject *args, PyObject *kwds)
 
         if (PySequence_Check(source)) {
             n = PySequence_Size(source);
-            if ((files = PyMem_NEW(char *, n+1)) == NULL) {
+            if ((files = PyMem_New(char *, n+1)) == NULL) {
                 PyErr_NoMemory();
                 return -1;
             }
@@ -311,7 +328,7 @@ AuParser_init(AuParser *self, PyObject *args, PyObject *kwds)
                 if ((files[i] = PyString_AsString(item)) == NULL) {
                     PyErr_SetString(PyExc_ValueError, "members of source sequence must be a string when source_type is AUSOURCE_FILE_ARRAY");
                     Py_DECREF(item);
-                    PyMem_Free(files);
+                    PyMem_Del(files);
                     return -1;
                 } else {
                     Py_DECREF(item);
@@ -325,10 +342,10 @@ AuParser_init(AuParser *self, PyObject *args, PyObject *kwds)
         
         if ((self->au = auparse_init(source_type, files)) == NULL) {
             PyErr_SetFromErrno(PyExc_IOError);
-            PyMem_Free(files);
+            PyMem_Del(files);
             return -1;
         }
-        PyMem_Free(files);
+        PyMem_Del(files);
     } break;
     case AUSOURCE_BUFFER: {
         char *buf;
@@ -345,7 +362,7 @@ AuParser_init(AuParser *self, PyObject *args, PyObject *kwds)
 
         if (PySequence_Check(source)) {
             n = PySequence_Size(source);
-            if ((buffers = PyMem_NEW(char *, n+1)) == NULL) {
+            if ((buffers = PyMem_New(char *, n+1)) == NULL) {
                 PyErr_NoMemory();
                 return -1;
             }
@@ -354,7 +371,7 @@ AuParser_init(AuParser *self, PyObject *args, PyObject *kwds)
                 if ((buffers[i] = PyString_AsString(item)) == NULL) {
                     PyErr_SetString(PyExc_ValueError, "members of source sequence must be a string when source_type is AUSOURCE_BUFFER_ARRAY");
                     Py_DECREF(item);
-                    PyMem_Free(buffers);
+                    PyMem_Del(buffers);
                     return -1;
                 } else {
                     Py_DECREF(item);
@@ -368,10 +385,10 @@ AuParser_init(AuParser *self, PyObject *args, PyObject *kwds)
         
         if ((self->au = auparse_init(source_type, buffers)) == NULL) {
             PyErr_SetFromErrno(PyExc_EnvironmentError);
-            PyMem_Free(buffers);
+            PyMem_Del(buffers);
             return -1;
         }
-        PyMem_Free(buffers);
+        PyMem_Del(buffers);
     } break;
     case AUSOURCE_DESCRIPTOR: {
         int fd;
@@ -398,14 +415,140 @@ AuParser_init(AuParser *self, PyObject *args, PyObject *kwds)
             return -1;
         }
     } break;
+    case AUSOURCE_FEED: {
+        if (source != Py_None) {
+            PyErr_SetString(PyExc_ValueError, "source must be None when source_type is AUSOURCE_FEED");
+            return -1;
+        }
+        if ((self->au = auparse_init(source_type, NULL)) == NULL) {
+            PyErr_SetFromErrno(PyExc_EnvironmentError);
+            return -1;
+        }
+    } break;
     default: {
         PyErr_SetString(PyExc_ValueError, "Invalid source type");
         return -1;
     } break;
     }
 
-    // FIXME printf(">> AuParser_init: self=%p au=%p\n", self, self->au);
+    if (debug) printf(">> AuParser_init: self=%p au=%p\n", self, self->au);
     return 0;
+}
+
+/********************************
+ * auparse_feed
+ ********************************/
+PyDoc_STRVAR(feed_doc,
+"feed(data) supplies new data for the parser to consume.\n\
+\n\
+AuParser() must have been called with a source type of AUSOURCE_FEED.\n\
+The parser consumes as much data as it can invoking a user supplied\n\
+callback specified with add_callback() with a cb_event_type of\n\
+AUPARSE_CB_EVENT_READY each time the parser recognizes a complete event\n\
+in the data stream. Data not fully parsed will persist and be prepended\n\
+to the next feed data. After all data has been feed to the parser flush_feed()\n\
+should be called to signal the end of input data and flush any pending\n\
+parse data through the parsing system.\n\
+\n\
+Returns None.\n\
+Raises exception (EnvironmentError) on error\n\
+");
+static PyObject *
+AuParser_feed(AuParser *self, PyObject *args)
+{
+    char *data;
+    int data_len;
+    int result;
+
+    if (!PyArg_ParseTuple(args, "s#:feed", &data, &data_len)) return NULL;
+    PARSER_CHECK;
+    result = auparse_feed(self->au, data, data_len);
+    if (result ==  0) Py_RETURN_NONE;
+    PyErr_SetFromErrno(PyExc_EnvironmentError);
+    return NULL;
+}
+
+/********************************
+ * auparse_flush_feed
+ ********************************/
+PyDoc_STRVAR(flush_feed_doc,
+"flush_feed() flush any unconsumed feed data through parser\n\
+\n\
+flush_feed() should be called to signal the end of feed input data\n\
+and flush any pending parse data through the parsing system.\n\
+\n\
+Returns None.\n\
+Raises exception (EnvironmentError) on error\n\
+");
+static PyObject *
+AuParser_flush_feed(AuParser *self)
+{
+    int result;
+
+    PARSER_CHECK;
+    result = auparse_flush_feed(self->au);
+    if (result ==  0) Py_RETURN_NONE;
+    PyErr_SetFromErrno(PyExc_EnvironmentError);
+    return NULL;
+}
+
+/********************************
+ * auparse_add_callback
+ ********************************/
+PyDoc_STRVAR(add_callback_doc,
+"add_callback(callback, user_data) add a callback handler for notifications.\n\
+\n\
+auparse_add_callback adds a callback function to the parse state which\n\
+is invoked to notify the application of parsing events.\n\
+\n\
+The signature of the callback is:\n\
+\n\
+callback(au, cb_event_type,user_data)\n\
+\n\
+When the callback is invoked it is passed:\n\
+au: the AuParser object\n\
+cb_event_type: enumerated value indicating the reason why the callback was invoked\n\
+user_data: user supplied private data\n\
+\n\
+The cb_event_type argument indicates why the callback was invoked.\n\
+It's possible values are:\n\
+\n\
+AUPARSE_CB_EVENT_READY\n\
+A complete event has been parsed and is ready to be examined.\n\
+This is logically equivalent to the parse state immediately following\n\
+auparse_next_event()\n\
+\n\
+Returns None.\n\
+Raises exception (EnvironmentError) on error\n\
+");
+static PyObject *
+AuParser_add_callback(AuParser *self, PyObject *args)
+{
+    PyObject *func;
+    PyObject *user_data;
+
+    if (!PyArg_ParseTuple(args, "O|O:add_callback", &func, &user_data)) return NULL;
+    if (!PyFunction_Check(func)) {
+        PyErr_SetString(PyExc_ValueError, "callback must be a function");
+        return NULL;
+    }
+    PARSER_CHECK;
+
+    {
+        CallbackData *cb;
+
+        cb = PyMem_New(CallbackData, 1);
+        if (cb == NULL)
+            return PyErr_NoMemory();
+        cb->py_AuParser = self;
+        cb->func = func;
+        cb->user_data = user_data;
+        Py_INCREF(cb->func);
+        Py_XINCREF(cb->user_data);
+        auparse_add_callback(self->au, auparse_callback, cb, callback_data_destroy);
+}
+
+    Py_RETURN_NONE;
 }
 
 /********************************
@@ -433,14 +576,67 @@ AuParser_reset(AuParser *self)
 }
 
 /********************************
+ * ausearch_add_expression
+ ********************************/
+PyDoc_STRVAR(search_add_expression_doc,
+"search_add_expression(expression, how) Build up search expression\n\
+\n\
+\n\
+ausearch_add_item adds an expression to the current audit search\n\
+expression.  The search conditions can then be used to scan logs,\n\
+files, or buffers for something of interest.  The expression parameter\n\
+contains an expression, as specified in ausearch-expression(5).\n\
+\n\
+The how parameter determines how this search expression will affect the\n\
+existing search expression, if one is already defined.  The possible\n\
+values are:\n\
+\n\
+AUSEARCH_RULE_CLEAR:\n\
+Clear the current search expression, if any, and use only this search\n\
+expression.\n\
+\n\
+AUSEARCH_RULE_OR:\n\
+\n\
+If a search expression E is already configured, replace it by\n\
+(E || this_search_expression).\n\
+\n\
+AUSEARCH_RULE_AND:\n\
+If a search expression E is already configured, replace it by\n\
+(E && this_search_expression).\n\
+\n\
+No Return value, raises exception (EnvironmentError) on error.\n\
+");
+static PyObject *
+AuParser_search_add_expression(AuParser *self, PyObject *args)
+{
+    const char *expression;
+    char *error;
+    int how;
+    int result;
+
+    if (!PyArg_ParseTuple(args, "si", &expression, &how)) return NULL;
+    PARSER_CHECK;
+
+    result = ausearch_add_expression(self->au, expression, &error, how);
+    if (result == 0) Py_RETURN_NONE;
+    if (error == NULL)
+	PyErr_SetFromErrno(PyExc_EnvironmentError);
+    else {
+	PyErr_SetString(PyExc_EnvironmentError, error);
+	free(error);
+    }
+    return NULL;
+}
+
+/********************************
  * ausearch_add_item
  ********************************/
 PyDoc_STRVAR(search_add_item_doc,
 "search_add_item(field, op, value, how) Build up search rule\n\
 \n\
 \n\
-search_add_item() adds one search condition to the audit search\n\
-API. The search conditions can then be used to scan logs, files, or\n\
+search_add_item() adds one search condition to the current audit search\n\
+expression. The search conditions can then be used to scan logs, files, or\n\
 buffers for something of interest. The field value is the field name\n\
 that the value will be checked for. The op variable describes what\n\
 kind of check is to be done. Legal op values are:\n\
@@ -456,23 +652,24 @@ is equal to the value given in this rule.\n\
 locate the field name and check that the value associated with\n\
 it is NOT equal to the value given in this rule.\n\
 \n\
-The how parameter determines how this search condition will be stored\n\
-internally. The possible values are:\n\
+The value parameter is compared to the uninterpreted field value.\n\
+\n\
+The how parameter determines how this search expression will affect the\n\
+existing search expression, if one is already defined.  The possible\n\
+values are:\n\
 \n\
 AUSEARCH_RULE_CLEAR:\n\
-When this is used, it clears any previous search condition and inserts\n\
-it as the first one.\n\
+Clear the current search expression, if any, and use only this search\n\
+expression.\n\
 \n\
 AUSEARCH_RULE_OR:\n\
 \n\
-When this is used, it means that the results of its evaluation will be\n\
-or'ed with other search conditions.\n\
+If a search expression E is already configured, replace it by\n\
+(E || this_search_expression).\n\
 \n\
 AUSEARCH_RULE_AND:\n\
-When this is used, it means that the results of its evaluation will be\n\
-and'ed with other search conditions.\n\
-\n\
-All search conditions must be the same type, you cannot mix 'and' and 'or'.\n\
+If a search expression E is already configured, replace it by\n\
+(E && this_search_expression).\n\
 \n\
 No Return value, raises exception (EnvironmentError) on error.\n\
 ");
@@ -491,6 +688,134 @@ AuParser_search_add_item(AuParser *self, PyObject *args)
 
     result = ausearch_add_item(self->au, field, op, value, how);
     if (result == 0) Py_RETURN_NONE;
+    PyErr_SetFromErrno(PyExc_EnvironmentError);
+    return NULL;
+}
+
+/********************************
+ * ausearch_add_interpreted_item
+ ********************************/
+PyDoc_STRVAR(search_add_interpreted_item_doc,
+"search_add_interpreted_item(field, op, value, how) Build up search rule\n\
+\n\
+\n\
+search_add_interpreted_item() adds one search condition to the current audit\n\
+search expression. The search conditions can then be used to scan logs,\n\
+files, or buffers for something of interest. The field value is the field\n\
+name that the value will be checked for. The op variable describes what\n\
+kind of check is to be done. Legal op values are:\n\
+\n\
+'exists':\n\
+Just check that a field name exists\n\
+\n\
+'=':\n\
+locate the field name and check that the value associated with it\n\
+is equal to the value given in this rule.\n\
+\n\
+'!=':\n\
+locate the field name and check that the value associated with\n\
+it is NOT equal to the value given in this rule.\n\
+\n\
+The value parameter is compared to the interpreted field value (the value\n\
+that would be returned by AuParser.interpret_field).\n\
+\n\
+The how parameter determines how this search expression will affect the\n\
+existing search expression, if one is already defined.  The possible\n\
+values are:\n\
+\n\
+AUSEARCH_RULE_CLEAR:\n\
+Clear the current search expression, if any, and use only this search\n\
+expression.\n\
+\n\
+AUSEARCH_RULE_OR:\n\
+\n\
+If a search expression E is already configured, replace it by\n\
+(E || this_search_expression).\n\
+\n\
+AUSEARCH_RULE_AND:\n\
+If a search expression E is already configured, replace it by\n\
+(E && this_search_expression).\n\
+\n\
+No Return value, raises exception (EnvironmentError) on error.\n\
+");
+
+static PyObject *
+AuParser_search_add_interpreted_item(AuParser *self, PyObject *args)
+{
+    const char *field;
+    const char *op;
+    const char *value;
+    int how;
+    int result;
+
+    if (!PyArg_ParseTuple(args, "sssi", &field, &op, &value, &how)) return NULL;
+    PARSER_CHECK;
+
+    result = ausearch_add_interpreted_item(self->au, field, op, value, how);
+    if (result == 0) Py_RETURN_NONE;
+    PyErr_SetFromErrno(PyExc_EnvironmentError);
+    return NULL;
+}
+
+/********************************
+ * ausearch_add_timestamp_item
+ ********************************/
+PyDoc_STRVAR(search_add_timestamp_item_doc,
+"search_add_timestamp_item(op, sec, milli, how) Build up search rule\n\
+\n\
+\n\
+search_add_timestamp_item adds an event time condition to the current audit\n\
+search expression. The search conditions can then be used to scan logs,\n\
+files, or buffers for something of interest. The op parameter specifies the\n\
+desired comparison. Legal op values are \"<\", \"<=\", \">=\", \">\" and\n\
+\"=\". The left operand of the comparison operator is the timestamp of the\n\
+examined event, the right operand is specified by the sec and milli\n\
+parameters.\n\
+\n\
+The how parameter determines how this search expression will affect the\n\
+existing search expression, if one is already defined.  The possible\n\
+values are:\n\
+\n\
+AUSEARCH_RULE_CLEAR:\n\
+Clear the current search expression, if any, and use only this search\n\
+expression.\n\
+\n\
+AUSEARCH_RULE_OR:\n\
+\n\
+If a search expression E is already configured, replace it by\n\
+(E || this_search_expression).\n\
+\n\
+AUSEARCH_RULE_AND:\n\
+If a search expression E is already configured, replace it by\n\
+(E && this_search_expression).\n\
+\n\
+No Return value, raises exception (EnvironmentError) on error.\n\
+");
+
+static PyObject *
+AuParser_search_add_timestamp_item(AuParser *self, PyObject *args)
+{
+    const char *op;
+    PY_LONG_LONG sec;
+    int milli;
+    int how;
+    int result;
+
+    /* There's no completely portable way to handle time_t values from Python;
+       note that time_t might even be a floating-point type!  PY_LONG_LONG
+       is at least enough not to worry about year 2038.
+
+       milli is int because Python's 'I' format does no overflow checking.
+       Negative milli values will wrap to values > 1000 and
+       ausearch_add_timestamp_item will reject them. */
+    if (!PyArg_ParseTuple(args, "sLii", &op, &sec, &milli, &how))
+	    return NULL;
+    PARSER_CHECK;
+
+    result = ausearch_add_timestamp_item(self->au, op, sec, (unsigned)milli,
+					 how);
+    if (result == 0)
+	    Py_RETURN_NONE;
     PyErr_SetFromErrno(PyExc_EnvironmentError);
     return NULL;
 }
@@ -732,6 +1057,37 @@ AuParser_next_record(AuParser *self)
 }
 
 /********************************
+ * auparse_goto_record_num
+ ********************************/
+PyDoc_STRVAR(goto_record_num_doc,
+"goto_record_num() Move record cursor to specific position.\n\
+\n\
+goto_record_num() will move the internal library cursors to point\n\
+to a specific physical record number. Records within the same event are\n\
+numbered  starting  from  0. This is generally not needed but there are\n\
+some cases where one may want precise control  over  the  exact  record\n\
+being looked at.\n\
+\n\
+Returns True on success, False if no more records in current event\n\
+Raises exception (EnvironmentError) on error.\n\
+");
+static PyObject *
+AuParser_goto_record_num(AuParser *self, PyObject *args)
+{
+    int result;
+    unsigned int num;
+
+    if (!PyArg_ParseTuple(args, "i", &num)) return NULL;
+    PARSER_CHECK;
+    result = auparse_goto_record_num(self->au, num);
+
+    if (result >  0) Py_RETURN_TRUE;
+    if (result == 0) Py_RETURN_FALSE;
+    PyErr_SetFromErrno(PyExc_EnvironmentError);
+    return NULL;
+}
+
+/********************************
  * auparse_get_type
  ********************************/
 PyDoc_STRVAR(get_type_doc,
@@ -756,6 +1112,49 @@ AuParser_get_type(AuParser *self)
         return NULL;
     }
     return Py_BuildValue("i", value);
+}
+
+/********************************
+ * auparse_get_line_number
+ ********************************/
+PyDoc_STRVAR(get_line_number_doc,
+"auparse_get_line_number() get line number where record was found\n\
+\n\
+get_line_number will return the source input line number for\n\
+the current record of the current event. Line numbers start at 1.  If\n\
+the source input type is AUSOURCE_FILE_ARRAY the line numbering will\n\
+reset back to 1 each time a new life in the file array is opened.\n\
+");
+static PyObject *
+AuParser_get_line_number(AuParser *self)
+{
+    unsigned int value;
+
+    PARSER_CHECK;
+    value = auparse_get_line_number(self->au);
+    return Py_BuildValue("I", value);
+}
+
+/********************************
+ * auparse_get_filename
+ ********************************/
+PyDoc_STRVAR(get_filename_doc,
+"auparse_get_filename() get the filename where record was found\n\
+get_filename() will return the name of the source file where the\n\
+record was found if the source type is AUSOURCE_FILE or\n\
+AUSOURCE_FILE_ARRAY. For other source types the return value will be\n\
+None.\n\
+");
+static PyObject *
+AuParser_get_filename(AuParser *self)
+{
+    const char *value;
+
+    PARSER_CHECK;
+    value = auparse_get_filename(self->au);
+
+    if (value == NULL) Py_RETURN_NONE;
+    return Py_BuildValue("s", value);
 }
 
 /********************************
@@ -1048,10 +1447,15 @@ PyMemberDef AuParser_members[] = {
     {NULL}  /* Sentinel */
 };
 
-// METH_VARARGS|METH_KEYWORDS
 static PyMethodDef AuParser_methods[] = {
+    {"feed",              (PyCFunction)AuParser_feed,              METH_VARARGS, feed_doc},
+    {"flush_feed",        (PyCFunction)AuParser_flush_feed,        METH_NOARGS,  flush_feed_doc},
+    {"add_callback",      (PyCFunction)AuParser_add_callback,      METH_VARARGS, add_callback_doc},
     {"reset",             (PyCFunction)AuParser_reset,             METH_NOARGS,  reset_doc},
+    {"search_add_expression", (PyCFunction)AuParser_search_add_expression, METH_VARARGS, search_add_expression_doc},
     {"search_add_item",   (PyCFunction)AuParser_search_add_item,   METH_VARARGS, search_add_item_doc},
+    {"search_add_interpreted_item", (PyCFunction)AuParser_search_add_interpreted_item, METH_VARARGS, search_add_interpreted_item_doc},
+    {"search_add_timestamp_item", (PyCFunction)AuParser_search_add_timestamp_item, METH_VARARGS, search_add_timestamp_item_doc},
     {"search_add_regex",  (PyCFunction)AuParser_search_add_regex,  METH_VARARGS, search_add_regex_doc},
     {"search_set_stop",   (PyCFunction)AuParser_search_set_stop,   METH_VARARGS, search_set_stop_doc},
     {"search_clear",      (PyCFunction)AuParser_search_clear,      METH_NOARGS,  search_clear_doc},
@@ -1061,7 +1465,10 @@ static PyMethodDef AuParser_methods[] = {
     {"get_num_records",   (PyCFunction)AuParser_get_num_records,   METH_NOARGS,  get_num_records_doc},
     {"first_record",      (PyCFunction)AuParser_first_record,      METH_NOARGS,  first_record_doc},
     {"next_record",       (PyCFunction)AuParser_next_record,       METH_NOARGS,  next_record_doc},
+    {"goto_record_num",   (PyCFunction)AuParser_goto_record_num,   METH_VARARGS,  goto_record_num_doc},
     {"get_type",          (PyCFunction)AuParser_get_type,          METH_NOARGS,  get_type_doc},
+    {"get_line_number",   (PyCFunction)AuParser_get_line_number,   METH_NOARGS,  get_line_number_doc},
+    {"get_filename",      (PyCFunction)AuParser_get_filename,      METH_NOARGS,  get_filename_doc},
     {"first_field",       (PyCFunction)AuParser_first_field,       METH_NOARGS,  first_field_doc},
     {"next_field",        (PyCFunction)AuParser_next_field,        METH_NOARGS,  next_field_doc},
     {"get_num_fields",    (PyCFunction)AuParser_get_num_fields,    METH_NOARGS,  get_num_fields_doc},
@@ -1089,6 +1496,7 @@ AUSOURCE_BUFFER:       string containing audit data to parse\n\
 AUSOURCE_BUFFER_ARRAY: list or tuple of strings each containing audit data to parse\n\
 AUSOURCE_DESCRIPTOR:   integer file descriptor (e.g. fileno)\n\
 AUSOURCE_FILE_POINTER: file object (e.g. types.FileType)\n\
+AUSOURCE_FEED:         None (data supplied via feed()\n\
 ");
 
 static PyTypeObject AuParserType = {
@@ -1176,29 +1584,32 @@ initauparse(void)
     PyModule_AddObject(m, "NoParser", NoParserError);
 
     /* ausource_t */
-    PyModule_AddIntConstant(m, "AUSOURCE_LOGS",         AUSOURCE_LOGS);
-    PyModule_AddIntConstant(m, "AUSOURCE_FILE",         AUSOURCE_FILE);
-    PyModule_AddIntConstant(m, "AUSOURCE_FILE_ARRAY",   AUSOURCE_FILE_ARRAY);
-    PyModule_AddIntConstant(m, "AUSOURCE_BUFFER",       AUSOURCE_BUFFER);
-    PyModule_AddIntConstant(m, "AUSOURCE_BUFFER_ARRAY", AUSOURCE_BUFFER_ARRAY);
-    PyModule_AddIntConstant(m, "AUSOURCE_DESCRIPTOR",   AUSOURCE_DESCRIPTOR);
-    PyModule_AddIntConstant(m, "AUSOURCE_FILE_POINTER", AUSOURCE_FILE_POINTER);
+    PyModule_AddIntConstant(m, "AUSOURCE_LOGS",          AUSOURCE_LOGS);
+    PyModule_AddIntConstant(m, "AUSOURCE_FILE",          AUSOURCE_FILE);
+    PyModule_AddIntConstant(m, "AUSOURCE_FILE_ARRAY",    AUSOURCE_FILE_ARRAY);
+    PyModule_AddIntConstant(m, "AUSOURCE_BUFFER",        AUSOURCE_BUFFER);
+    PyModule_AddIntConstant(m, "AUSOURCE_BUFFER_ARRAY",  AUSOURCE_BUFFER_ARRAY);
+    PyModule_AddIntConstant(m, "AUSOURCE_DESCRIPTOR",    AUSOURCE_DESCRIPTOR);
+    PyModule_AddIntConstant(m, "AUSOURCE_FILE_POINTER",  AUSOURCE_FILE_POINTER);
+    PyModule_AddIntConstant(m, "AUSOURCE_FEED",          AUSOURCE_FEED);
 
     /* ausearch_op_t */
-    PyModule_AddIntConstant(m, "AUSEARCH_UNSET",        AUSEARCH_UNSET);
-    PyModule_AddIntConstant(m, "AUSEARCH_EXISTS",       AUSEARCH_EXISTS);
-    PyModule_AddIntConstant(m, "AUSEARCH_EQUAL",        AUSEARCH_EQUAL);
-    PyModule_AddIntConstant(m, "AUSEARCH_NOT_EQUAL",    AUSEARCH_NOT_EQUAL);
+    PyModule_AddIntConstant(m, "AUSEARCH_UNSET",         AUSEARCH_UNSET);
+    PyModule_AddIntConstant(m, "AUSEARCH_EXISTS",        AUSEARCH_EXISTS);
+    PyModule_AddIntConstant(m, "AUSEARCH_EQUAL",         AUSEARCH_EQUAL);
+    PyModule_AddIntConstant(m, "AUSEARCH_NOT_EQUAL",     AUSEARCH_NOT_EQUAL);
 
     /* austop_t */
-    PyModule_AddIntConstant(m, "AUSEARCH_STOP_EVENT",   AUSEARCH_STOP_EVENT);
-    PyModule_AddIntConstant(m, "AUSEARCH_STOP_RECORD",  AUSEARCH_STOP_RECORD);
-    PyModule_AddIntConstant(m, "AUSEARCH_STOP_FIELD",   AUSEARCH_STOP_FIELD);
+    PyModule_AddIntConstant(m, "AUSEARCH_STOP_EVENT",    AUSEARCH_STOP_EVENT);
+    PyModule_AddIntConstant(m, "AUSEARCH_STOP_RECORD",   AUSEARCH_STOP_RECORD);
+    PyModule_AddIntConstant(m, "AUSEARCH_STOP_FIELD",    AUSEARCH_STOP_FIELD);
 
     /* ausearch_rule_t */
-    PyModule_AddIntConstant(m, "AUSEARCH_RULE_CLEAR",   AUSEARCH_RULE_CLEAR);
-    PyModule_AddIntConstant(m, "AUSEARCH_RULE_OR",      AUSEARCH_RULE_OR);
-    PyModule_AddIntConstant(m, "AUSEARCH_RULE_AND",     AUSEARCH_RULE_AND);
-    PyModule_AddIntConstant(m, "AUSEARCH_RULE_REGEX",   AUSEARCH_RULE_REGEX);
+    PyModule_AddIntConstant(m, "AUSEARCH_RULE_CLEAR",    AUSEARCH_RULE_CLEAR);
+    PyModule_AddIntConstant(m, "AUSEARCH_RULE_OR",       AUSEARCH_RULE_OR);
+    PyModule_AddIntConstant(m, "AUSEARCH_RULE_AND",      AUSEARCH_RULE_AND);
+    PyModule_AddIntConstant(m, "AUSEARCH_RULE_REGEX",    AUSEARCH_RULE_REGEX);
 
+    /* auparse_cb_event_t */
+    PyModule_AddIntConstant(m, "AUPARSE_CB_EVENT_READY", AUPARSE_CB_EVENT_READY);
 }

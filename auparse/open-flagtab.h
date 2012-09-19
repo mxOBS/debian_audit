@@ -21,7 +21,7 @@
  *      Steve Grubb <sgrubb@redhat.com>
  */
 
-_S(00,		"O_RDONLY" )
+// Handled in the code: _S(00,		"O_RDONLY" )
 _S(01,		"O_WRONLY" )
 _S(02,		"O_RDWR" )
 _S(0100,	"O_CREAT")

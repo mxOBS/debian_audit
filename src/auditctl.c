@@ -1,5 +1,5 @@
 /* auditctl.c -- 
- * Copyright 2004-2006 Red Hat Inc., Durham, North Carolina.
+ * Copyright 2004-2008 Red Hat Inc., Durham, North Carolina.
  * All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -34,6 +34,7 @@
 #include <fcntl.h>
 #include <errno.h>
 #include <libgen.h>	/* For basename */
+#include <limits.h>	/* PATH_MAX */
 #include "libaudit.h"
 #include "private.h"
 
@@ -66,7 +67,13 @@ enum { OLD, NEW };
 int which;
 static struct audit_rule  rule;
 static struct audit_rule_data *rule_new = NULL;
+int audit_permadded;
+static char key[AUDIT_MAX_KEY_LEN+1];
+static int keylen;
+static int printed;
+static const char key_sep[2] = { AUDIT_KEY_SEPARATOR, 0 };
 
+/* External vars */
 extern int audit_archadded;
 extern int audit_syscalladded;
 extern unsigned int audit_elf;
@@ -79,6 +86,7 @@ static int reset_vars(void)
 {
 	list_requested = 0;
 	audit_syscalladded = 0;
+	audit_permadded = 0;
 	audit_archadded = 0;
 	audit_elf = 0;
 	add = AUDIT_FILTER_UNSET;
@@ -117,7 +125,7 @@ static void upgrade_rule(void)
 		if (ops & AUDIT_NEGATE)
 			rule_new->fieldflags[i] = AUDIT_NOT_EQUAL;
 		else
-			rule_new->fieldflags[i] = AUDIT_EQUAL;
+			rule_new->fieldflags[i] = AUDIT_EQUAL; 
 	}
 }
 
@@ -125,32 +133,35 @@ static void usage(void)
 {
     printf(
     "usage: auditctl [options]\n"
-     "    -a <l,a>     Append rule to end of <l>ist with <a>ction\n"
-     "    -A <l,a>     Add rule at beginning of <l>ist with <a>ction\n"
-     "    -b <backlog> Set max number of outstanding audit buffers allowed\n"
-     "                 Default=64\n"
-     "    -d <l,a>     Delete rule from <l>ist with <a>ction\n"
-     "                 l=task,entry,exit,user,watch,exclude a=never,possible,always\n"
-     "    -D           Delete all rules and watches\n"
-     "    -e [0..2]    Set enabled flag\n"
-     "    -f [0..2]    Set failure flag\n"
-     "                 0=silent 1=printk 2=panic\n"
-     "    -F f=v       Build rule: field name, operator(=,!=,<,>,<=,>=,^,&),\n"
-     "                 value\n"
-     "    -h           Help\n"
-     "    -i           Ignore errors when reading rules from file\n"
-     "    -k <key>     Set filter key on audit rule\n"
-     "    -l           List rules\n"
-     "    -m text      Send a user-space message\n"
-     "    -p [r|w|x|a] Set permissions filter on watch\n"
-     "                 r=read, w=write, x=execute, a=attribute\n"
-     "    -r <rate>    Set limit in messages/sec (0=none)\n"
-     "    -R <file>    read rules from file\n"
-     "    -s           Report status\n"
-     "    -S syscall   Build rule: syscall name or number\n"
-     "    -v           Version\n"
-     "    -w <path>    Insert watch at <path>\n"
-     "    -W <path>    Remove watch at <path>\n"
+     "    -a <l,a>            Append rule to end of <l>ist with <a>ction\n"
+     "    -A <l,a>            Add rule at beginning of <l>ist with <a>ction\n"
+     "    -b <backlog>        Set max number of outstanding audit buffers\n"
+     "                        allowed Default=64\n"
+     "    -d <l,a>            Delete rule from <l>ist with <a>ction\n"
+     "                        l=task,entry,exit,user,watch,exclude\n"
+     "                        a=never,possible,always\n"
+     "    -D                  Delete all rules and watches\n"
+     "    -e [0..2]           Set enabled flag\n"
+     "    -f [0..2]           Set failure flag\n"
+     "                        0=silent 1=printk 2=panic\n"
+     "    -F f=v              Build rule: field name, operator(=,!=,<,>,<=,\n"
+     "                        >=,&,&=) value\n"
+     "    -h                  Help\n"
+     "    -i                  Ignore errors when reading rules from file\n"
+     "    -k <key>            Set filter key on audit rule\n"
+     "    -l                  List rules\n"
+     "    -m text             Send a user-space message\n"
+     "    -p [r|w|x|a]        Set permissions filter on watch\n"
+     "                        r=read, w=write, x=execute, a=attribute\n"
+     "    -q <mount,subtree>  make subtree part of mount point's dir watches\n"
+     "    -r <rate>           Set limit in messages/sec (0=none)\n"
+     "    -R <file>           read rules from file\n"
+     "    -s                  Report status\n"
+     "    -S syscall          Build rule: syscall name or number\n"
+     "    -t                  Trim directory watches\n"
+     "    -v                  Version\n"
+     "    -w <path>           Insert watch at <path>\n"
+     "    -W <path>           Remove watch at <path>\n"
      );
 }
 
@@ -226,7 +237,9 @@ static int check_path(const char *path)
  */
 static int audit_setup_watch_name(struct audit_rule_data **rulep, char *path)
 {
+	int type = AUDIT_WATCH;
 	size_t len;
+	struct stat buf;
 
 	if (check_path(path))
 		return -1;
@@ -239,9 +252,12 @@ static int audit_setup_watch_name(struct audit_rule_data **rulep, char *path)
 			len--;
 		}
 	}
-
+	if (stat(path, &buf) == 0) {
+		if (S_ISDIR(buf.st_mode))
+			type = AUDIT_DIR;
+	}
 	/* FIXME: might want to check to see that rule is empty */
-	if (audit_add_watch(rulep, path)) 
+	if (audit_add_watch_dir(type, rulep, path)) 
 		return -1;
 
 	return 1;
@@ -281,11 +297,94 @@ static int audit_setup_perms(struct audit_rule_data *rule, const char *opt)
 		}
 	}
 
-	if (audit_update_watch_perms(rule, val) == 0)
+	if (audit_update_watch_perms(rule, val) == 0) {
+		audit_permadded = 1;
 		return 1;
+	}
 	return -1;
 }
 
+/* 0 success, -1 failure */
+static int lookup_itype(const char *kind)
+{
+        if (strcmp(kind, "file") == 0)
+                return 0;
+        if (strcmp(kind, "exec") == 0)
+                return 0;
+        if (strcmp(kind, "mkexe") == 0)
+                return 0;
+        return -1;
+}
+
+/* 0 success, -1 failure */
+static int lookup_iseverity(const char *severity)
+{
+        if (strncmp(severity, "inf", 3) == 0)
+                return 0;
+        if (strncmp(severity, "low", 3) == 0)
+                return 0;
+        if (strncmp(severity, "med", 3) == 0)
+                return 0;
+        if (strncmp(severity, "hi", 2) == 0)
+                return 0;
+        return -1;
+}
+
+/* 0 success, -1 failure */
+static int check_ids_key(const char *k)
+{
+	char *ptr, *kindptr, *ratingptr;
+	char keyptr[AUDIT_MAX_KEY_LEN+1];
+
+	if (strlen(k) > AUDIT_MAX_KEY_LEN)
+		goto fail_exit;
+
+	strncpy(keyptr, k, sizeof(keyptr));
+	keyptr[AUDIT_MAX_KEY_LEN] = 0;
+	ptr = strchr(keyptr, '-'); // There has to be a - because strncmp
+	kindptr = ptr + 1;
+	if (*kindptr == 0) 
+		goto fail_exit;
+
+	ptr = strchr(kindptr, '-');
+	if (ptr) {
+		*ptr = 0;
+		ratingptr = ptr +1;
+	} else // The rules are misconfigured
+		goto fail_exit;
+	if (*ratingptr == 0) 
+		goto fail_exit;
+
+	if (lookup_itype(kindptr)) {
+		fprintf(stderr, "ids key type is bad\n");
+		return -1;
+	}
+	if (lookup_iseverity(ratingptr)) {
+		fprintf(stderr, "ids key severity is bad\n");
+		return -1;
+	}
+	return 0;
+
+fail_exit:
+	fprintf(stderr, "ids key is bad\n");
+	return -1;
+}
+
+static int equiv_parse(char *optarg, char **mp, char **sub)
+{
+	char *ptr = strchr(optarg, ',');
+	if (ptr == NULL)
+		return -1;	// no comma
+	*ptr = 0;
+	ptr++;
+	if (*ptr == 0)
+		return -1;	// ends with comma
+	*mp = optarg;
+	*sub = ptr;
+	if (strchr(*sub, ','))
+		return -1;	// too many commas
+	return 0;
+}
 
 void audit_request_rule_list(int fd)
 {
@@ -304,7 +403,7 @@ void audit_request_rule_list(int fd)
 }
 // FIXME: Change these to enums
 /*
- * returns: -3 depreacted, -2 success - no reply, -1 error - noreply,
+ * returns: -3 deprecated, -2 success - no reply, -1 error - noreply,
  * 0 success - reply, > 0 success - rule
  */
 static int setopt(int count, char *vars[])
@@ -314,8 +413,11 @@ static int setopt(int count, char *vars[])
 
     optind = 0;
     opterr = 0;
+    key[0] = 0;
+    keylen = AUDIT_MAX_KEY_LEN;
+
     while ((retval >= 0) && (c = getopt(count, vars,
-			"hislDve:f:r:b:a:A:d:S:F:m:R:w:W:k:p:")) != EOF) {
+			"hislDvte:f:r:b:a:A:d:S:F:m:R:w:W:k:p:q:")) != EOF) {
 	int flags = AUDIT_FILTER_UNSET;
 	rc = 10;	// Init to something impossible to see if unused.
         switch (c) {
@@ -401,11 +503,22 @@ static int setopt(int count, char *vars[])
 		}
 		break;
         case 'l':
-		if (count != 2) {
+		if (count > 4 || count == 3) {
 			fprintf(stderr,
-				"List request should be given by itself\n");
+				"Wrong number of options for list request\n");
 			retval = -1;
 			break;
+		} 
+		if (count == 4) {
+			if (strcmp(vars[optind], "-k") == 0) { 
+				strncat(key, vars[3], keylen);
+				count -= 2;
+			} else {
+				fprintf(stderr,
+					"Only the -k option is allowed\n");
+				retval = -1;
+				break;
+			}
 		}
 		audit_request_rule_list(fd);
 		retval = -2;
@@ -561,6 +674,14 @@ static int setopt(int count, char *vars[])
 		switch (rc)
 		{
 			case 0:
+				if (which == OLD && 
+				    	rule.fields[rule.field_count-1] ==
+						AUDIT_PERM)
+					audit_permadded = 1;
+				else if (which == NEW &&
+				    rule_new->fields[rule_new->field_count-1] ==
+						AUDIT_PERM)
+					audit_permadded = 1;
 				break;
 			case -1:
 				fprintf(stderr, "-F missing = for %s\n", 
@@ -638,6 +759,16 @@ static int setopt(int count, char *vars[])
 					optarg);
 				retval = -1;
 				break;
+			case -15:
+				fprintf(stderr, 
+					"-F unknown errno - %s\n", optarg);
+				retval = -1;
+				break;
+			case -16:
+				fprintf(stderr, 
+					"-F unknown file type - %s\n", optarg);
+				retval = -1;
+				break;
 			default:
 				retval = -1;
 				break;
@@ -655,15 +786,27 @@ static int setopt(int count, char *vars[])
 		retval = -1;
 		break;
 	case 'D':
-		if (count != 2) {
+		if (count > 4 || count == 3) {
 			fprintf(stderr,
-			    "Delete all request should be given by itself\n");
+			    "Wrong number of options for Delete all request\n");
 			retval = -1;
 			break;
+		} 
+		if (count == 4) {
+			if (strcmp(vars[optind], "-k") == 0) { 
+				strncat(key, vars[3], keylen);
+				count -= 2;
+			} else {
+				fprintf(stderr, 
+					"Only the -k option is allowed\n");
+				retval = -1;
+				break;
+			}
 		}
 		retval = delete_all_rules(fd);
 		if (retval == 0) {
 			audit_request_rule_list(fd);
+			key[0] = 0;
 			retval = -2;
 		}
 		break;
@@ -692,7 +835,7 @@ static int setopt(int count, char *vars[])
 		}
 		break;
 	case 'k':
-		if (audit_syscalladded != 1 ||
+		if (!(audit_syscalladded || audit_permadded ) ||
 				(add==AUDIT_FILTER_UNSET &&
 					del==AUDIT_FILTER_UNSET)) {
 			fprintf(stderr,
@@ -701,32 +844,26 @@ static int setopt(int count, char *vars[])
 		} else if (!optarg) {
 			fprintf(stderr, "key option needs a value\n");
 			retval = -1;
+		} else if ((strlen(optarg)+strlen(key)+(!!key[0])) >
+							AUDIT_MAX_KEY_LEN) {
+			fprintf(stderr, "key option exceeds size limit\n");
+			retval = -1;
 		} else {
-			int flags = 0;
-			char *cmd=NULL;
-
-			/* Get the flag */
-			if (add != AUDIT_FILTER_UNSET)
-				flags = add & AUDIT_FILTER_MASK;
-			else if (del != AUDIT_FILTER_UNSET)
-				flags = del & AUDIT_FILTER_MASK;
-
-			/* Build the command */
-			asprintf(&cmd, "key=%s", optarg);
-			if (cmd) {
-				/* Add this to the rule */
-				int ret;
-				if (which == OLD)
-					upgrade_rule();
-				ret = audit_rule_fieldpair_data(&rule_new,
-					cmd, flags);
-				if (ret < 0)
+			if (strncmp(optarg, "ids-", 4) == 0) {
+				if (check_ids_key(optarg)) {
 					retval = -1;
-				free(cmd);
-			} else {
-				fprintf(stderr, "Out of memory adding key\n");
-				retval = -1;
+					break;
+				}
 			}
+			if (strchr(optarg, AUDIT_KEY_SEPARATOR)) 
+				fprintf(stderr,
+				    "key %s has illegal character\n", optarg);
+			if (key[0]) { // Add the separator if we need to
+				strcat(key, key_sep);
+				keylen--;
+			}
+			strncat(key, optarg, keylen);
+			keylen = AUDIT_MAX_KEY_LEN - strlen(key);
 		}
 		break;
 	case 'p':
@@ -742,9 +879,37 @@ static int setopt(int count, char *vars[])
 				fprintf(stderr,
 				"You must give a watch prior to perms\n");
 				retval = -1;
-			} else
+			} else 
 				retval = audit_setup_perms(rule_new, optarg);
 		}
+		break;
+        case 'q':
+		if (audit_syscalladded) {
+			fprintf(stderr, 
+			   "Syscall auditing requested for make equivalent\n");
+			retval = -1;
+		} else {
+			char *mp, *sub;
+			retval = equiv_parse(optarg, &mp, &sub);
+			if (retval < 0) {
+				fprintf(stderr, 
+			   "Error parsing equivalent parts\n");
+				retval = -1;
+			} else {
+				retval = audit_make_equivalent(fd, mp, sub);
+				if (retval <= 0) {
+					retval = -1;
+				} else
+					return -2; // success - no reply needed
+			}
+		}
+		break;
+        case 't':
+		retval = audit_trim_subtrees(fd);
+		if (retval <= 0)
+			retval = -1;
+		else
+			return -2;  // success - no reply for this
 		break;
 	case 'v':
 		printf("auditctl version %s\n", VERSION);
@@ -762,6 +927,34 @@ static int setopt(int count, char *vars[])
     else if ((optind < count) && (retval != -1)) {
 	fprintf(stderr, "parameter passed without an option given\n");	
 	retval = -1;
+    }
+
+    /* See if we were adding a key */
+    if (key[0] && list_requested == 0) {
+	int flags = 0;
+	char *cmd=NULL;
+
+	/* Get the flag */
+	if (add != AUDIT_FILTER_UNSET)
+		flags = add & AUDIT_FILTER_MASK;
+	else if (del != AUDIT_FILTER_UNSET)
+		flags = del & AUDIT_FILTER_MASK;
+
+	/* Build the command */
+	asprintf(&cmd, "key=%s", key);
+	if (cmd) {
+		/* Add this to the rule */
+		int ret;
+		if (which == OLD)
+			upgrade_rule();
+		ret = audit_rule_fieldpair_data(&rule_new, cmd, flags);
+		if (ret < 0)
+			retval = -1;
+		free(cmd);
+	} else {
+		fprintf(stderr, "Out of memory adding key\n");
+		retval = -1;
+	}
     }
     return retval;
 }
@@ -965,8 +1158,26 @@ static int handle_request(int status)
 			if (which == OLD) {
 				rc = audit_add_rule(fd, &rule, add, action);
 			} else {
+				set_aumessage_mode(MSG_QUIET, DBG_NO);
 				rc = audit_add_rule_data(fd, rule_new,
 								 add, action);
+				set_aumessage_mode(MSG_STDERR, DBG_NO);
+				/* Retry for legacy kernels */
+				if (rc < 0) {
+					if (errno == EINVAL &&
+					rule_new->fields[0] == AUDIT_DIR) {
+						rule_new->fields[0] =
+								AUDIT_WATCH;
+						rc = audit_add_rule_data(fd,
+								rule_new,
+								add, action);
+					} else {
+						fprintf(stderr,
+				"Error sending add rule data request (%s)\n",
+						errno == EEXIST ?
+						"Rule exists" : strerror(-rc));
+					}
+				}
 			}
 		}
 		else if (del != AUDIT_FILTER_UNSET) {
@@ -980,9 +1191,28 @@ static int handle_request(int status)
 			}
 			if (which == OLD)
 				rc = audit_delete_rule(fd, &rule, del, action);
-			else
+			else {
+				set_aumessage_mode(MSG_QUIET, DBG_NO);
 				rc = audit_delete_rule_data(fd, rule_new,
 								 del, action);
+				set_aumessage_mode(MSG_STDERR, DBG_NO);
+				/* Retry for legacy kernels */
+				if (rc < 0) {
+					if (errno == EINVAL &&
+					rule_new->fields[0] == AUDIT_DIR) {
+						rule_new->fields[0] =
+								AUDIT_WATCH;
+						rc = audit_delete_rule_data(fd,
+								rule_new,
+								del, action);
+					} else {
+						fprintf(stderr,
+			       "Error sending delete rule data request (%s)\n",
+						errno == EEXIST ?
+						"Rule exists" : strerror(-rc));
+					}
+				}
+			}
 		} else {
         		usage();
 	    		audit_close(fd);
@@ -1012,6 +1242,9 @@ static void get_reply(void)
 	FD_ZERO(&read_mask);
 	FD_SET(fd, &read_mask);
 
+	// Reset printing counter
+	printed = 0;
+
 	for (i = 0; i < timeout; i++) {
 		struct timeval t;
 
@@ -1030,10 +1263,49 @@ static void get_reply(void)
 			
 			if ((retval = audit_print_reply(&rep)) == 0) 
 				break;
-			if (retval == 1)
+			else
 				i = 0; /* If getting more, reset timeout */
 		}
 	}
+}
+
+/*
+ * Returns 1 if rule should be printed & 0 if not
+ */
+int key_match(struct audit_reply *rep)
+{
+	int i;
+	size_t boffset = 0;
+
+	if (key[0] == 0)
+		return 1;
+
+	// At this point, we have a key
+	// Old records don't have keys
+	if (rep->type == AUDIT_LIST)
+		return 0;
+
+	for (i = 0; i < rep->rule->field_count; i++) {
+		int field = rep->rule->fields[i] &
+					~AUDIT_OPERATORS & ~AUDIT_NEGATE;
+		if (field == AUDIT_FILTERKEY) {
+			char *keyptr;
+			asprintf(&keyptr, "%.*s", rep->ruledata->values[i],
+				&rep->ruledata->buf[boffset]);
+			if (strstr(keyptr, key)) {
+				free(keyptr);
+				return 1;
+			}
+			free(keyptr);
+		}
+		if (((field >= AUDIT_SUBJ_USER && field <= AUDIT_OBJ_LEV_HIGH)
+                     && field != AUDIT_PPID) || field == AUDIT_WATCH ||
+			field == AUDIT_WATCH || field == AUDIT_DIR ||
+			field == AUDIT_FILTERKEY) {
+				boffset += rep->ruledata->values[i];
+		}
+	}
+	return 0;
 }
 
 /*
@@ -1055,13 +1327,14 @@ static int audit_print_reply(struct audit_reply *rep)
 		case NLMSG_NOOP:
 			return 1;
 		case NLMSG_DONE:
-			if (list_requested == 1)
+			if (printed == 0)
 				printf("No rules\n");
 			return 0;
 		case NLMSG_ERROR: 
 		        printf("NLMSG_ERROR %d (%s)\n",
 				-rep->error->error, 
 				strerror(-rep->error->error));
+			printed = 1;
 			return 0;
 		case AUDIT_GET:
 			printf("AUDIT_STATUS: enabled=%d flag=%d pid=%d"
@@ -1070,12 +1343,16 @@ static int audit_print_reply(struct audit_reply *rep)
 			rep->status->pid, rep->status->rate_limit,
 			rep->status->backlog_limit, rep->status->lost,
 			rep->status->backlog);
+			printed = 1;
 			return 0;
 		case AUDIT_LIST:
 		case AUDIT_LIST_RULES:
 			list_requested = 0;
 			boffset = 0;
 			show_syscall = 1;
+			if (key_match(rep) == 0)
+				return 1;
+			printed = 1;
 			printf("%s: %s,%s", audit_msg_type_to_name(rep->type),
 				audit_flag_to_name((int)rep->rule->flags),
 				audit_action_to_name(rep->rule->action));
@@ -1127,12 +1404,26 @@ static int audit_print_reply(struct audit_reply *rep)
 						  &rep->ruledata->buf[boffset]);
 						boffset +=
 						    rep->ruledata->values[i];
+					} else if (field == AUDIT_DIR) {
+						printf(" dir=%.*s", 
+						  rep->ruledata->values[i],
+						  &rep->ruledata->buf[boffset]);
+						boffset +=
+						    rep->ruledata->values[i];
 					} else if (field == AUDIT_FILTERKEY) {
-						printf(" key=%.*s",
+						char *rkey, *ptr;
+						asprintf(&rkey, "%.*s",
 						rep->ruledata->values[i],
 						&rep->ruledata->buf[boffset]);
 						boffset +=
 						    rep->ruledata->values[i];
+						ptr = strtok(rkey, key_sep);
+						while (ptr) {
+							printf(" key=%s", ptr);
+							ptr = strtok(NULL,
+								key_sep);
+						}
+						free(rkey);
 					} else if (field == AUDIT_PERM) {
 						char perms[5];
 						int val=rep->rule->values[i];
@@ -1211,6 +1502,7 @@ static int audit_print_reply(struct audit_reply *rep)
 		default:
 			printf("Unknown: type=%d, len=%d\n", rep->type, 
 				rep->nlh->nlmsg_len);
+			printed = 1;
 			return 0;
 	}
 }

@@ -56,4 +56,3 @@ void audit_msg(int priority, const char *fmt, ...)
 	}
         va_end( ap );
 }
-hidden_def(audit_msg)

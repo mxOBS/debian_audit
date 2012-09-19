@@ -1,5 +1,5 @@
 # Makefile.am--
-# Copyright 2004-6 Red Hat Inc., Durham, North Carolina.
+# Copyright 2004-07 Red Hat Inc., Durham, North Carolina.
 # All Rights Reserved.
 #
 # This program is free software; you can redistribute it and/or modify
@@ -21,8 +21,11 @@
 #
 
 CONFIG_CLEAN_FILES = Makefile.in *.rej *.orig
-EXTRA_DIST = auditd.init  auditd.sysconfig auditd.conf audit.rules auditd.cron
+EXTRA_DIST = auditd.init auditd.sysconfig auditd.conf audit.rules \
+	auditd.cron libaudit.conf audispd.conf
 libconfig = libaudit.conf
+dispconfig = audispd.conf
+dispconfigdir = $(sysconfdir)/audisp
 initdir=$(sysconfdir)/rc.d/init.d
 sysconfigdir=$(sysconfdir)/sysconfig
 
@@ -32,6 +35,7 @@ dist_audit_DATA = auditd.conf audit.rules
 install-data-hook:
 	$(INSTALL_DATA) -D -m 640 ${srcdir}/auditd.sysconfig ${DESTDIR}${sysconfigdir}/auditd
 	$(INSTALL_DATA) -D -m 640 ${srcdir}/${libconfig} ${DESTDIR}${sysconfdir}
+	$(INSTALL_DATA) -D -m 640 ${srcdir}/${dispconfig} ${DESTDIR}${dispconfigdir}
 
 install-exec-hook:
 	$(INSTALL_SCRIPT) -D ${srcdir}/auditd.init ${DESTDIR}${initdir}/auditd
@@ -39,6 +43,7 @@ install-exec-hook:
 
 uninstall-hook:
 	rm ${DESTDIR}${sysconfigdir}/auditd
+	rm ${DESTDIR}${dispconfigdir}/${dispconfig}
 	rm ${DESTDIR}${sysconfdir}/${libconfig}
 	rm ${DESTDIR}${initdir}/auditd
 

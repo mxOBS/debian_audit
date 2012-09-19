@@ -10,3 +10,5 @@ to this project.
 * Darrel Goeddel of TCS for new audit rule format patch
 * Lisa Smith of HP for the audit failure query function
 * Dan Walsh for Python bindings
+* John Dennis for rewriting the python bindings and auparse updates
+* Miloslav Trmac for system config audit program

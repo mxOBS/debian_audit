@@ -31,35 +31,20 @@
 #include "ellist.h"
 
 
-void nvlist_create(nvlist *l);
-void nvlist_clear(nvlist* l);
+void nvlist_create(nvlist *l) hidden;
+void nvlist_clear(nvlist* l) hidden;
 static inline unsigned int nvlist_get_cnt(nvlist *l) { return l->cnt; }
 static inline void nvlist_first(nvlist *l) { l->cur = l->head; }
 static inline nvnode *nvlist_get_cur(const nvlist *l) { return l->cur; }
-nvnode *nvlist_next(nvlist *l);
+nvnode *nvlist_next(nvlist *l) hidden;
 static inline const char *nvlist_get_cur_name(const nvlist *l) {return l->cur->name;}
 static inline const char *nvlist_get_cur_val(const nvlist *l) {return l->cur->val;}
 static inline const char *nvlist_get_cur_val_interp(const nvlist *l) {return l->cur->interp_val;}
-const char *nvlist_interp_cur_val(const rnode *r);
-void nvlist_append(nvlist *l, nvnode *node);
+const char *nvlist_interp_cur_val(const rnode *r) hidden;
+void nvlist_append(nvlist *l, nvnode *node) hidden;
 
 /* Given a numeric index, find that record. */
-int nvlist_find_name(nvlist *l, const char *name);
-
-
-/* Make these hidden to prevent conflicts */
-hidden_proto(nvlist_create);
-hidden_proto(nvlist_clear);
-hidden_proto(nvlist_get_cnt);
-hidden_proto(nvlist_first);
-hidden_proto(nvlist_get_cur);
-hidden_proto(nvlist_next);
-hidden_proto(nvlist_get_cur_name);
-hidden_proto(nvlist_get_cur_val);
-hidden_proto(nvlist_get_cur_val_interp);
-hidden_proto(nvlist_interp_cur_val);
-hidden_proto(nvlist_append);
-hidden_proto(nvlist_find_name);
+int nvlist_find_name(nvlist *l, const char *name) hidden;
 
 #endif
 

@@ -45,20 +45,12 @@ typedef struct {
   unsigned int cnt;	// How many items in this list
 } nvpair;
 
-void nvpair_create(nvpair *l);
+void nvpair_create(nvpair *l) hidden;
 static inline void nvpair_first(nvpair *l) { l->cur = l->head; }
 static inline nvpnode *nvpair_get_cur(nvpair *l) { return l->cur; }
-void nvpair_append(nvpair *l, nvpnode *node);
-void nvpair_clear(nvpair *l);
-int nvpair_find_val(nvpair *l, long val);
-
-/* Make these hidden to prevent conflicts */
-hidden_proto(nvpair_create);
-hidden_proto(nvpair_first);
-hidden_proto(nvpair_get_cur);
-hidden_proto(nvpair_append);
-hidden_proto(nvpair_clear);
-hidden_proto(nvpair_find_val);
+void nvpair_append(nvpair *l, nvpnode *node) hidden;
+void nvpair_clear(nvpair *l) hidden;
+int nvpair_find_val(nvpair *l, long val) hidden;
 
 
 #endif

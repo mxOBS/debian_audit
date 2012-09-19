@@ -1,6 +1,6 @@
 /*
 * aureport-scan.c - Extract interesting fields and check for match
-* Copyright (c) 2005-06 Red Hat Inc., Durham, North Carolina.
+* Copyright (c) 2005-06, 2008 Red Hat Inc., Durham, North Carolina.
 * All Rights Reserved. 
 *
 * This software may be freely redistributed and/or modified under the
@@ -60,6 +60,7 @@ void reset_counters(void)
 	slist_create(&sd.hosts);
 	slist_create(&sd.exes);
 	slist_create(&sd.avc_objs);
+	slist_create(&sd.keys);
 	ilist_create(&sd.pids);
 	ilist_create(&sd.sys_list);
 	ilist_create(&sd.anom_list);
@@ -90,6 +91,7 @@ void destroy_counters(void)
 	slist_clear(&sd.hosts);
 	slist_clear(&sd.exes);
 	slist_clear(&sd.avc_objs);
+	slist_clear(&sd.keys);
 	ilist_clear(&sd.pids);
 	ilist_clear(&sd.sys_list);
 	ilist_clear(&sd.anom_list);
@@ -187,7 +189,14 @@ int scan(llist *l)
 	if (start_time == 0 || l->e.sec >= start_time) {
 		if (end_time == 0 || l->e.sec <= end_time) {
 			// OK - do the heavier checking
-			if (extract_search_items(l) == 0) {
+			int rc = extract_search_items(l);
+			if (rc == 0) {
+                                if (event_node) {
+                                        if (l->s.node == NULL)
+                                                return 0;
+                                        if (strcasecmp(event_node, l->s.node))
+                                                return 0;
+                                }
 				if (classify_success(l) && classify_conf(l))
 					return 1;
 				return 0;
@@ -398,6 +407,22 @@ static int per_event_summary(llist *l)
 					ilist_add_if_uniq(&sd.crypto_list, 
 							l->head->type, 0);
 				}
+			}
+			break;
+		case RPT_KEY:
+			if (l->s.key) {
+				const snode *sn;
+				slist *sptr = l->s.key;
+
+				slist_first(sptr);
+				sn=slist_get_cur(sptr);
+				while (sn) {
+					if (sn->str &&
+						    strcmp(sn->str, "(null)"))
+						slist_add_if_uniq(&sd.keys,
+								sn->str);
+					sn=slist_next(sptr);
+				} 
 			}
 			break;
 		default:
@@ -624,6 +649,21 @@ static int per_event_detailed(llist *l)
 				UNIMPLEMENTED;
 			}
 			break;
+		case RPT_KEY:
+			list_first(l);
+			if (report_detail == D_DETAILED) {
+				if (l->s.key) {
+					slist_first(l->s.key);
+					if (strcmp(l->s.key->cur->str,
+							"(null)")) {
+						print_per_event_item(l);
+						rc = 1;
+					}
+				}
+			} else { //  specific key report
+				UNIMPLEMENTED;
+			}
+			break;
 		default:
 			break;
 	}
@@ -684,6 +724,11 @@ static void do_summary_total(llist *l)
 	} else if (list_find_msg(l, AUDIT_USER_ACCT)) {
 		// Only count the failures
 		if (l->s.success == S_FAILED)
+			sd.bad_auth++;
+	} else if (list_find_msg(l, AUDIT_GRP_AUTH)) {
+		if (l->s.success == S_SUCCESS)
+			sd.good_auth++;
+		else if (l->s.success == S_FAILED)
 			sd.bad_auth++;
 	}
 
@@ -754,5 +799,20 @@ static void do_summary_total(llist *l)
 	// add response to anomalies
 	if (list_find_msg_range(l, AUDIT_FIRST_ANOM_RESP, AUDIT_LAST_ANOM_RESP))
 		sd.responses++;
+
+	// add keys
+	if (l->s.key) {
+		const snode *sn;
+		slist *sptr = l->s.key;
+
+		slist_first(sptr);
+		sn=slist_get_cur(sptr);
+		while (sn) {
+			if (sn->str && strcmp(sn->str, "(null)")) {
+				slist_add_if_uniq(&sd.keys, sn->str);
+			}
+			sn=slist_next(sptr);
+		} 
+	}
 }
 

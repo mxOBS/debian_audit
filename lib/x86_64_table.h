@@ -1,5 +1,5 @@
 /* x86_64_table.h --
- * Copyright 2005,2006 Red Hat Inc., Durham, North Carolina.
+ * Copyright 2005-08 Red Hat Inc., Durham, North Carolina.
  * All Rights Reserved.
  *
  * This library is free software; you can redistribute it and/or
@@ -234,8 +234,8 @@ _S(210, "io_cancel")
 _S(211, "get_thread_area")
 _S(212, "lookup_dcookie")
 _S(213, "epoll_create")
-_S(214, "epoll_ctl")
-_S(215, "epoll_wait")
+_S(214, "epoll_ctl_old")
+_S(215, "epoll_wait_old")
 _S(216, "remap_file_pages")
 _S(217, "getdents64")
 _S(218, "set_tid_address")
@@ -300,4 +300,12 @@ _S(276, "tee")
 _S(277, "sync_file_range")
 _S(278, "vmsplice")
 _S(279, "move_pages")
+_S(280, "utimensat")
+_S(281, "epoll_pwait")
+_S(282, "signalfd")
+_S(283, "timerfd")
+_S(284, "eventfd")
+_S(285, "fallocate")
+_S(286, "timerfd_settime")
+_S(287, "timerfd_gettime")
 

@@ -20,15 +20,19 @@
 #   Steve Grubb <sgrubb@redhat.com>
 #
 
+SUBDIRS = plugins 
 CONFIG_CLEAN_FILES = Makefile.in *.rej *.orig 
 AUTOMAKE_OPTIONS = no-dependencies
 INCLUDES = -I.. -I${top_srcdir}/lib
 sbin_PROGRAMS = audispd
-LIBS = 
-LDADD =
-AM_CFLAGS = 
+noinst_HEADERS = audispd-config.h audispd-pconfig.h audispd-llist.h \
+	queue.h audispd-builtins.h
+LIBS = -L${top_srcdir}/src/mt -lauditmt 
+LDADD = -lpthread
+AM_CFLAGS = -D_REENTRANT 
 
-audispd_SOURCES = audispd.c
-audispd_CFLAGS = -fPIE -DPIE -g
+audispd_SOURCES = audispd.c audispd-config.c audispd-pconfig.c \
+	audispd-llist.c queue.c audispd-builtins.c
+audispd_CFLAGS = -fPIE -DPIE -g -D_GNU_SOURCE
 audispd_LDFLAGS = -pie -Wl,-z,relro
 

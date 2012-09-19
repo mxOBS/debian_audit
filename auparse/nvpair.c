@@ -32,7 +32,6 @@ void nvpair_create(nvpair *l)
 	l->cur = NULL;
 	l->cnt = 0;
 }
-hidden_def(nvpair_create);
 
 static void nvpair_last(nvpair *l)
 {
@@ -73,7 +72,6 @@ void nvpair_append(nvpair *l, nvpnode *node)
 	l->cur = newnode;
 	l->cnt++;
 }
-hidden_def(nvpair_append);
 
 int nvpair_find_val(nvpair *l, long val)
 {
@@ -89,7 +87,6 @@ int nvpair_find_val(nvpair *l, long val)
 	}
 	return 0;
 }
-hidden_def(nvpair_find_val);
 
 void nvpair_clear(nvpair *l)
 {
@@ -107,5 +104,4 @@ void nvpair_clear(nvpair *l)
 	l->cur = NULL;
 	l->cnt = 0;
 }
-hidden_def(nvpair_clear);
 

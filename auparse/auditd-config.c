@@ -89,20 +89,27 @@ static void clear_config(struct daemon_conf *config)
 	config->sender_ctx = NULL;
 	config->log_file = strdup("/var/log/audit/audit.log");
 	config->log_format = LF_RAW;
+	config->log_group = 0;
 	config->priority_boost = 3;
 	config->flush =  FT_NONE;
 	config->freq = 0;
 	config->num_logs = 0L;
 	config->dispatcher = NULL;
+	config->node_name_format = N_NONE;
+	config->node_name = NULL;
 	config->max_log_size = 0L;
 	config->max_log_size_action = SZ_IGNORE;
 	config->space_left = 0L;
 	config->space_left_action = FA_IGNORE;
+	config->space_left_exe = NULL;
 	config->action_mail_acct = strdup("root");
 	config->admin_space_left= 0L;
 	config->admin_space_left_action = FA_IGNORE;
+	config->admin_space_left_exe = NULL;
 	config->disk_full_action = FA_IGNORE;
+	config->disk_full_exe = NULL;
 	config->disk_error_action = FA_SYSLOG;
+	config->disk_error_exe = NULL;
 }
 
 int load_config(struct daemon_conf *config, log_test_t lt)
@@ -210,7 +217,6 @@ int load_config(struct daemon_conf *config, log_test_t lt)
 	fclose(f);
 	return 0;
 }
-hidden_def(load_config);
 
 static char *get_line(FILE *f, char *buf)
 {
@@ -334,11 +340,16 @@ static int log_file_parser(const char *val, int line,struct daemon_conf *config)
 		audit_msg(LOG_ERR, "%s is not owned by root", val);
 		return 1;
 	}
-	if ((buf.st_mode & (S_IRUSR|S_IWUSR|S_IRGRP)) != 
-			   (S_IRUSR|S_IWUSR|S_IRGRP)) {
-		audit_msg(LOG_ERR, "%s permissions should be 0640", val);
+	if ( (buf.st_mode & (S_IXUSR|S_IWGRP|S_IXGRP|S_IRWXO)) ) {
+		audit_msg(LOG_ERR, "%s permissions should be 0600 or 0640",
+				val);
 		return 1;
 	}
+	if ( !(buf.st_mode & S_IWUSR) ) {
+		audit_msg(LOG_ERR, "audit log is not writable by owner");
+		return 1;
+	}
+
 	free((void *)config->log_file);
 	config->log_file = strdup(val);
 	if (config->log_file == NULL)
@@ -399,7 +410,11 @@ void free_config(struct daemon_conf *config)
 	free((void*)config->sender_ctx);
 	free((void*)config->log_file);
 	free((void*)config->dispatcher);
+	free((void *)config->node_name);
 	free((void *)config->action_mail_acct);
+	free((void *)config->space_left_exe);
+	free((void *)config->admin_space_left_exe);
+	free((void *)config->disk_full_exe);
+	free((void *)config->disk_error_exe);
 }
-hidden_def(free_config);
 

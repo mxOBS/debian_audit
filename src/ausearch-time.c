@@ -1,5 +1,5 @@
 /* ausearch-time.c - time handling utility functions
- * Copyright 2006 Red Hat Inc., Durham, North Carolina.
+ * Copyright 2006-07 Red Hat Inc., Durham, North Carolina.
  * All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -25,6 +25,13 @@
 #include <string.h>
 #include "ausearch-time.h"
 
+
+#define SECONDS_IN_DAY 24*60*60
+static void clear_tm(struct tm *t);
+static void replace_time(struct tm *t1, struct tm *t2);
+static void replace_date(struct tm *t1, struct tm *t2);
+
+
 time_t start_time = 0, end_time = 0;
 
 struct nv_pair {
@@ -38,6 +45,7 @@ static struct nv_pair timetab[] = {
         { T_TODAY, "today" },
         { T_YESTERDAY, "yesterday" },
         { T_THIS_WEEK, "this-week" },
+        { T_WEEK_AGO, "week-ago" },
         { T_THIS_MONTH, "this-month" },
         { T_THIS_YEAR, "this-year" },
 };
@@ -56,7 +64,7 @@ int lookup_time(const char *name)
 
 }
 
-void clear_tm(struct tm *t)
+static void clear_tm(struct tm *t)
 {
         t->tm_sec = 0;         /* seconds */
         t->tm_min = 0;         /* minutes */
@@ -67,7 +75,7 @@ void clear_tm(struct tm *t)
         t->tm_isdst = 0;       /* DST flag */
 }
 
-void set_tm_now(struct tm *d)
+static void set_tm_now(struct tm *d)
 {
         time_t t = time(NULL);
         struct tm *tv = localtime(&t);
@@ -75,27 +83,27 @@ void set_tm_now(struct tm *d)
 	replace_date(d, tv);
 }
 
-void set_tm_today(struct tm *d)
+static void set_tm_today(struct tm *d)
 {
         time_t t = time(NULL);
         struct tm *tv = localtime(&t);
-        d->tm_sec = 1;          /* seconds */
+        d->tm_sec = 0;          /* seconds */
         d->tm_min = 0;          /* minutes */
         d->tm_hour = 0;         /* hours */
 	replace_date(d, tv);
 }
 
-void set_tm_yesterday(struct tm *d)
+static void set_tm_yesterday(struct tm *d)
 {
-        time_t t = time(NULL) - (time_t)(24*60*60);
+        time_t t = time(NULL) - (time_t)(SECONDS_IN_DAY);
         struct tm *tv = localtime(&t);
-        d->tm_sec = 1;          /* seconds */
+        d->tm_sec = 0;          /* seconds */
         d->tm_min = 0;          /* minutes */
         d->tm_hour = 0;         /* hours */
 	replace_date(d, tv);
 }
 
-void set_tm_recent(struct tm *d)
+static void set_tm_recent(struct tm *d)
 {
         time_t t = time(NULL) - (time_t)(10*60); /* 10 minutes ago */
         struct tm *tv = localtime(&t);
@@ -103,34 +111,46 @@ void set_tm_recent(struct tm *d)
 	replace_date(d, tv);
 }
 
-void set_tm_this_week(struct tm *d)
+static void set_tm_this_week(struct tm *d)
 {
         time_t t = time(NULL);
         struct tm *tv = localtime(&t);
-        d->tm_sec = 1;          /* seconds */
+        d->tm_sec = 0;          /* seconds */
         d->tm_min = 0;          /* minutes */
         d->tm_hour = 0;         /* hours */
-	t -= (time_t)(tv->tm_wday*24*60*60);
+	t -= (time_t)(tv->tm_wday*SECONDS_IN_DAY);
         tv = localtime(&t);
 	replace_date(d, tv);
 }
 
-void set_tm_this_month(struct tm *d)
+static void set_tm_week_ago(struct tm *d)
 {
         time_t t = time(NULL);
         struct tm *tv = localtime(&t);
-        d->tm_sec = 1;          /* seconds */
+        d->tm_sec = 0;          /* seconds */
+        d->tm_min = 0;          /* minutes */
+        d->tm_hour = 0;         /* hours */
+	t -= (time_t)(7*SECONDS_IN_DAY);
+        tv = localtime(&t);
+	replace_date(d, tv);
+}
+
+static void set_tm_this_month(struct tm *d)
+{
+        time_t t = time(NULL);
+        struct tm *tv = localtime(&t);
+        d->tm_sec = 0;          /* seconds */
         d->tm_min = 0;          /* minutes */
         d->tm_hour = 0;         /* hours */
 	replace_date(d, tv);
         d->tm_mday = 1;         /* override day of month */
 }
 
-void set_tm_this_year(struct tm *d)
+static void set_tm_this_year(struct tm *d)
 {
         time_t t = time(NULL);
         struct tm *tv = localtime(&t);
-        d->tm_sec = 1;          /* seconds */
+        d->tm_sec = 0;          /* seconds */
         d->tm_min = 0;          /* minutes */
         d->tm_hour = 0;         /* hours */
 	replace_date(d, tv);
@@ -139,7 +159,7 @@ void set_tm_this_year(struct tm *d)
 }
 
 /* Combine date & time into 1 struct. Results in date. */
-void add_tm(struct tm *d, struct tm *t)
+static void add_tm(struct tm *d, struct tm *t)
 {
         time_t dst;
         struct tm *lt;
@@ -153,7 +173,7 @@ void add_tm(struct tm *d, struct tm *t)
 }
 
 /* The time in t1 is replaced by t2 */
-void replace_time(struct tm *t1, struct tm *t2)
+static void replace_time(struct tm *t1, struct tm *t2)
 {
         t1->tm_sec = t2->tm_sec;	/* seconds */
         t1->tm_min = t2->tm_min;	/* minutes */
@@ -161,7 +181,7 @@ void replace_time(struct tm *t1, struct tm *t2)
 }
 
 /* The date in t1 is replaced by t2 */
-void replace_date(struct tm *t1, struct tm *t2)
+static void replace_date(struct tm *t1, struct tm *t2)
 {
         t1->tm_mday = t2->tm_mday;	/* day */
         t1->tm_mon = t2->tm_mon;	/* month */
@@ -169,7 +189,7 @@ void replace_date(struct tm *t1, struct tm *t2)
         t1->tm_isdst = t2->tm_isdst;	/* daylight savings time */
 }
 
-/* Given 2 char strings, create a time struct */
+/* Given 2 char strings, create a time struct *
 void set_time(struct tm *t, int num, const char *t1, const char *t2)
 {
 	switch (num)
@@ -190,7 +210,7 @@ void set_time(struct tm *t, int num, const char *t1, const char *t2)
 		default:
 			break;
 	}
-}
+} */
 
 static int lookup_and_set_time(const char *da, struct tm *d)
 {
@@ -212,6 +232,9 @@ static int lookup_and_set_time(const char *da, struct tm *d)
 				break;
 			case T_THIS_WEEK:
 				set_tm_this_week(d);
+				break;
+			case T_WEEK_AGO:
+				set_tm_week_ago(d);
 				break;
 			case T_THIS_MONTH:
 				set_tm_this_month(d);
@@ -239,6 +262,7 @@ int ausearch_time_start(const char *da, const char *ti)
 	int rc = 0;
 	struct tm d, t;
 	char *ret;
+	int keyword=-1;
 
 	if (da == NULL)
 		set_tm_now(&d);
@@ -256,6 +280,10 @@ int ausearch_time_start(const char *da, const char *ti)
 					"Error parsing start date (%s)\n", da);
 				return 1;
 			}
+		} else {
+			keyword=lookup_time(da);
+			if (keyword == T_RECENT || keyword == T_NOW)
+				goto set_it;
 		}
 	}
 
@@ -287,8 +315,7 @@ int ausearch_time_start(const char *da, const char *ti)
 		fprintf(stderr, "Error - year is %d\n", d.tm_year+1900);
 		return -1;
 	}
-
-// FIXME: ok at this point we reconstruct time from broken down time
+set_it:
 	start_time = mktime(&d);
 	if (start_time == -1) {
 		fprintf(stderr, "Error converting start time\n");
@@ -319,6 +346,15 @@ int ausearch_time_end(const char *da, const char *ti)
 					"Error parsing end date (%s)\n", da);
 				return 1;
 			}
+		} else {
+			int keyword=lookup_time(da);
+			if (keyword == T_RECENT || keyword == T_NOW)
+				goto set_it;
+			// Special case today
+			if (keyword == T_TODAY) {
+				set_tm_now(&d);
+				goto set_it;
+			}
 		}
 	}
 	if (ti != NULL) {
@@ -347,12 +383,14 @@ int ausearch_time_end(const char *da, const char *ti)
 		t.tm_min = tv->tm_min;
 		t.tm_sec = tv->tm_sec;
 		t.tm_isdst = tv->tm_isdst;
+
 	}
 	add_tm(&d, &t);
 	if (d.tm_year < 104) {
 		fprintf(stderr, "Error - year is %d\n", d.tm_year+1900);
 		return -1;
 	}
+set_it:
 	end_time = mktime(&d);
 	if (end_time == -1) {
 		fprintf(stderr, "Error converting end time\n");

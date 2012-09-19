@@ -1,5 +1,5 @@
 /* s390_table.h --
- * Copyright 2005,2006 Red Hat Inc., Durham, North Carolina.
+ * Copyright 2005-08 Red Hat Inc., Durham, North Carolina.
  * All Rights Reserved.
  *
  * This library is free software; you can redistribute it and/or
@@ -239,6 +239,7 @@ _S(238, "futex")
 _S(239, "sched_setaffinity")
 _S(240, "sched_getaffinity")
 _S(241, "tgkill")
+//_S(242, "")
 _S(243, "io_setup")
 _S(244, "io_destroy")
 _S(245, "io_getevents")
@@ -259,9 +260,14 @@ _S(259, "clock_settime")
 _S(260, "clock_gettime")
 _S(261, "clock_getres")
 _S(262, "clock_nanosleep")
+//_S(263, "")
 _S(264, "fadvise64_64")
 _S(265, "statfs64")
 _S(266, "fstatfs64")
+_S(267, "remap_file_pages")
+//_S(268, "")
+//_S(269, "")
+//_S(270, "")
 _S(271, "mq_open")
 _S(272, "mq_unlink")
 _S(273, "mq_timedsend")
@@ -305,4 +311,12 @@ _S(309, "vmsplice")
 _S(311, "getcpu")
 _S(312, "epoll_pwait")
 _S(313, "utimes")
+_S(314, "fallocate")
+_S(315, "utimensat")
+_S(316, "signalfd")
+_S(317, "timerfd")
+_S(318, "eventfd")
+_S(319, "timerfd_create")
+_S(320, "timerfd_settime")
+_S(321, "timerfd_gettime")
 

@@ -1,6 +1,6 @@
 /*
 * ausearch-parse.c - Extract interesting fields and check for match
-* Copyright (c) 2005-06 Red Hat Inc., Durham, North Carolina.
+* Copyright (c) 2005-08 Red Hat Inc., Durham, North Carolina.
 * All Rights Reserved. 
 *
 * This software may be freely redistributed and/or modified under the
@@ -30,11 +30,13 @@
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <netdb.h>
+#include <limits.h>	/* PATH_MAX */
 #include "libaudit.h"
 #include "ausearch-options.h"
 #include "ausearch-parse.h"
 
 #define NAME_OFFSET 36
+static const char key_sep[2] = { AUDIT_KEY_SEPARATOR, 0 };
 
 static int parse_syscall(lnode *n, search_items *s);
 static int parse_dir(const lnode *n, search_items *s);
@@ -137,14 +139,26 @@ int extract_search_items(llist *l)
 	if (n) {
 		do {
 			char *ptr, *str, *term;
+			// get node if its there
+			if ((strncmp(n->message, "node=", 5) == 0) &&
+							s->node == NULL) {
+				str = n->message;
+				ptr = str+5;
+				term = strchr(ptr, ' ');
+				if (term == NULL)
+					return -1;
+				*term = 0;
+				s->node = strdup(ptr);
+				*term = ' ';
+			}
 			// get type
 			str = strstr(n->message, "type=");
 			if (str == NULL)
-				return -1;
+				return -2;
 			ptr = str+5;
 			term = strchr(ptr, ' ');
 			if (term == NULL)
-				return -2;
+				return -3;
 			*term = 0;
 			n->type = audit_name_to_msg_type(ptr);
 			*term = ' ';
@@ -156,7 +170,6 @@ int extract_search_items(llist *l)
 				// If we don't know, don't extract.
 				return 0;
 			}
-
 			switch (n->type) {
 			case AUDIT_SYSCALL:
 				ret = parse_syscall(n, s);
@@ -395,6 +408,20 @@ static int parse_syscall(lnode *n, search_items *s)
 			*term = ' ';
 		}
 	}
+	// ses
+	str = strstr(term, "ses=");
+	if (str) {
+		ptr = str + 4;
+		term = strchr(ptr, ' ');
+		if (term == NULL)
+			return 32;
+		*term = 0;
+		errno = 0;
+		s->session_id = strtoul(ptr, NULL, 10);
+		if (errno)
+			return 33;
+		*term = ' ';
+	}
 	if (event_comm) {
 		// dont do this search unless needed
 		str = strstr(term, "comm=");
@@ -407,14 +434,14 @@ static int parse_syscall(lnode *n, search_items *s)
 				str++;
 				term = strchr(str, '"');
 				if (term == NULL)
-					return 32;
+					return 34;
 				*term = 0;
 				s->comm = strdup(str);
 				*term = '"';
 			} else 
 				s->comm = unescape(str);
 		} else
-			return 33;
+			return 35;
 	}
 	if (event_exe) {
 		// dont do this search unless needed
@@ -425,14 +452,14 @@ static int parse_syscall(lnode *n, search_items *s)
 				str++;
 				term = strchr(str, '"');
 				if (term == NULL)
-					return 34;
+					return 36;
 				*term = 0;
 				s->exe = strdup(str);
 				*term = '"';
 			} else 
 				s->exe = unescape(str);
 		} else
-			return 35;
+			return 37;
 	}
 	if (event_subject) {
 		// scontext
@@ -441,7 +468,7 @@ static int parse_syscall(lnode *n, search_items *s)
 			str += 5;
 			term = strchr(str, ' ');
 			if (term == NULL)
-				return 36;
+				return 38;
 			*term = 0;
 			if (audit_avc_init(s) == 0) {
 				anode an;
@@ -451,23 +478,55 @@ static int parse_syscall(lnode *n, search_items *s)
 				alist_append(s->avc, &an);
 				*term = ' ';
 			} else
-				return 37;
+				return 39;
 		}
 	}
 	if (event_key) {
 		str = strstr(term, "key=");
 		if (str) {
+			if (!s->key) {
+				//create
+				s->key = malloc(sizeof(slist));
+				if (s->key == NULL)
+					return 40;
+				slist_create(s->key);
+			}
 			str += 4;
 			if (*str == '"') {
 				str++;
 				term = strchr(str, '"');
 				if (term == NULL)
-					return 38;
+					return 41;
 				*term = 0;
-				s->key = strdup(str);
+				if (s->key) {
+					// append
+					snode sn;
+					sn.str = strdup(str);
+					sn.key = NULL;
+					sn.hits = 1;
+					slist_append(s->key, &sn);
+				}
 				*term = '"';
-			} else 
-				s->key = unescape(str);
+			} else { 
+				if (s->key) {
+					char *saved=NULL;
+					char *keyptr = unescape(str);
+					char *kptr = strtok_r(keyptr,
+							key_sep, &saved);
+					while (kptr) {
+						snode sn;
+						// append
+						sn.str = strdup(kptr);
+						sn.key = NULL;
+						sn.hits = 1;
+						slist_append(s->key, &sn);
+						kptr = strtok_r(NULL,
+							key_sep, &saved);
+					}
+					free(keyptr);
+
+				}
+			}
 		}
 	}
 	return 0;
@@ -503,19 +562,19 @@ static int common_path_parser(search_items *s, char *path)
 {
 	char *term;
 
+	if (!s->filename) {
+		//create
+		s->filename = malloc(sizeof(slist));
+		if (s->filename == NULL)
+			return 4;
+		slist_create(s->filename);
+	}
 	if (*path == '"') {
 		/* string is normal */
 		path++;
 		term = strchr(path, '"');
 		if (term == NULL)
 			return 1;
-		if (!s->filename) {
-			//create
-			s->filename = malloc(sizeof(slist));
-			if (s->filename == NULL)
-				return 2;
-			slist_create(s->filename);
-		}
 		*term = 0;
 		if (s->filename) {
 			// append
@@ -538,42 +597,46 @@ static int common_path_parser(search_items *s, char *path)
 		}
 		*term = '"';
 	} else { 
-		if (!s->filename) {
-			//create
-			s->filename = malloc(sizeof(slist));
-			if (s->filename == NULL)
-				return 4;
-			slist_create(s->filename);
-		}
 		if (s->filename) {
 			// append
 			snode sn;
-			sn.str = unescape(path);
 			sn.key = NULL;
 			sn.hits = 1;
+			if (strcmp(path, "(null)")) {
+				sn.str = strdup(path);
+				goto append;
+			}
+			if (!isxdigit(path[0]))
+				return 5;
+			if (path[0] == '0' && path[1] == '0')
+				sn.str = unescape(&path[2]); // Abstract name
+			else
+				sn.str = unescape(path);
 			// Attempt to rebuild path if relative
 			if ((sn.str[0] == '.') && ((sn.str[1] == '.') ||
 				(sn.str[1] == '/')) && s->cwd) {
 				char *tmp = malloc(PATH_MAX);
 				if (tmp == NULL)
-					return 5;
+					return 6;
 				snprintf(tmp, PATH_MAX, "%s/%s", 
 					s->cwd, sn.str);
 				free(sn.str);
 				sn.str = tmp;
 			}
+append:
 			slist_append(s->filename, &sn);
 		}
 	}
 	return 0;
 }
 
+/* Older AVCs have path separate from the AVC record */
 static int avc_parse_path(const lnode *n, search_items *s)
 {
 	char *str;
 
 	if (event_filename) {
-	// dont do this search unless needed
+		// dont do this search unless needed
 		str = strstr(n->message, " path=");
 		if (str) {
 			str += 6;
@@ -594,9 +657,11 @@ static int parse_path(const lnode *n, search_items *s)
 		// dont do this search unless needed
 		str = strstr(term, " name=");
 		if (str) {
+			int rc;
 			str += 6;
-			if (common_path_parser(s, str))
-				return 1;
+			rc = common_path_parser(s, str);
+			if (rc)
+				return rc;
 		}
 	}
 	if (event_object) {
@@ -616,7 +681,7 @@ static int parse_path(const lnode *n, search_items *s)
 				if (term)
 					*term = ' ';
 			} else
-				return 6;
+				return 7;
 		}
 	}
 	return 0;
@@ -714,16 +779,37 @@ static int parse_user(const lnode *n, search_items *s)
 		str = strstr(term, "acct=");
 		if (str != NULL) {
 			ptr = str + 5;
-			term = ptr;
-			while (*term != ':' && *term != ' ')
-				term++;
-			if (term == ptr)
-				return 14;
 
-			saved = *term;
-			*term = 0;
-			s->acct = strdup(ptr);
-			*term = saved;
+			term = ptr + 1;
+			if (*ptr == '"') {
+				while (*term != '"')
+					term++;
+				saved = *term;
+				*term = 0;
+				s->acct = strdup(str);
+				*term = saved;
+			} else { 
+				/* Handle legacy accts */
+				char *end = term;
+				int legacy = 0;
+
+				while (*end != ' ') {
+					if (!isxdigit(*end)) {
+						legacy = 1;
+						break;
+					}
+					end++;
+				}
+				term = end;
+				if (!legacy)
+					s->acct = unescape(str);
+				else {
+					saved = *term;
+					*term = 0;
+					s->acct = strdup(str);
+					*term = saved;
+				}
+			}
 		}
 	}
 	mptr = term + 1;
@@ -869,9 +955,22 @@ static int parse_login(const lnode *n, search_items *s)
 	if (term)
 		*term = ' ';
 
-	// Login means the kernel changed loginuid, its always
-	// successful at this point.
-	s->success = S_SUCCESS;
+	// success
+	str = strstr(ptr, "res=");
+	if (str != NULL) {
+		ptr = str + 4;
+		term = strchr(ptr, ' ');
+		if (term)
+			*term = 0;
+		errno = 0;
+		s->success = strtoul(ptr, NULL, 10);
+		if (errno)
+			return 9;
+		if (term)
+			*term = ' ';
+	} else	// Assume older kernel where always successful
+		s->success = S_SUCCESS; 
+
 	return 0;
 }
 
@@ -1068,6 +1167,8 @@ static int parse_avc(const lnode *n, search_items *s)
 		if (term == NULL)
 			return 1;
 		*term = 0;
+		// FIXME. Do not override syscall pass/fail if its already
+		// set. Syscall pass/fail is the authoritative value.
 		if (strstr(str, "denied")) {
 			s->success = S_FAILED; 
 			an.avc_result = AVC_DENIED;
@@ -1112,6 +1213,17 @@ static int parse_avc(const lnode *n, search_items *s)
 		} else { 
 			s->comm = unescape(str);
 			term = str + 6;
+		}
+	}
+	if (event_filename) {
+		// do we have a path?
+		str = strstr(term, " path=");
+		if (str) {
+			str += 6;
+			rc = common_path_parser(s, str);
+			if (rc)
+				goto err;
+			term += 7;
 		}
 	}
 	if (event_subject) {
@@ -1195,7 +1307,7 @@ static int parse_kernel_anom(const lnode *n, search_items *s)
 		term = n->message;
 
 	// get uid
-	str = strstr(term, "uid=");
+	str = strstr(term, " uid="); // if promiscuous, we start over
 	if (str) {
 		ptr = str + 4;
 		term = strchr(ptr, ' ');

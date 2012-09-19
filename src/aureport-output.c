@@ -1,6 +1,6 @@
 /*
 * aureport-output.c - Print the report
-* Copyright (c) 2005-06 Red Hat Inc., Durham, North Carolina.
+* Copyright (c) 2005-06, 2008 Red Hat Inc., Durham, North Carolina.
 * All Rights Reserved. 
 *
 * This software may be freely redistributed and/or modified under the
@@ -170,6 +170,12 @@ static void print_title_summary(void)
 			printf("======================\n");
 			printf("total  type\n");
 			printf("======================\n");
+			break;
+		case RPT_KEY:
+			printf("Key Summary Report\n");
+			printf("===========================\n");
+			printf("total  file\n");
+			printf("===========================\n");
 			break;
 		default:
 			break;
@@ -379,6 +385,20 @@ static void print_title_detailed(void)
 				printf("===================================\n");
 			}
 			break;
+		case RPT_KEY:
+			if (report_detail == D_DETAILED) {
+			    printf("Key Report\n");
+			    printf(
+			"===============================================\n");
+			    printf(
+			"# date time key success exe auid event\n");
+			    printf(
+			"===============================================\n");
+			} else {
+				printf("Specific Key Report\n");
+				printf("====================\n");
+			}
+			break;
 		default:
 			break;
 	}
@@ -566,6 +586,16 @@ void print_per_event_item(llist *l)
 				aulookup_success(l->s.success),
 				l->e.serial);
 			break;
+		case RPT_KEY:	// report_detail == D_DETAILED
+			// key, success, exe, who, event
+			slist_first(l->s.key);
+			printf("%s %s %s %s %lu\n",
+				l->s.key->cur->str,
+				aulookup_success(l->s.success),
+				l->s.exe ? l->s.exe : "?",
+				aulookup_uid(l->s.loginuid, name, sizeof(name)),
+				l->e.serial);
+			break;
 		default:
 			break;
 	}
@@ -645,6 +675,10 @@ void print_wrap_up(void)
 			ilist_sort_by_hits(&sd.crypto_list);
 			do_type_summary_output(&sd.crypto_list);
 			break;
+		case RPT_KEY:
+			slist_sort_by_hits(&sd.keys);
+			do_file_summary_output(&sd.keys);
+			break;
 		default:
 			break;
 	}
@@ -700,12 +734,13 @@ static void do_summary_output(void)
 	printf("Number of host names: %u\n", sd.hosts.cnt);
 	printf("Number of executables: %u\n", sd.exes.cnt);
 	printf("Number of files: %u\n", sd.files.cnt);
-	printf("Number of AVC denials: %lu\n", sd.avcs);
+	printf("Number of AVC's: %lu\n", sd.avcs);
 	printf("Number of MAC events: %lu\n", sd.mac);
 	printf("Number of failed syscalls: %lu\n", sd.failed_syscalls);
 	printf("Number of anomaly events: %lu\n", sd.anomalies);
 	printf("Number of responses to anomaly events: %lu\n", sd.responses);
 	printf("Number of crypto events: %lu\n", sd.crypto);
+	printf("Number of keys: %u\n", sd.keys.cnt);
 	printf("Number of process IDs: %u\n", sd.pids.cnt);
 	printf("Number of events: %lu\n", sd.events);
 	printf("\n");

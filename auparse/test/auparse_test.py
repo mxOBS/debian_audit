@@ -1,19 +1,27 @@
 #!/usr/bin/env python
 
 
-buf = ["type=LOGIN msg=audit(1143146623.787:142): login pid=2027 uid=0 old auid=4294967295 new auid=48\ntype=SYSCALL msg=audit(1143146623.875:143): arch=c000003e syscall=188 success=yes exit=0 a0=7fffffa9a9f0 a1=3958d11333 a2=5131f0 a3=20 items=1 pid=2027 auid=48 uid=0 gid=0 euid=0 suid=0 fsuid=0 egid=0 sgid=0 fsgid=0 tty=tty3 comm=\"login\" exe=\"/bin/login\" subj=system_u:system_r:local_login_t:s0-s0:c0.c255",
-"type=USER_LOGIN msg=audit(1143146623.879:146): user pid=2027 uid=0 auid=48 msg=\'uid=48: exe=\"/bin/login\" (hostname=?, addr=?, terminal=tty3 res=success)\'",
+buf = ["type=LOGIN msg=audit(1143146623.787:142): login pid=2027 uid=0 old auid=4294967295 new auid=48\ntype=SYSCALL msg=audit(1143146623.875:143): arch=c000003e syscall=188 success=yes exit=0 a0=7fffffa9a9f0 a1=3958d11333 a2=5131f0 a3=20 items=1 pid=2027 auid=48 uid=0 gid=0 euid=0 suid=0 fsuid=0 egid=0 sgid=0 fsgid=0 tty=tty3 comm=\"login\" exe=\"/bin/login\" subj=system_u:system_r:local_login_t:s0-s0:c0.c255\n",
+"type=USER_LOGIN msg=audit(1143146623.879:146): user pid=2027 uid=0 auid=48 msg=\'uid=48: exe=\"/bin/login\" (hostname=?, addr=?, terminal=tty3 res=success)\'\n",
 ]
 files = ["test.log", "test2.log"]
 
 import os
 import sys
 import time
-load_path = 'build/lib.linux-i686-2.4'
+load_path = '../../bindings/python/build/lib.linux-i686-2.4'
 if False:
     sys.path.insert(0, load_path)
 
 import auparse
+import audit
+
+def none_to_null(s):
+    'used so output matches C version'
+    if s is None:
+        return '(null)'
+    else:
+        return s
 
 def walk_test(au):
     event_cnt = 1
@@ -24,23 +32,27 @@ def walk_test(au):
             print "Error getting first record"
             sys.exit(1)
 
-        print "event: %d" % event_cnt
-        print "records:%d" % au.get_num_records()
+        print "event %d has %d records" % (event_cnt, au.get_num_records())
 
+        record_cnt = 1
         while True:
-            print "fields:%d" % au.get_num_fields()
-            print "type=%d" % au.get_type(),
+            print "    record %d of type %d(%s) has %d fields" % \
+                  (record_cnt,
+                   au.get_type(), audit.audit_msg_type_to_name(au.get_type()),
+                   au.get_num_fields())
+            print "    line=%d file=%s" % (au.get_line_number(), au.get_filename())
             event = au.get_timestamp()
             if event is None:
                 print "Error getting timestamp - aborting"
                 sys.exit(1)
 
-            print "event time: %d.%d:%d" % (event.sec, event.milli, event.serial)
+            print "    event time: %d.%d:%d, host=%s" % (event.sec, event.milli, event.serial, none_to_null(event.host))
             au.first_field()
             while True:
-                print "%s=%s (%s)" % (au.get_field_name(), au.get_field_str(), au.interpret_field())
+                print "        %s=%s (%s)" % (au.get_field_name(), au.get_field_str(), au.interpret_field())
                 if not au.next_field(): break
             print
+            record_cnt += 1
             if not au.next_record(): break
         event_cnt += 1
         if not au.parse_next_event(): break
@@ -52,18 +64,23 @@ def light_test(au):
             print "Error getting first record"
             sys.exit(1)
 
-        print "records:%d" % au.get_num_records()
+        print "event has %d records" % (au.get_num_records())
 
+        record_cnt = 1
         while True:
-            print "fields:%d" % au.get_num_fields()
-            print "type=%d" % au.get_type(),
+            print "    record %d of type %d(%s) has %d fields" % \
+                  (record_cnt,
+                   au.get_type(), audit.audit_msg_type_to_name(au.get_type()),
+                   au.get_num_fields())
+            print "    line=%d file=%s" % (au.get_line_number(), au.get_filename())
             event = au.get_timestamp()
             if event is None:
                 print "Error getting timestamp - aborting"
                 sys.exit(1)
 
-            print "event time: %d.%d:%d" % (event.sec, event.milli, event.serial)
+            print "    event time: %d.%d:%d, host=%s" % (event.sec, event.milli, event.serial, none_to_null(event.host))
             print
+            record_cnt += 1
             if not au.next_record(): break
         if not au.parse_next_event(): break
 
@@ -101,7 +118,35 @@ def compound_search(au, how):
     else:
         print "Found %s = %s" % (au.get_field_name(), au.get_field_str())
 
+def feed_callback(au, cb_event_type, event_cnt):
+    if cb_event_type == auparse.AUPARSE_CB_EVENT_READY:
+        if not au.first_record():
+            print "Error getting first record"
+            sys.exit(1)
 
+        print "event %d has %d records" % (event_cnt[0], au.get_num_records())
+
+        record_cnt = 1
+        while True:
+            print "    record %d of type %d(%s) has %d fields" % \
+                  (record_cnt,
+                   au.get_type(), audit.audit_msg_type_to_name(au.get_type()),
+                   au.get_num_fields())
+            print "    line=%d file=%s" % (au.get_line_number(), au.get_filename())
+            event = au.get_timestamp()
+            if event is None:
+                print "Error getting timestamp - aborting"
+                sys.exit(1)
+
+            print "    event time: %d.%d:%d, host=%s" % (event.sec, event.milli, event.serial, none_to_null(event.host))
+            au.first_field()
+            while True:
+                print "        %s=%s (%s)" % (au.get_field_name(), au.get_field_str(), au.interpret_field())
+                if not au.next_field(): break
+            print
+            record_cnt += 1
+            if not au.next_record(): break
+        event_cnt[0] += 1
 
 au = auparse.AuParser(auparse.AUSOURCE_BUFFER_ARRAY, buf)
 
@@ -116,6 +161,7 @@ print "Test 1 Done\n"
 
 # Reset, now lets go to beginning and walk the list manually */
 print "Starting Test 2, walk events, records, and fields..."
+au.reset()
 walk_test(au)
 print "Test 2 Done\n"
 
@@ -171,13 +217,45 @@ compound_search(au, auparse.AUSEARCH_RULE_AND)
 compound_search(au, auparse.AUSEARCH_RULE_OR)
 print "Test 7 Done\n"
 
+# Note: this should match Test 2 exactly
+print "Starting Test 8, buffer feed..."
+au = auparse.AuParser(auparse.AUSOURCE_FEED);
+event_cnt = 1
+au.add_callback(feed_callback, [event_cnt])
+chunk_len = 3
+for s in buf:
+    s_len = len(s)
+    beg = 0
+    while beg < s_len:
+        end = min(s_len, beg + chunk_len)
+        data = s[beg:end]
+        beg += chunk_len
+        au.feed(data)
+au.flush_feed()
+print "Test 8 Done\n"
+
+# Note: this should match Test 4 exactly
+print "Starting Test 9, file feed..."
+au = auparse.AuParser(auparse.AUSOURCE_FEED);
+event_cnt = 1
+au.add_callback(feed_callback, [event_cnt])
+f = open("./test.log");
+while True:
+    data = f.read(4)
+    if not data: break
+    au.feed(data)
+au.flush_feed()
+print "Test 9 Done\n"
+
 if (os.getuid() != 0):
-    print "Finished non-admin tests"
+    print "Finished non-admin tests\n"
+    au = None
     sys.exit(0)
 
-print "Starting Test 8, walk events, records of logs..."
+print "Starting Test 10, walk events, records of logs..."
 au = auparse.AuParser(auparse.AUSOURCE_LOGS)
 light_test(au)
-print "Test 8 Done\n"
+print "Test 10 Done\n"
+au = None
 sys.exit(0)
 

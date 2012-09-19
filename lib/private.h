@@ -48,7 +48,7 @@ extern "C" {
 typedef enum { REAL_ERR, HIDE_IT } hide_t;
 
 /* Internal syslog messaging */
-void audit_msg(int priority, const char *fmt, ...)
+void audit_msg(int priority, const char *fmt, ...) hidden
 #ifdef __GNUC__
 	__attribute__ ((format (printf, 2, 3)));
 #else
@@ -56,13 +56,16 @@ void audit_msg(int priority, const char *fmt, ...)
 #endif
 
 /* General */
-extern int audit_send(int fd, int type, const void *data, unsigned int size);
+extern int audit_send(int fd, int type, const void *data, unsigned int size)
+	hidden;
 
 // This is the main messaging function used internally
+// Don't hide it, it used to be a part of the public API!
 extern int audit_send_user_message(int fd, int type, hide_t hide_err, 
 	const char *message);
 
 // Newly deprecated
+// Don't hide them, they used to be a part of the public API!
 extern int  audit_request_rules_list(int fd);
 extern int  audit_add_rule(int fd, struct audit_rule *rule,
 				int flags, int action);
@@ -75,12 +78,6 @@ extern int  audit_rule_fieldpair(struct audit_rule *rule, const char *pair,
 				int flags);
 extern void audit_rule_free(struct audit_rule *rule);
 
-// message.c
-hidden_proto(audit_msg);
-
-// netlink.c
-hidden_proto(audit_send);
-
 // libaudit.c
 hidden_proto(audit_send_user_message);
 hidden_proto(audit_request_rules_list);
@@ -90,6 +87,26 @@ hidden_proto(audit_rule_syscall);
 hidden_proto(audit_rule_syscallbyname);
 hidden_proto(audit_rule_fieldpair);
 hidden_proto(audit_rule_free);
+hidden_proto(audit_add_watch_dir);
+hidden_proto(audit_detect_machine);
+hidden_proto(audit_request_status);
+hidden_proto(audit_rule_syscall_data);
+hidden_proto(audit_rule_syscallbyname_data);
+
+// lookup_table.c
+hidden_proto(audit_elf_to_machine);
+hidden_proto(audit_machine_to_elf);
+hidden_proto(audit_msg_type_to_name);
+hidden_proto(audit_name_to_errno);
+hidden_proto(audit_name_to_field);
+hidden_proto(audit_name_to_machine);
+hidden_proto(audit_name_to_msg_type);
+hidden_proto(audit_name_to_syscall);
+hidden_proto(audit_operator_to_symbol);
+hidden_proto(audit_name_to_ftype);
+
+// netlink.c
+hidden_proto(audit_get_reply);
 
 // FIXME delete after bumping soname number
 extern int audit_log_avc(int fd, int type, const char *fmt, va_list ap); //dbus,nscd

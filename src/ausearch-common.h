@@ -1,5 +1,5 @@
 /* ausearch-common.h -- 
- * Copyright 2006 Red Hat Inc., Durham, North Carolina.
+ * Copyright 2006-07 Red Hat Inc., Durham, North Carolina.
  * All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -31,6 +31,7 @@ extern gid_t event_gid, event_egid;
 extern pid_t event_pid;
 extern int event_exact_match;
 extern uid_t event_uid, event_euid, event_loginuid;
+extern const char *event_node;
 extern const char *event_comm;
 extern const char *event_filename;
 extern const char *event_hostname;

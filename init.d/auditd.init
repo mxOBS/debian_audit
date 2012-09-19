@@ -3,7 +3,10 @@
 # auditd        This starts and stops auditd
 #
 # chkconfig: 2345 11 88
-# description: This starts the Linux Auditing System Daemon
+# description: This starts the Linux Auditing System Daemon, \
+#              which collects security related events in a dedicated \
+#              audit log. If this daemon is turned off, audit events \
+#              will be sent to syslog.
 #
 # processname: /sbin/auditd
 # config: /etc/sysconfig/auditd
@@ -19,6 +22,8 @@
 # 5 - program is not installed
 # 6 - program is not configured
 # 7 - program is not running
+#
+
 
 PATH=/sbin:/bin:/usr/bin:/usr/sbin
 prog="auditd"
@@ -102,6 +107,14 @@ rotate(){
 	return $RETVAL
 }
 
+resume(){
+	echo -n $"Resuming logging: "	
+	killproc $prog -USR2
+	RETVAL=$?
+	echo
+	return $RETVAL
+}
+
 restart(){
 	test -f /etc/audit/auditd.conf  || exit 6
 	stop
@@ -131,11 +144,14 @@ case "$1" in
     rotate)
 	rotate
 	;;
+    resume)
+	resume
+	;;
     condrestart)
 	condrestart
 	;;
     *)
-	echo $"Usage: $0 {start|stop|status|restart|condrestart|reload|rotate}"
+	echo $"Usage: $0 {start|stop|status|restart|condrestart|reload|rotate|resume}"
 	RETVAL=3
 esac
 

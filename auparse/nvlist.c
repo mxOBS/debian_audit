@@ -34,7 +34,6 @@ void nvlist_create(nvlist *l)
 	l->cur = NULL;
 	l->cnt = 0;
 }
-hidden_def(nvlist_create);
 
 static void nvlist_last(nvlist *l)
 {
@@ -55,7 +54,6 @@ nvnode *nvlist_next(nvlist *l)
 		l->cur = l->cur->next;
 	return l->cur;
 }
-hidden_def(nvlist_next);
 
 void nvlist_append(nvlist *l, nvnode *node)
 {
@@ -84,11 +82,13 @@ void nvlist_append(nvlist *l, nvnode *node)
 	l->cur = newnode;
 	l->cnt++;
 }
-hidden_def(nvlist_append);
 
+/*
+ * This function will start at current index and scan for a name
+ */
 int nvlist_find_name(nvlist *l, const char *name)
 {
-        register nvnode* window = l->head;
+        register nvnode* window = l->cur;
 
 	while (window) {
 		if (strcmp(window->name, name) == 0) {
@@ -100,7 +100,6 @@ int nvlist_find_name(nvlist *l, const char *name)
 	}
 	return 0;
 }
-hidden_def(nvlist_find_name);
 
 const char *nvlist_interp_cur_val(const rnode *r)
 {
@@ -109,7 +108,6 @@ const char *nvlist_interp_cur_val(const rnode *r)
 		return l->cur->interp_val;
 	return interpret(r);
 }
-hidden_def(nvlist_interp_cur_val);
 
 void nvlist_clear(nvlist* l)
 {
@@ -129,5 +127,3 @@ void nvlist_clear(nvlist* l)
 	l->cur = NULL;
 	l->cnt = 0;
 }
-hidden_def(nvlist_clear);
-

@@ -1,5 +1,5 @@
-/* audispd.c -- 
- * Copyright 2007 Red Hat Inc., Durham, North Carolina.
+/* audispd.c --
+ * Copyright 2007-08 Red Hat Inc., Durham, North Carolina.
  * All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -18,450 +18,742 @@
  *
  * Authors:
  *   Steve Grubb <sgrubb@redhat.com>
- *
- * Typist:
- *   James Antill <jantill@redhat.com>
- *
- *  The main design constraint on this implementation was lines of code: 
- * efficiency of the CPU and memory, future features and
- * reliability/maintainability were all sacrificed for this goal.
- *
  */
-#include <stdlib.h>
+
+#include "config.h"
 #include <stdio.h>
 #include <unistd.h>
-#include <fcntl.h>
-#include <string.h>
-#include <errno.h>
-#include <sys/un.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <poll.h>
-#include <sys/time.h>
+#include <stdlib.h>
 #include <signal.h>
-#include <stdarg.h>
+#include <errno.h>
+#include <string.h>
 #include <sys/wait.h>
+#include <pthread.h>
+#include <dirent.h>
+#include <fcntl.h>
+#include <sys/poll.h>
+#include <netdb.h>
+#include <arpa/inet.h>
 
+#include "audispd-config.h"
+#include "audispd-pconfig.h"
+#include "audispd-llist.h"
+#include "audispd-builtins.h"
+#include "queue.h"
 #include "libaudit.h"
 
-#ifndef CONF_AF_LOCAL_PATH
-#define CONF_AF_LOCAL_PATH "/var/run/audit_events"
+/* Global Data */
+volatile int stop = 0;
+volatile int hup = 0;
+
+/* Local data */
+static daemon_conf_t daemon_config;
+static conf_llist plugin_conf;
+static int audit_fd;
+static pthread_t inbound_thread;
+static const char *config_file = "/etc/audisp/audispd.conf";
+static const char *plugin_dir =  "/etc/audisp/plugins.d/";
+
+/* Local function prototypes */
+static void signal_plugins(int sig);
+static int event_loop(void);
+static int safe_exec(plugin_conf_t *conf);
+static void *inbound_thread_main(void *arg);
+static void process_inbound_event(int fd);
+
+/*
+ * SIGTERM handler
+ */
+static void term_handler( int sig )
+{
+        stop = 1;
+}
+
+/*
+ * SIGCHLD handler
+ */
+static void child_handler( int sig )
+{
+	int status;
+	pid_t pid;
+
+        pid = waitpid(-1, &status, WNOHANG);
+	if (pid > 0) {
+		// FIXME: Need to mark the child pid as 0 in the configs
+	}
+}
+
+/*
+ * SIGHUP handler: re-read config
+ */
+static void hup_handler( int sig )
+{
+        hup = 1;
+}
+
+/*
+ * SIGALRM handler - help force exit when terminating daemon
+ */
+static void alarm_handler( int sig )
+{
+        pthread_cancel(inbound_thread);
+	abort();
+}
+
+static void load_plugin_conf(conf_llist *plugin)
+{
+	DIR *d;
+
+	/* init plugin list */
+	plist_create(plugin);
+
+	/* read configs */
+	d = opendir(plugin_dir);
+	if (d) {
+		struct dirent *e;
+
+		while ((e = readdir(d))) {
+			plugin_conf_t config;
+			char fname[PATH_MAX];
+
+			if (e->d_name[0] == '.')
+				continue;
+
+			snprintf(fname, sizeof(fname), "%s%s",
+				plugin_dir, e->d_name);
+
+			clear_pconfig(&config);
+			if (load_pconfig(&config, fname) == 0) {
+				/* Push onto config list only if active */
+				if (config.active == A_YES)
+					plist_append(plugin, &config);
+				else
+					free_pconfig(&config);
+			} else
+				syslog(LOG_ERR, 
+					"Skipping %s plugin due to errors",
+					e->d_name);
+		}
+		closedir(d);
+	}
+}
+
+static int start_one_plugin(lnode *conf)
+{
+	if (conf->p->type == S_BUILTIN)
+		start_builtin(conf->p);
+	else if (conf->p->type == S_ALWAYS) {
+		if (safe_exec(conf->p)) {
+			syslog(LOG_ERR,
+				"Error running %s (%s) continuing without it",
+				conf->p->path, strerror(errno));
+			conf->p->active = A_NO;
+			return 0;
+		}
+
+		/* Close the parent's read side */
+		close(conf->p->plug_pipe[0]);
+		conf->p->plug_pipe[0] = -1;
+		/* Avoid leaking descriptor */
+		fcntl(conf->p->plug_pipe[1], F_SETFD, FD_CLOEXEC);
+	}
+	return 1;
+}
+
+static int start_plugins(conf_llist *plugin)
+{
+	/* spawn children */
+	lnode *conf;
+	int active = 0;
+
+	plist_first(plugin);
+	conf = plist_get_cur(plugin);
+	if (conf == NULL || conf->p == NULL)
+		return active;
+
+	do {
+		if (conf->p && conf->p->active == A_YES) {
+			if (start_one_plugin(conf))
+				active++;
+		}
+	} while ((conf = plist_next(plugin)));
+	return active;
+}
+
+static void reconfigure(void)
+{
+	int rc;
+	daemon_conf_t tdc;
+	conf_llist tmp_plugin;
+	lnode *tpconf;
+
+	/* Read new daemon config */
+	rc = load_config(&tdc, config_file);
+	if (rc == 0) {
+		if (tdc.q_depth > daemon_config.q_depth) {
+			increase_queue_depth(tdc.q_depth);
+			daemon_config.q_depth = tdc.q_depth;
+		}
+		daemon_config.overflow_action = tdc.overflow_action;
+		reset_suspended();
+		/* We just fill these in because they are used by this
+		 * same thread when we return
+		 */
+		daemon_config.node_name_format = tdc.node_name_format;
+		free((char *)daemon_config.name);
+		daemon_config.name = tdc.name;
+	}
+
+	/* The idea for handling SIGHUP to children goes like this:
+	 * 1) load the current config in temp list
+	 * 2) mark all in real list unchecked
+	 * 3) for each one in tmp list, scan old list
+	 * 4) if new, start it, append to list, mark done
+	 * 5) else check if there was a change to active state
+	 * 6) if so, copy config over and start
+	 * 7) If no change, send sighup to non-builtins and mark done
+	 * 8) Finally, scan real list for unchecked, terminate and deactivate
+	 */
+	load_plugin_conf(&tmp_plugin);
+	plist_mark_all_unchecked(&plugin_conf);
+
+	plist_first(&tmp_plugin);
+	tpconf = plist_get_cur(&tmp_plugin);
+	while (tpconf && tpconf->p) {
+		lnode *opconf;
+		
+		opconf = plist_find_name(&plugin_conf, tpconf->p->name);
+		if (opconf == NULL) {
+			/* We have a new service */
+			if (tpconf->p->active == A_YES) {
+				tpconf->p->checked = 1;
+				plist_last(&plugin_conf);
+				plist_append(&plugin_conf, tpconf->p);
+				free(tpconf->p);
+				tpconf->p = NULL;
+				start_one_plugin(plist_get_cur(&plugin_conf));
+			}
+		} else {
+			if (opconf->p->active == tpconf->p->active) {
+				if (opconf->p->type == S_ALWAYS)
+					kill(opconf->p->pid, SIGHUP);
+				opconf->p->checked = 1;
+			} else {
+				/* A change in state */
+				if (tpconf->p->active == A_YES) {
+					/* starting - copy config and exec */
+					free_pconfig(opconf->p);
+					free(opconf->p);
+					opconf->p = tpconf->p;
+					opconf->p->checked = 1;
+					start_one_plugin(opconf);
+					tpconf->p = NULL;
+				}
+			}
+		}
+
+		tpconf = plist_next(&tmp_plugin);
+	}
+
+	/* Now see what's left over */
+	while ( (tpconf = plist_find_unchecked(&plugin_conf)) ) {
+		/* Anything not checked is something removed from the config */
+		tpconf->p->active = A_NO;
+		kill(tpconf->p->pid, SIGTERM);
+		tpconf->p->pid = 0;
+		tpconf->p->checked = 1;
+	}
+	
+	/* Release memory from temp config */
+	plist_first(&tmp_plugin);
+	tpconf = plist_get_cur(&tmp_plugin);
+	while (tpconf) {
+		free_pconfig(tpconf->p);
+		tpconf = plist_next(&tmp_plugin);
+	}
+	plist_clear(&tmp_plugin);
+}
+
+int main(int argc, char *argv[])
+{
+	lnode *conf;
+	struct sigaction sa;
+	int i;
+
+#ifndef DEBUG
+	/* Make sure we are root */
+	if (getuid() != 0) {
+		fprintf(stderr, "You must be root to run this program.\n");
+		return 4;
+	}
 #endif
+	set_aumessage_mode(MSG_SYSLOG, DBG_YES);
 
-#ifndef CONF_CHDIR_PATH
-#define CONF_CHDIR_PATH "/"
-#endif
+	/* Register sighandlers */
+	sa.sa_flags = 0;
+	sigemptyset(&sa.sa_mask);
+	/* Ignore all signals by default */
+	sa.sa_handler = SIG_IGN;
+	for (i=1; i<NSIG; i++)
+		sigaction(i, &sa, NULL);
+	/* Set handler for the ones we care about */
+	sa.sa_handler = term_handler;
+	sigaction(SIGTERM, &sa, NULL);
+	sa.sa_handler = hup_handler;
+	sigaction(SIGHUP, &sa, NULL);
+	sa.sa_handler = alarm_handler;
+	sigaction(SIGALRM, &sa, NULL);
+	sa.sa_handler = child_handler;
+	sigaction(SIGCHLD, &sa, NULL);
 
-#define CONF_SYSLOG_PRIO LOG_DAEMON
+	/* move stdin to its own fd */
+	if (argc == 3 && strcmp(argv[1], "--input") == 0) 
+		audit_fd = open(argv[2], O_RDONLY);
+	else
+		audit_fd = dup(0);
+	if (audit_fd < 0) {
+		syslog(LOG_ERR, "Failed setting up input, exiting");
+		return 1;
+	}
 
-#define CONF_CON_OUT_SZ   32 /* max buffered messages */
-#define CONF_CON_NUM_SZ   32 /* max number of connections -- Note 0,1,2 incl. */
+	/* Make all descriptors point to dev null */
+	i = open("/dev/null", O_RDWR);
+	if (i >= 0) {
+		if (dup2(0, i) < 0 || dup2(1, i) < 0 || dup2(2, i) < 0) {
+			syslog(LOG_ERR, "Failed duping /dev/null %s, exiting",
+					strerror(errno));
+			return 1;
+		}
+		close(i);
+	} else {
+		syslog(LOG_ERR, "Failed opening /dev/null %s, exiting",
+					strerror(errno));
+		return 1;
+	}
+	if (fcntl(audit_fd, F_SETFD, FD_CLOEXEC) < 0) {
+		syslog(LOG_ERR, "Failed protecting input %s, exiting",
+					strerror(errno));
+		return 1;
+	}
 
-#define TRUE  1
-#define FALSE 0
+	/* init the daemon's config */
+	if (load_config(&daemon_config, config_file))
+		return 6;
 
-struct auditd_msg
-{
- struct audit_dispatcher_header hdr;
- char msg[MAX_AUDIT_MESSAGE_LENGTH];
-};
+	load_plugin_conf(&plugin_conf);
 
-struct con_data
-{
- struct auditd_msg out[CONF_CON_OUT_SZ];
- size_t num; /* number of out[] that have been used atm. */
- size_t off; /* number of out[] that we've sent out the socket.
-                always < num, or zero */
- size_t used; /* amount of current message used.
-                 always < sizeof(auditd_msg) */
+	/* if no plugins - exit */
+	if (plist_count(&plugin_conf) == 0) {
+		syslog(LOG_ERR, "No plugins found, exiting");
+		return 0;
+	}
 
- unsigned int active : 1;
-};
+	/* Plugins are started with the auditd priority */
+	i = start_plugins(&plugin_conf);
 
-static void die(const char *, ...) __attribute__ ((format (printf, 1, 2)));
-static void die(const char *msg, ...)
-{
-  va_list va;
+	/* Now boost priority to make sure we are getting time slices */
+	if (daemon_config.priority_boost != 0) {
+		errno = 0;
+		(void) nice((int)-daemon_config.priority_boost);
+		if (errno) {
+			syslog(LOG_ERR, "Cannot change priority (%s)",
+					strerror(errno));
+			/* Stay alive as this is better than stopping */
+		}
+	}
 
-  va_start(va, msg);
-  vsyslog(LOG_ERR, msg, va);
-  va_end(va);
-  
-  abort();
+	/* Let the queue initialize */
+	init_queue(daemon_config.q_depth);
+	syslog(LOG_NOTICE, 
+		"audispd initialized with q_depth=%d and %d active plugins",
+		daemon_config.q_depth, i);
+
+	/* Tell it to poll the audit fd */
+	if (add_event(audit_fd, process_inbound_event) < 0) {
+		syslog(LOG_ERR, "Cannot add event, exiting");
+		return 1;
+	}
+
+	/* Create inbound thread */
+	pthread_create(&inbound_thread, NULL, inbound_thread_main, NULL); 
+
+	/* Start event loop */
+	while (event_loop()) {
+		hup = 0;
+		reconfigure();
+	}
+
+	/* Tell plugins we are going down */
+	signal_plugins(SIGTERM);
+
+	/* Cleanup builtin plugins */
+	destroy_af_unix();
+	destroy_syslog();
+
+	/* Give it 5 seconds to clear the queue */
+	alarm(5);
+	pthread_join(inbound_thread, NULL);
+
+	/* Release configs */
+	plist_first(&plugin_conf);
+	conf = plist_get_cur(&plugin_conf);
+	while (conf) {
+		free_pconfig(conf->p);
+		conf = plist_next(&plugin_conf);
+	}
+	plist_clear(&plugin_conf);
+
+	/* Cleanup the queue */
+	destroy_queue();
+	free_config(&daemon_config);
+	
+	return 0;
 }
 
-void io__set_nonblock(int fd)
+static int safe_exec(plugin_conf_t *conf)
 {
-  int flags = 0;
+	char *argv[MAX_PLUGIN_ARGS+2];
+	int pid, i;
 
-  if ((flags = fcntl(fd, F_GETFL)) == -1)
-    die("%s: fcntl(F_GETFL): %m", __func__);
-  if (fcntl(fd, F_SETFL, flags | O_NONBLOCK) == -1)
-    die("%s: fcntl(F_SETFL): %m", __func__);
+	/* Set up IPC with child */
+	if (socketpair(AF_UNIX, SOCK_STREAM, 0, conf->plug_pipe) != 0)
+		return -1;
+
+	pid = fork();
+	if (pid > 0) {
+		conf->pid = pid;
+		return 0;	/* Parent...normal exit */
+	}
+	if (pid < 0) { 
+		close(conf->plug_pipe[0]);
+		close(conf->plug_pipe[1]);
+		conf->pid = 0;
+		return -1;	/* Failed to fork */
+	}
+
+	/* Set up comm with child */
+	dup2(conf->plug_pipe[0], 0);
+	for (i=3; i<24; i++)	 /* Arbitrary number */
+		close(i);
+
+	/* Child */
+	argv[0] = (char *)conf->path;
+	for (i=1; i<(MAX_PLUGIN_ARGS+1); i++)
+		argv[i] = conf->args[i];
+	argv[i] = NULL;
+	execve(conf->path, argv, NULL);
+	exit(1);		/* Failed to exec */
 }
 
-static struct pollfd st_poll__fds[CONF_CON_NUM_SZ + 1];
-static const size_t st_poll__max = CONF_CON_NUM_SZ;
-
-static void io_poll_init(void)
+static void signal_plugins(int sig)
 {
-  unsigned int scan = 0;
+	lnode *conf;
 
-  while (scan < CONF_CON_NUM_SZ)
-    st_poll__fds[scan++].fd = -1;
+	plist_first(&plugin_conf);
+	conf = plist_get_cur(&plugin_conf);
+	while (conf) {
+		if (conf->p && conf->p->pid)
+			kill(conf->p->pid, sig);
+		conf = plist_next(&plugin_conf);
+	}
 }
 
-static void io_poll_add(int fd, int events)
+/* Returns 0 on stop, and 1 on HUP */
+static int event_loop(void)
 {
-  io__set_nonblock(fd);
-  
-  st_poll__fds[fd].events  = events;
-  st_poll__fds[fd].revents = 0;
-  st_poll__fds[fd].fd      = fd;
+	char *name = NULL, tmp_name[255];
+
+	/* Get the host name representation */
+	switch (daemon_config.node_name_format)
+	{
+		case N_NONE:
+			break;
+		case N_HOSTNAME:
+			if (gethostname(tmp_name, sizeof(tmp_name))) {
+				syslog(LOG_ERR, "Unable to get machine name");
+				name = strdup("?");
+			} else
+				name = strdup(tmp_name);
+			break;
+		case N_USER:
+			if (daemon_config.name)
+				name = strdup(daemon_config.name);
+			else {
+				syslog(LOG_ERR, "User defined name missing");
+				name = strdup("?");
+			}
+			break;
+		case N_FQD:
+			if (gethostname(tmp_name, sizeof(tmp_name))) {
+				syslog(LOG_ERR, "Unable to get machine name");
+				name = strdup("?");
+			} else {
+				int rc;
+				struct addrinfo *ai;
+				struct addrinfo hints;
+
+				memset(&hints, 0, sizeof(hints));
+				hints.ai_flags = AI_ADDRCONFIG | AI_CANONNAME;
+				hints.ai_socktype = SOCK_STREAM;
+
+				rc = getaddrinfo(tmp_name, NULL, &hints, &ai);
+				if (rc != 0) {
+					syslog(LOG_ERR,
+					"Cannot resolve hostname %s (%s)",
+					tmp_name, gai_strerror(rc));
+					name = strdup("?");
+					break;
+				}
+				name = strdup(ai->ai_canonname);
+				freeaddrinfo(ai);
+			}
+			break;
+		case N_NUMERIC:
+			if (gethostname(tmp_name, sizeof(tmp_name))) {
+				syslog(LOG_ERR, "Unable to get machine name");
+				name = strdup("?");
+			} else {
+				int rc;
+				struct addrinfo *ai;
+				struct addrinfo hints;
+
+				memset(&hints, 0, sizeof(hints));
+				hints.ai_flags = AI_ADDRCONFIG | AI_PASSIVE;
+				hints.ai_socktype = SOCK_STREAM;
+
+				rc = getaddrinfo(tmp_name, NULL, &hints, &ai);
+				if (rc != 0) {
+					syslog(LOG_ERR,
+					"Cannot resolve hostname %s (%s)",
+					tmp_name, gai_strerror(rc));
+					name = strdup("?");
+					break;
+				}
+				inet_ntop(ai->ai_family,
+						ai->ai_family == AF_INET ?
+		(void *) &((struct sockaddr_in *)ai->ai_addr)->sin_addr :
+		(void *) &((struct sockaddr_in6 *)ai->ai_addr)->sin6_addr,
+						tmp_name, INET6_ADDRSTRLEN);
+				freeaddrinfo(ai);
+				name = strdup(tmp_name);
+			}
+			break;
+	}
+
+	/* Figure out the format for the af_unix socket */
+	while (stop == 0) {
+		event_t *e;
+		const char *type;
+		char *v, unknown[32];
+		unsigned int len;
+		lnode *conf;
+
+		/* This is where we block until we have an event */
+		e = dequeue();
+		if (e == NULL) {
+			if (hup) {
+				free(name);
+				return 1;
+			}
+			continue;
+		}
+
+		/* Get the event formatted */
+		type = audit_msg_type_to_name(e->hdr.type);
+		if (type == NULL) {
+			snprintf(unknown, sizeof(unknown),
+				"UNKNOWN[%d]", e->hdr.type);
+			type = unknown;
+		}
+
+		if (daemon_config.node_name_format != N_NONE) {
+			len = asprintf(&v, "node=%s type=%s msg=%.*s\n", 
+				name, type, e->hdr.size, e->data);
+		} else
+			len = asprintf(&v, "type=%s msg=%.*s\n", 
+				type, e->hdr.size, e->data);
+
+		/* Distribute event to the plugins */
+		plist_first(&plugin_conf);
+		conf = plist_get_cur(&plugin_conf);
+		do {
+			if (conf == NULL || conf->p == NULL)
+				continue;
+			if (conf->p->active == A_NO)
+				continue;
+
+			/* Now send the event to the right child */
+			if (conf->p->type == S_SYSLOG) 
+				send_syslog(v);
+			else if (conf->p->type == S_AF_UNIX) {
+				if (conf->p->format == F_STRING)
+					send_af_unix_string(v, len);
+				else
+					send_af_unix_binary(e);
+			} else if (conf->p->type == S_ALWAYS) {
+				int rc;
+				if (conf->p->format == F_STRING) {
+					do {
+						rc = write(
+							conf->p->plug_pipe[1],
+							v, len);
+					} while (rc < 0 && errno == EINTR);
+				} else {
+					struct iovec vec[2];
+
+					vec[0].iov_base = &e->hdr;
+					vec[0].iov_len = sizeof(struct
+						audit_dispatcher_header);
+
+					vec[1].iov_base = &e->data;
+					vec[1].iov_len =
+						MAX_AUDIT_MESSAGE_LENGTH;
+					do {
+						rc = writev(
+							conf->p->plug_pipe[1],
+							vec, 2);
+					} while (rc < 0 && errno == EINTR);
+				}
+				if (rc < 0 && errno == EPIPE) {
+					/* Child disappeared ? */
+					syslog(LOG_ERR,
+					"plugin %s terminated unexpectedly", 
+								conf->p->path);
+					conf->p->pid = 0;
+					close(conf->p->plug_pipe[1]);
+					conf->p->plug_pipe[1] = -1;
+					conf->p->active = A_NO;
+				}
+			}
+		} while ((conf = plist_next(&plugin_conf)));
+
+		/* Done with the memory...release it */
+		free(v);
+		free(e);
+		if (hup)
+			break;
+	}
+	free(name);
+	if (stop)
+		return 0;
+	else
+		return 1;
 }
 
-static void io_poll_del(int fd)
+static struct pollfd pfd[4];
+static poll_callback_ptr pfd_cb[4];
+static volatile int pfd_cnt=0;
+int add_event(int fd, poll_callback_ptr cb)
 {
-  st_poll__fds[fd].fd = -1;
+	if (pfd_cnt > 3)
+		return -1;
+
+	pfd[pfd_cnt].fd = fd;
+	pfd[pfd_cnt].events = POLLIN;
+	pfd[pfd_cnt].revents = 0;
+	pfd_cb[pfd_cnt] = cb;
+	pfd_cnt++;
+	return 0;
 }
 
-static void io_poll_block(void)
+int remove_event(int fd)
 {
-  while (poll(st_poll__fds, st_poll__max + 1, -1) == -1)
-    if ((errno != EAGAIN) && (errno != EINTR))
-      die("poll: %m");
+	int start, i;
+	if (pfd_cnt == 0)
+		return -1;
+
+	for (start=0; start < pfd_cnt; start++) {
+		if (pfd[start].fd == fd)
+			break;
+	}
+	for (i=start; i<(pfd_cnt-1); i++) {
+		pfd[i].events = pfd[i+1].events;
+		pfd[i].revents = pfd[i+1].revents;
+		pfd[i].fd = pfd[i+1].fd;
+		pfd_cb[i] = pfd_cb[i+1];
+	}
+
+	pfd_cnt--;
+	return 0;
 }
 
-static ssize_t read_all(int fd, void *buf, size_t len, int force_block)
+/* inbound thread - enqueue inbound data to intermediate table */
+static void *inbound_thread_main(void *arg)
 {
-  size_t got = 0;
+	while (stop == 0) {
+		int rc;
+		if (hup)
+			nudge_queue();
+		do {
+			rc = poll(pfd, pfd_cnt, 20000); /* 20 sec */
+		} while (rc < 0 && errno == EAGAIN && stop == 0);
+		if (rc == 0)
+			continue;
 
-  while (got != len)
-  {
-    ssize_t tmp = read(fd, buf + got, len - got);
-
-    if ((tmp == -1) && (errno == EAGAIN) && (got || force_block))
-    {
-      poll(st_poll__fds + fd, 1, -1);
-      continue;
-    }
-    if ((tmp == -1) || !tmp)
-      return (tmp);
-    
-    got += (size_t)tmp;
-  }
-  
-  return (got);
+		/* Event readable... */
+		if (rc > 0) {
+			/* Figure out the fd that is ready and call */
+			int i = 0;
+			while (i < pfd_cnt) {
+				if (pfd[i].revents & POLLIN) 
+					pfd_cb[i](pfd[i].fd);
+				i++;
+			}
+		} 
+	}
+	/* make sure event loop wakes up */
+	nudge_queue();
+	return NULL;
 }
 
-static struct con_data con_data[CONF_CON_NUM_SZ + 1];
-
-static void con_init(void)
+static void process_inbound_event(int fd)
 {
-  unsigned int scan = 0;
+	int rc;
+	struct iovec vec;
+	event_t *e = malloc(sizeof(event_t));
+	if (e == NULL) 
+		return;
+	memset(e, 0, sizeof(event_t));
 
-  while (scan < CONF_CON_NUM_SZ)
-    con_data[scan++].active = FALSE;
+	/* Get header first. It is fixed size */
+	vec.iov_base = &e->hdr;
+	vec.iov_len = sizeof(struct audit_dispatcher_header);
+	do {
+		rc = readv(fd, &vec, 1);
+	} while (rc < 0 && errno == EINTR);
+
+	if (rc <= 0) {
+		if (rc == 0)
+			stop = 1; // End of File
+		free(e);
+		return;
+	}
+
+	if (rc > 0) {
+		/* Sanity check */
+		if (e->hdr.ver != AUDISP_PROTOCOL_VER ||
+				e->hdr.hlen != sizeof(e->hdr) ||
+				e->hdr.size > MAX_AUDIT_MESSAGE_LENGTH) {
+			free(e);
+			syslog(LOG_ERR,
+				"Dispatcher protocol mismatch, exiting");
+			exit(1);
+		}
+
+		/* Next payload */
+		vec.iov_base = e->data;
+		vec.iov_len = e->hdr.size;
+		do {
+			rc = readv(fd, &vec, 1);
+		} while (rc < 0 && errno == EINTR);
+
+		if (rc > 0)
+			enqueue(e, &daemon_config);
+		else {
+			if (rc == 0)
+				stop = 1; // End of File
+			free(e);
+		}
+	}
 }
 
-static size_t con_data_used_num(const struct con_data *con)
-{
-  return (con->num - con->off);
-}
-
-static void con_data_add(struct con_data *con, const struct auditd_msg *aud)
-{
-  if (con->num == CONF_CON_OUT_SZ)
-  {
-    memmove(con->out, con->out + con->off, con->num * sizeof(con->out[0]));
-    con->num -= con->off;
-    con->off = 0;
-  }
-  
-  con->out[con->num++] = *aud;
-}
-
-static void auditd_input(int fd)
-{
-  unsigned int scan = 0;
-  struct auditd_msg aud;
-  ssize_t len = read_all(fd, &aud.hdr, sizeof(aud.hdr), FALSE);
-
-  if ((len == -1) && (errno == EAGAIN))
-    return;
-  if (len == -1)
-    die("input read: %m");
-  if (!len) /* FIXME: output stuff left ? */
-    die("input read: EOF");
-  
-  if (aud.hdr.ver != AUDISP_PROTOCOL_VER)
-    die("Wrong header version. got=%d expected=%d",
-        (int)aud.hdr.ver, (int)AUDISP_PROTOCOL_VER);
-  if (aud.hdr.hlen != sizeof(aud.hdr))
-    die("Wrong header size. got=%zu expected=%zu",
-        (size_t)aud.hdr.hlen, sizeof(aud.hdr));
-  if (aud.hdr.size > MAX_AUDIT_MESSAGE_LENGTH)
-    die("Bad header data size. got=%zu max=%zu",
-        (size_t)aud.hdr.size, (size_t)MAX_AUDIT_MESSAGE_LENGTH);
-
-  /* block waiting for input, it's too painful otherwise */
-  len = read_all(fd, &aud.msg, aud.hdr.size, TRUE);
-  if ((size_t)len != aud.hdr.size)
-    die("didn't read correct data length. got=%zd, expected=%zu",
-        len, (size_t)aud.hdr.size);
-
-  for (; scan <= st_poll__max; ++scan)
-  {
-    if (!con_data[scan].active || 
-        (con_data_used_num(con_data + scan) >= CONF_CON_OUT_SZ))
-      continue;
-
-    st_poll__fds[scan].events |= POLLOUT;
-    con_data_add(con_data + scan, &aud);
-  }
-
-  auditd_input(fd);
-}
-
-static void con_add(int fd)
-{
-  io_poll_add(fd, 0);
-  con_data[fd].used = con_data[fd].num = con_data[fd].off = 0;
-  con_data[fd].active = TRUE;
-}
-
-static void con_accept(int listen_fd)
-{
-  int fd = -1;
-
-  if ((fd = accept(listen_fd, NULL, 0)) == -1)
-    return;
-
-  if (fd <= CONF_CON_NUM_SZ)
-    con_add(fd);
-  else
-  {
-    syslog(LOG_WARNING, " Too many connections: max = %d", CONF_CON_NUM_SZ);
-    close(fd);
-  }
-}
-
-static void con_output(int fd)
-{
-  size_t len = 0;
-  ssize_t ret = 0;
-  struct con_data *con = con_data + fd;
-  struct audit_dispatcher_header *hdr = &con->out[con->off].hdr;
-  char *msg = con->out[con->off].msg;
-  
-  if (con->used >= hdr->hlen)
-  {
-    len = (hdr->size - (con->used - hdr->hlen));
-    ret = write(fd, msg, len);
-  }
-  else
-  {
-    struct iovec vec[2];
-    
-    vec[0].iov_base = hdr;
-    vec[0].iov_len  = hdr->hlen - con->used;
-    vec[1].iov_base = msg;
-    vec[1].iov_len  = hdr->size;
-
-    len = vec[0].iov_len + vec[1].iov_len;
-    ret = writev(fd, vec, 2);
-  }
-
-  if (ret == -1)
-  {
-    if (errno == EAGAIN)
-      return;
-    syslog(LOG_WARNING, " writev(%d): %m", fd);
-
-    con->active = FALSE;
-    io_poll_del(fd);
-    close(fd);
-    return;
-  }
-  
-  if ((size_t)ret != len)
-    con->used += ret;
-  else
-  {
-    con->used = 0;
-    
-    if (++con->off == con->num)
-    {
-      st_poll__fds[fd].events &= ~POLLOUT;
-      con->off = con->num = 0;
-    }
-  }
-}
-
-static int pipe_fd = -1; /* input from auditd */
-static int locl_fd = -1; /* input from local socket */
-
-static void io_poll_loop(void)
-{
-  unsigned int scan = 0;
-  
-  if ((locl_fd != -1) && (st_poll__fds[locl_fd].revents & POLLIN))
-    con_accept(locl_fd);
-  if ((pipe_fd != -1) && (st_poll__fds[pipe_fd].revents & POLLIN))
-    auditd_input(pipe_fd);
-  
-  for (; scan <= st_poll__max; ++scan)
-  {
-    if (st_poll__fds[scan].revents & POLLOUT)
-      con_output(scan);
-  }
-}
-
-static void cmd_add(const char *path, const char *arg1, const char *arg2,
-                    const char *arg3, const char *arg4, const char *arg5,
-                    const char *arg6, const char *arg7, const char *arg8)
-{ /* start a managed connection */
-  int fds[2];
-  pid_t pid = -1;
-  
-  if (pipe(fds) == -1)
-    die("socketpair(): %m");
-  
-  switch ((pid = fork()))
-  {
-    case -1: die("fork(): %m");
-      
-    case 0: /* child */
-      close(fds[1]);
-      if (dup2(fds[0], STDIN_FILENO) == -1)
-        die("dup2(STDIN)");
-      if (dup2(fds[0], STDOUT_FILENO) == -1) /* note will fail */
-        die("dup2(STDOUT)");
-      close(fds[0]);
-      execl(path, path, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8,
-            (char *)NULL);
-      die("execl(%s): %m", path);
-      break;
-      
-    default:
-      break;
-  }
-
-  con_add(fds[1]);
-
-  syslog(LOG_NOTICE, "Started managed-connection: %s pid=%ld", path, (long)pid);
-}
-
-static void io_bind_local(void)
-{
-  const char *fname = CONF_AF_LOCAL_PATH;
-  size_t len = strlen(fname) + 1;
-  struct sockaddr_un tmp_sun;
-  struct sockaddr_un *saddr = NULL;
-
-  if ((locl_fd = socket(PF_LOCAL, SOCK_STREAM, 0)) == -1)
-    die("socket: %m");
-
-  saddr = &tmp_sun; /* assume it's OK */
-  saddr->sun_family = AF_LOCAL;
-  memcpy(saddr->sun_path, fname, len);
-
-  unlink(fname);
-  if (bind(locl_fd, (struct sockaddr *)saddr, SUN_LEN(saddr)) == -1)
-    die("bind(%s): %m", fname);
-  if (chmod(fname, 0400) == -1)
-    die("chmod(%s): %m", fname);
-  if (listen(locl_fd, 16) == -1)
-    die("listen(%s): %m", fname);
-
-  io_poll_add(locl_fd, POLLIN);
-}
-
-static volatile int signaled = 0;
-static void term_handler(int sig)
-{
-  (void)sig;
-  signaled = 1;
-}
-
-int main(void)
-{
-  struct sigaction sa;
-
-  openlog("audispd", LOG_PID, CONF_SYSLOG_PRIO);
-  syslog(LOG_NOTICE, "listening on %s", CONF_AF_LOCAL_PATH);
-
-#ifdef NDEBUG
-  /* Make sure we are root */
-  if (getuid() != 0)
-    die("You must be root to run this program.");
-#endif
-
-  /* register sighandlers */
-  sa.sa_flags   = 0;
-  sa.sa_handler = term_handler;
-  sigemptyset(&sa.sa_mask);
-  if (sigaction(SIGTERM, &sa, NULL ) == -1)
-    die("sigaction(SIGTERM): %m");
-  sa.sa_handler = term_handler;
-  if (sigaction(SIGCHLD, &sa, NULL ) == -1)
-    die("sigaction(SIGCHLD): %m");
-  sa.sa_handler = SIG_IGN;
-  if (sigaction(SIGHUP, &sa, NULL ) == -1)
-    die("sigaction(SIGHUP): %m");
-
-  if (chdir(CONF_CHDIR_PATH) == -1)
-    die("chdir(%s): %m", CONF_CHDIR_PATH);
-  
-  /* change over to pipe_fd */
-  if ((pipe_fd = dup(STDIN_FILENO)) == -1)
-    die("dup(STDIN_FILENO): %m");
-
-  /* close "std" fds, so nothing gets confused etc. */
-  if (close(STDIN_FILENO) == -1)
-    die("open(STDIN_FILENO): %m");
-  if (open("/dev/null", O_RDONLY) == -1)
-    die("open(%s): %m", "/dev/null");
-  if (close(STDOUT_FILENO) == -1)
-    die("open(STDOUT_FILENO): %m");
-  if (open("/dev/null", O_WRONLY) == -1)
-    die("open(%s): %m", "/dev/null");
-  if (close(STDERR_FILENO) == -1)
-    die("open(STDERR_FILENO): %m");
-  if (open("/dev/null", O_WRONLY) == -1)
-    die("open(%s): %m", "/dev/null");
-
-  /* init data structures */
-  io_poll_init();
-  con_init();
-
-  /* setup input */
-  io_poll_add(pipe_fd, POLLIN);
-
-  /* setup connections */
-  io_bind_local();
-
-#ifdef TST /* FIXME: needs config. */
-  cmd_add("/usr/sbin/audispd-plugin", "--daemon", "/tmp/audispd-plugin-output",
-          NULL, NULL, NULL, NULL, NULL, NULL);
-#endif
-  
-  while (!signaled)
-  {
-    io_poll_block();
-    io_poll_loop(); 
-  }
-  
-  {
-    pid_t cpid = -1;
-    
-    if ((cpid = waitpid(-1, NULL, WNOHANG)) != -1)
-      syslog(LOG_NOTICE, "Child %ld died", (long)cpid);
-  }
-  
-  unlink(CONF_AF_LOCAL_PATH);
-  
-  syslog(LOG_NOTICE, "exiting");
-  
-  exit (EXIT_SUCCESS);
-}

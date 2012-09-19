@@ -1,5 +1,5 @@
 /* ia64_table.h --
- * Copyright 2005,2006 Red Hat Inc., Durham, North Carolina.
+ * Copyright 2005-08 Red Hat Inc., Durham, North Carolina.
  * All Rights Reserved.
  *
  * This library is free software; you can redistribute it and/or
@@ -284,8 +284,8 @@ _S(1290, "symlinkat")
 _S(1291, "readlinkat")
 _S(1292, "fchmodat")
 _S(1293, "faccessat")
-//_S(1294, "")
-//_S(1295, "")
+_S(1294, "pselect")
+_S(1295, "ppoll")
 _S(1296, "unshare")
 _S(1297, "splice")
 _S(1298, "set_robust_list")
@@ -293,6 +293,14 @@ _S(1299, "get_robust_list")
 _S(1300, "sync_file_range")
 _S(1301, "tee")
 _S(1302, "vmsplice")
-//_S(1303, "")
+_S(1303, "fallocate")
 _S(1304, "getcpu")
+_S(1305, "epoll_pwait")
+_S(1306, "utimensat")
+_S(1307, "signalfd")
+_S(1308, "timerfd")
+_S(1309, "eventfd")
+_S(1310, "timerfd_create")
+_S(1311, "timerfd_settime")
+_S(1312, "timerfd_gettime")
 

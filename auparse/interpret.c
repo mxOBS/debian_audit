@@ -1,6 +1,6 @@
 /*
 * interpret.c - Lookup values to something more readable
-* Copyright (c) 2007 Red Hat Inc., Durham, North Carolina.
+* Copyright (c) 2007,08 Red Hat Inc., Durham, North Carolina.
 * All Rights Reserved. 
 *
 * This software may be freely redistributed and/or modified under the
@@ -45,37 +45,34 @@
 #include <linux/x25.h>
 #include <linux/if.h>   // FIXME: remove when ipx.h is fixed
 #include <linux/ipx.h>
+#include "gen_tables.h"
 
+/* This is from asm/ipc.h. Copying it for now as some platforms
+ * have broken headers. */
+#define SEMOP            1
+#define SEMGET           2
+#define SEMCTL           3
+#define MSGSND          11
+#define MSGRCV          12
+#define MSGGET          13
+#define MSGCTL          14
+#define SHMAT           21
+#define SHMDT           22
+#define SHMGET          23
+#define SHMCTL          24
+
+#include "captabs.h"
+#include "clone-flagtabs.h"
+#include "famtabs.h"
+#include "fcntl-cmdtabs.h"
+#include "flagtabs.h"
+#include "ipctabs.h"
+#include "open-flagtabs.h"
+#include "socktabs.h"
+#include "typetabs.h"
 
 typedef enum { AVC_UNSET, AVC_DENIED, AVC_GRANTED } avc_t;
 typedef enum { S_UNSET=-1, S_FAILED, S_SUCCESS } success_t;
-
-/* This is the list of field types that we can interpret */
-enum { T_UID, T_GID, T_SYSCALL, T_ARCH, T_EXIT, T_ESCAPED, T_PERM, T_MODE,
-T_SOCKADDR, T_FLAGS, T_PROMISC, T_CAPABILITY, T_SUCCESS, T_A0, T_A1, T_A2,
-T_SIGNAL };
-
-struct transtab {
-    int   value;
-    int   offset;
-};
-
-#define MSGSTRFIELD(line) MSGSTRFIELD1(line)
-#define MSGSTRFIELD1(line) str##line
-
-struct int_transtab {
-    int        key;
-    unsigned int  lvalue;
-};
-
-/* To create the following tables in a DSO-friendly way we split them in
- * two separate variables: a long string which is created by concatenating
- * all strings referenced in the table and the table itself, which uses
- * offsets instead of string pointers.  To do this without increasing
- * the maintenance burden we use a lot of preprocessor magic.  All the
- * maintainer has to do is to add a new entry to the included file and
- * recompile.  */
-
 
 /*
  * This function will take a pointer to a 2 byte Ascii character buffer and
@@ -98,7 +95,7 @@ static unsigned char x2c(unsigned char *buf)
 }
 
 /* returns a freshly malloc'ed and converted buffer */
-static const char *unescape(char *buf)
+const char *au_unescape(char *buf)
 {
         int len, i;
         char saved, *str, *ptr = buf;
@@ -119,6 +116,7 @@ static const char *unescape(char *buf)
         str = strdup(buf);
         *ptr = saved;
 
+	/* See if its '(null)' from the kernel */
         if (*buf == '(')
                 return str;
 
@@ -154,86 +152,6 @@ static const char *aulookup_success(int s)
 			return success[2];
 			break;
 	}
-}
-
-static const union socktab_msgstr_t {
-	struct {
-#define _S(n, s) char MSGSTRFIELD(__LINE__)[sizeof (s)];
-#include "socktab.h"
-#undef _S
-	};
-	char str[0];
-} socktab_msgstr = { {
-#define _S(n, s) s,
-#include "socktab.h"
-#undef _S
-} };
-static const struct transtab socktab[] = {
-#define _S(n, s) { n, offsetof(union socktab_msgstr_t,  \
-				MSGSTRFIELD(__LINE__)) },
-#include "socktab.h"
-#undef _S
-};
-#define SOCK_NAMES (sizeof(socktab)/sizeof(socktab[0]))
-
-static const char *aulookup_socketcall(long sc)
-{
-        int i;
-
-        for (i = 0; i < SOCK_NAMES; i++)
-                if (socktab[i].value == sc)
-                        return socktab_msgstr.str + socktab[i].offset;
-
-        return NULL;
-}
-
-/* This is from asm/ipc.h. Copying it for now as some platforms
- * have broken headers. */
-#define SEMOP            1
-#define SEMGET           2
-#define SEMCTL           3
-#define MSGSND          11
-#define MSGRCV          12
-#define MSGGET          13
-#define MSGCTL          14
-#define SHMAT           21
-#define SHMDT           22
-#define SHMGET          23
-#define SHMCTL          24
-
-/*
- * This table maps ipc calls to their text name
- */
-
-static const union ipctab_msgstr_t {
-        struct {
-#define _S(n, s) char MSGSTRFIELD(__LINE__)[sizeof (s)];
-#include "ipctab.h"
-#undef _S
-        };
-        char str[0];
-} ipctab_msgstr = { {
-#define _S(n, s) s,
-#include "ipctab.h"
-#undef _S
-} };
-static const struct transtab ipctab[] = {
-#define _S(n, s) { n, offsetof(union ipctab_msgstr_t,  \
-                                MSGSTRFIELD(__LINE__)) },
-#include "ipctab.h"
-#undef _S
-};
-#define IPC_NAMES (sizeof(ipctab)/sizeof(ipctab[0]))
-
-static const char *aulookup_ipccall(long ic)
-{
-        int i;
-
-        for (i = 0; i < IPC_NAMES; i++)
-                if (ipctab[i].value == ic)
-                        return ipctab_msgstr.str + ipctab[i].offset;
-
-        return NULL;
 }
 
 static nvpair uid_nvl;
@@ -284,7 +202,6 @@ void aulookup_destroy_uid_list(void)
 	nvpair_clear(&uid_nvl); 
 	uid_list_created = 0;
 }
-hidden_def(aulookup_destroy_uid_list);
 
 static nvpair gid_nvl;
 static int gid_list_created=0;
@@ -334,7 +251,6 @@ void aulookup_destroy_gid_list(void)
 	nvpair_clear(&gid_nvl); 
 	gid_list_created = 0;
 }
-hidden_def(aulookup_destroy_gid_list);
 
 static const char *print_uid(const char *val)
 {
@@ -402,10 +318,12 @@ static const char *print_syscall(const char *val, const rnode *r)
         sys = audit_syscall_to_name(syscall, machine);
         if (sys) {
                 const char *func = NULL;
-                if (strcmp(sys, "socketcall") == 0)
-                        func = aulookup_socketcall((long)a0);
-                else if (strcmp(sys, "ipc") == 0)
-                        func = aulookup_ipccall((long)a0);
+                if (strcmp(sys, "socketcall") == 0) {
+			if ((int)a0 == a0)
+				func = sock_i2s(a0);
+                } else if (strcmp(sys, "ipc") == 0)
+			if ((int)a0 == a0)
+				func = ipc_i2s(a0);
                 if (func)
                         asprintf(&out, "%s(%s)", sys, func);
                 else
@@ -439,8 +357,10 @@ static const char *print_exit(const char *val)
 
 static const char *print_escaped(const char *val)
 {
+	const char *out;
+
         if (*val == '"') {
-                char *term, *out;
+                char *term;
                 val++;
                 term = strchr(val, '"');
                 if (term == NULL)
@@ -449,7 +369,8 @@ static const char *print_escaped(const char *val)
                 out = strdup(val);
 		*term = '"';
 		return out;
-// FIXME: working here...was trying to detect (null) and handle that differently// The other 2 should have " around the file names.
+// FIXME: working here...was trying to detect (null) and handle that
+// differently. The other 2 should have " around the file names.
 /*      } else if (*val == '(') {
                 char *term;
                 val++;
@@ -458,9 +379,13 @@ static const char *print_escaped(const char *val)
                         return;
                 *term = 0;
                 printf("%s ", val); */
-        } else {
-                return unescape((char *)val);
-        }
+        } else if (val[0] == '0' && val[1] == '0')
+                out = au_unescape((char *)&val[2]); // Abstract name
+	else
+                out = au_unescape((char *)val);
+	if (out)
+		return out;
+	return strdup(val); // Something is wrong with string, just send as is
 }
 
 static const char *print_perm(const char *val)
@@ -478,7 +403,7 @@ static const char *print_perm(const char *val)
 
 	buf[0] = 0;
 
-        /* The kernel treats nothing as everything */
+        /* The kernel treats nothing (0x00) as everything (0x0F) */
         if (ival == 0)
                 ival = 0x0F;
         if (ival & AUDIT_PERM_READ) {
@@ -522,21 +447,9 @@ static const char *print_mode(const char *val)
 
 	buf[0] = 0;
 
-        // detect its type
-        if (S_ISREG(ival))
-                strcat(buf, "file,");
-        else if (S_ISSOCK(ival))
-                strcat(buf, "socket,");
-        else if (S_ISDIR(ival))
-                strcat(buf, "dir,");
-        else if (S_ISLNK(ival))
-                strcat(buf, "symlink,");
-        else if (S_ISCHR(ival))
-                strcat(buf, "char,");
-        else if (S_ISBLK(ival))
-                strcat(buf, "block,");
-        else if (S_ISFIFO(ival))
-                strcat(buf, "fifo,");
+        // detect tthe file type
+        strcat(buf, audit_ftype_to_name(ival & S_IFMT));
+	strcat(buf, ",");
 
         // check on special bits
         if (S_ISUID & ival)
@@ -551,40 +464,6 @@ static const char *print_mode(const char *val)
 	return out;
 }
 
-/*
- * This table maps socket families to their text name
- */
-static const union famtab_msgstr_t {
-        struct {
-#define _S(n, s) char MSGSTRFIELD(__LINE__)[sizeof (s)];
-#include "famtab.h"
-#undef _S
-        };
-        char str[0];
-} famtab_msgstr = { {
-#define _S(n, s) s,
-#include "famtab.h"
-#undef _S
-} };
-static const struct transtab famtab[] = {
-#define _S(n, s) { n, offsetof(union famtab_msgstr_t,  \
-                                MSGSTRFIELD(__LINE__)) },
-#include "famtab.h"
-#undef _S
-};
-#define FAM_NAMES (sizeof(famtab)/sizeof(famtab[0]))
-
-static const char *audit_lookup_fam(int fam)
-{
-        int i;
-
-        for (i = 0; i < FAM_NAMES; i++)
-                if (famtab[i].value == fam)
-                        return famtab_msgstr.str + famtab[i].offset;
-
-        return NULL;
-}
-
 static const char *print_sockaddr(const char *val)
 {
         int slen;
@@ -595,11 +474,11 @@ static const char *print_sockaddr(const char *val)
         const char *str;
 
         slen = strlen(val)/2;
-        host = unescape((char *)val);
+        host = au_unescape((char *)val);
         saddr = (struct sockaddr *)host;
 
 
-        str = audit_lookup_fam(saddr->sa_family);
+        str = fam_i2s(saddr->sa_family);
         if (str == NULL) {
                 asprintf(&out, "unknown family(%d)", saddr->sa_family);
 		return out;
@@ -704,32 +583,10 @@ static const char *print_sockaddr(const char *val)
 	return out;
 }
 
-/*
- * This table maps file system flags to their text name
- */
-static const union flagtab_msgstr_t {
-        struct {
-#define _S(n, s) char MSGSTRFIELD(__LINE__)[sizeof (s)];
-#include "flagtab.h"
-#undef _S
-        };
-        char str[0];
-} flagtab_msgstr = { {
-#define _S(n, s) s,
-#include "flagtab.h"
-#undef _S
-} };
-static const struct transtab flagtab[] = {
-#define _S(n, s) { n, offsetof(union flagtab_msgstr_t,  \
-                                MSGSTRFIELD(__LINE__)) },
-#include "flagtab.h"
-#undef _S
-};
-#define FLAG_NAMES (sizeof(flagtab)/sizeof(flagtab[0]))
-
 static const char *print_flags(const char *val)
 {
-        int flags, i,cnt = 0;
+        int flags, cnt = 0;
+	size_t i;
 	char *out, buf[80];
 
         errno = 0;
@@ -743,16 +600,16 @@ static const char *print_flags(const char *val)
                 return out;
         }
 	buf[0] = 0;
-        for (i=0; i<FLAG_NAMES; i++) {
-                if (flagtab[i].value & flags) {
+        for (i=0; i<FLAG_NUM_ENTRIES; i++) {
+                if (flag_table[i].value & flags) {
                         if (!cnt) {
-                                strcat(buf, 
-					flagtab_msgstr.str + flagtab[i].offset);
+                                strcat(buf,
+				       flag_strings + flag_table[i].offset);
                                 cnt++;
                         } else {
                                 strcat(buf, ",");
                                 strcat(buf,
-					flagtab_msgstr.str + flagtab[i].offset);
+				       flag_strings + flag_table[i].offset);
 			}
                 }
         }
@@ -777,33 +634,11 @@ static const char *print_promiscuous(const char *val)
                 return strdup("yes");
 }
 
-/*
- * This table maps file system flags to their text name
- */
-static const union captab_msgstr_t {
-        struct {
-#define _S(n, s) char MSGSTRFIELD(__LINE__)[sizeof (s)];
-#include "captab.h"
-#undef _S
-        };
-        char str[0];
-} captab_msgstr = { {
-#define _S(n, s) s,
-#include "captab.h"
-#undef _S
-} };
-static const struct transtab captab[] = {
-#define _S(n, s) { n, offsetof(union captab_msgstr_t,  \
-                                MSGSTRFIELD(__LINE__)) },
-#include "captab.h"
-#undef _S
-};
-#define CAP_NAMES (sizeof(captab)/sizeof(captab[0]))
-
 static const char *print_capabilities(const char *val)
 {
-        int cap, i;
+        int cap;
 	char *out;
+	const char *s;
 
         errno = 0;
         cap = strtoul(val, NULL, 10);
@@ -812,12 +647,9 @@ static const char *print_capabilities(const char *val)
                 return out;
         }
 
-        for (i = 0; i < CAP_NAMES; i++) {
-                if (captab[i].value == cap) {
-                        return strdup(captab_msgstr.str + captab[i].offset);
-                }
-
-        }
+	s = cap_i2s(cap);
+	if (s != NULL)
+		return strdup(s);
 	asprintf(&out, "unknown capability(%s)", val);
 	return out;
 }
@@ -840,95 +672,51 @@ static const char *print_success(const char *val)
 		return strdup(val);
 }
 
-/*
- * This table maps open syscall flags to their text name
- */
-static const union openflagtab_msgstr_t {
-        struct {
-#define _S(n, s) char MSGSTRFIELD(__LINE__)[sizeof (s)];
-#include "open-flagtab.h"
-#undef _S
-        };
-        char str[0];
-} openflagtab_msgstr = { {
-#define _S(n, s) s,
-#include "open-flagtab.h"
-#undef _S
-} };
-static const struct transtab openflagtab[] = {
-#define _S(n, s) { n, offsetof(union openflagtab_msgstr_t,  \
-                                MSGSTRFIELD(__LINE__)) },
-#include "open-flagtab.h"
-#undef _S
-};
-#define OPEN_FLAG_NAMES (sizeof(openflagtab)/sizeof(openflagtab[0]))
-
 static const char *print_open_flags(int flags)
 {
-        int i, cnt = 0;
+	size_t i;
+	int cnt = 0;
 	char buf[144];
 
 	buf[0] = 0;
         if ((flags & O_ACCMODE) == 0) {
 		// Handle O_RDONLY specially
-                strcat(buf, openflagtab_msgstr.str);
+                strcat(buf, "O_RDONLY");
                 cnt++;
         }
-        for (i=0; i<OPEN_FLAG_NAMES; i++) {
-                if (openflagtab[i].value & flags) {
+        for (i=0; i<OPEN_FLAG_NUM_ENTRIES; i++) {
+                if (open_flag_table[i].value & flags) {
                         if (!cnt) {
-                                strcat(buf, 
-				openflagtab_msgstr.str + openflagtab[i].offset);
+                                strcat(buf,
+				open_flag_strings + open_flag_table[i].offset);
                                 cnt++;
                         } else {
                                 strcat(buf, "|");
                                 strcat(buf,
-				openflagtab_msgstr.str + openflagtab[i].offset);
+				open_flag_strings + open_flag_table[i].offset);
 			}
                 }
         }
 	return strdup(buf);
 }
 
-/*
- * This table maps clone syscall flags to their text name
- */
-static const union cloneflagtab_msgstr_t {
-        struct {
-#define _S(n, s) char MSGSTRFIELD(__LINE__)[sizeof (s)];
-#include "clone-flagtab.h"
-#undef _S
-        };
-        char str[0];
-} cloneflagtab_msgstr = { {
-#define _S(n, s) s,
-#include "clone-flagtab.h"
-#undef _S
-} };
-static const struct transtab cloneflagtab[] = {
-#define _S(n, s) { n, offsetof(union cloneflagtab_msgstr_t,  \
-                                MSGSTRFIELD(__LINE__)) },
-#include "clone-flagtab.h"
-#undef _S
-};
-#define CLONE_FLAG_NAMES (sizeof(cloneflagtab)/sizeof(cloneflagtab[0]))
-
 static const char *print_clone_flags(int flags)
 {
-        int i, cnt = 0;
-	char buf[192];
+        size_t i;
+	int cnt = 0;
+	char buf[352];
 
 	buf[0] = 0;
-        for (i=0; i<CLONE_FLAG_NAMES; i++) {
-                if (cloneflagtab[i].value & flags) {
+        for (i=0; i<CLONE_FLAG_NUM_ENTRIES; i++) {
+                if (clone_flag_table[i].value & flags) {
                         if (!cnt) {
-                                strcat(buf, 
-			cloneflagtab_msgstr.str + cloneflagtab[i].offset);
+                                strcat(buf,
+			clone_flag_strings + clone_flag_table[i].offset);
                                 cnt++;
                         } else {
                                 strcat(buf, "|");
                                 strcat(buf,
-			cloneflagtab_msgstr.str + cloneflagtab[i].offset);
+			clone_flag_strings + clone_flag_table[i].offset);
 			}
                 }
         }
@@ -937,40 +725,14 @@ static const char *print_clone_flags(int flags)
 	return strdup(buf);
 }
 
-/*
- * This table maps fcntl syscall cmds to their text name
- */
-static const union fcntltab_msgstr_t {
-        struct {
-#define _S(n, s) char MSGSTRFIELD(__LINE__)[sizeof (s)];
-#include "fcntl-cmdtab.h"
-#undef _S
-        };
-        char str[0];
-} fcntltab_msgstr = { {
-#define _S(n, s) s,
-#include "fcntl-cmdtab.h"
-#undef _S
-} };
-static const struct transtab fcntltab[] = {
-#define _S(n, s) { n, offsetof(union fcntltab_msgstr_t,  \
-                                MSGSTRFIELD(__LINE__)) },
-#include "fcntl-cmdtab.h"
-#undef _S
-};
-#define FCNTL_CMD_NAMES (sizeof(fcntltab)/sizeof(fcntltab[0]))
-
 static const char *print_fcntl_cmd(int cmd)
 {
-        int i;
 	char *out;
+	const char *s;
 
-        for (i = 0; i < FCNTL_CMD_NAMES; i++) {
-                if (fcntltab[i].value == cmd) {
-                        return strdup(fcntltab_msgstr.str + fcntltab[i].offset);
-                }
-
-        }
+	s = fcntl_i2s(cmd);
+	if (s != NULL)
+		return s;
 	asprintf(&out, "unknown fcntl command(%d)", cmd);
 	return out;
 }
@@ -978,9 +740,20 @@ static const char *print_fcntl_cmd(int cmd)
 static const char *print_a0(const char *val, const rnode *r)
 {
 	int machine = r->machine, syscall = r->syscall;
+	char *out;
 	const char *sys = audit_syscall_to_name(syscall, machine);
 	if (sys) {
-		/* Unused right now... */
+		if (strcmp(sys, "clone") == 0) {
+			int ival;
+
+			errno = 0;
+			ival = strtoul(val, NULL, 16);
+		        if (errno) {
+                		asprintf(&out, "conversion error(%s)", val);
+	                	return out;
+	        	}
+			return print_clone_flags(ival);
+		}
 	}
 	return strdup(val);
 }
@@ -1022,17 +795,7 @@ static const char *print_a2(const char *val, const rnode *r)
 	char *out;
 	const char *sys = audit_syscall_to_name(syscall, machine);
 	if (sys) {
-		if (strcmp(sys, "clone") == 0) {
-			int ival;
-
-			errno = 0;
-			ival = strtoul(val, NULL, 16);
-		        if (errno) {
-                		asprintf(&out, "conversion error(%s)", val);
-	                	return out;
-	        	}
-			return print_clone_flags(ival);
-		} else if (strncmp(sys, "fcntl", 5) == 0) {
+		if (strncmp(sys, "fcntl", 5) == 0) {
 			int ival;
 
 			errno = 0;
@@ -1045,6 +808,10 @@ static const char *print_a2(const char *val, const rnode *r)
 			{
 				case F_SETOWN:
 					return print_uid(val);
+				case F_SETFD:
+					if (ival == FD_CLOEXEC)
+						return strdup("FD_CLOEXEC");
+					/* Fall thru okay. */
 				case F_SETFL:
 				case F_SETLEASE:
 				case F_GETLEASE:
@@ -1070,40 +837,37 @@ static const char *print_signals(const char *val)
 	return out;
 }
 
-/*
- * This table translates field names into a type that identifies the
- * interpreter to use on it.
- */
+static const char *print_list(const char *val)
+{
+	int i;
+	char *out;
 
-static const union typetab_msgstr_t {
-        struct {
-#define _S(n, s) char MSGSTRFIELD(__LINE__)[sizeof (s)];
-#include "typetab.h"
-#undef _S
-        };
-        char str[0];
-} typetab_msgstr = { {
-#define _S(n, s) s,
-#include "typetab.h"
-#undef _S
-} };
-static const struct transtab typetab[] = {
-#define _S(n, s) { n, offsetof(union typetab_msgstr_t,  \
-                                MSGSTRFIELD(__LINE__)) },
-#include "typetab.h"
-#undef _S
-};
-#define TYPE_NAMES (sizeof(typetab)/sizeof(typetab[0]))
-
+	errno = 0;
+        i = strtoul(val, NULL, 10);
+	if (errno) 
+		asprintf(&out, "conversion error(%s)", val);
+	else
+		out = strdup(audit_flag_to_name(i));
+	return out;
+}
 
 static int audit_lookup_type(const char *name)
 {
 	int i;
 
-	for (i = 0; i < TYPE_NAMES; i++)
-		if (!strcmp(typetab_msgstr.str + typetab[i].offset, name))
-			return typetab[i].value;
+	if (type_s2i(name, &i) != 0)
+		return i;
 	return -1;
+}
+
+static int is_hex_string(const char *str)
+{
+	while (*str) {
+		if (!isxdigit(*str))
+			return 0;
+		str++;
+	}
+	return 1;
 }
 
 const char *interpret(const rnode *r)
@@ -1115,10 +879,21 @@ const char *interpret(const rnode *r)
 	const char *name = nvlist_get_cur_name(nv);
 	const char *val = nvlist_get_cur_val(nv);
 
+	/* Do some fixups */
 	if (r->type == AUDIT_EXECVE && name[0] == 'a')
 		type = T_ESCAPED;
-	else
+	else if (r->type == AUDIT_AVC && strcmp(name, "saddr") == 0)
+		type = -1;
+	else if (strcmp(name, "acct") == 0) {
+		if (val[0] == '"')
+			type = T_ESCAPED;
+		else if (is_hex_string(val))
+			type = T_ESCAPED;
+		else
+			type = -1;
+	} else
 		type = audit_lookup_type(name);
+
 	switch(type) {
 		case T_UID:
 			out = print_uid(val);
@@ -1171,6 +946,9 @@ const char *interpret(const rnode *r)
 		case T_SIGNAL:
 			out = print_signals(val);
 			break; 
+		case T_LIST:
+			out = print_list(val);
+			break; 
 		default: {
 			char *out2;
 			if (comma)
@@ -1186,4 +964,3 @@ const char *interpret(const rnode *r)
 
 	return out;
 }
-hidden_def(interpret);

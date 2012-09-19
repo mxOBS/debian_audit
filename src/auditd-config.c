@@ -1,5 +1,5 @@
 /* auditd-config.c -- 
- * Copyright 2004-2007 Red Hat Inc., Durham, North Carolina.
+ * Copyright 2004-2008 Red Hat Inc., Durham, North Carolina.
  * All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -33,6 +33,8 @@
 #include <netdb.h>
 #include <fcntl.h>	/* O_NOFOLLOW needs gnu defined */
 #include <libgen.h>
+#include <arpa/inet.h>
+#include <limits.h>	/* INT_MAX */
 #include "auditd-config.h"
 #include "libaudit.h"
 #include "private.h"
@@ -65,9 +67,15 @@ static int log_file_parser(struct nv_pair *nv, int line,
 		struct daemon_conf *config);
 static int num_logs_parser(struct nv_pair *nv, int line, 
 		struct daemon_conf *config);
+static int log_group_parser(struct nv_pair *nv, int line, 
+		struct daemon_conf *config);
 static int qos_parser(struct nv_pair *nv, int line, 
 		struct daemon_conf *config);
 static int dispatch_parser(struct nv_pair *nv, int line,
+		struct daemon_conf *config);
+static int name_format_parser(struct nv_pair *nv, int line,
+		struct daemon_conf *config);
+static int name_parser(struct nv_pair *nv, int line,
 		struct daemon_conf *config);
 static int max_log_size_parser(struct nv_pair *nv, int line, 
 		struct daemon_conf *config);
@@ -101,10 +109,13 @@ static const struct kw_pair keywords[] =
 {
   {"log_file",                 log_file_parser,			0 },
   {"log_format",               log_format_parser,		0 },
+  {"log_group",                log_group_parser,		0 },
   {"flush",                    flush_parser,			0 },
   {"freq",                     freq_parser,			0 },
   {"num_logs",                 num_logs_parser,			0 },
   {"dispatcher",               dispatch_parser,			0 },
+  {"name_format",              name_format_parser,		0 },
+  {"name",                     name_parser,			0 },
   {"disp_qos",                 qos_parser,			0 },
   {"max_log_file",             max_log_size_parser,		0 },
   {"max_log_file_action",      max_log_size_action_parser,	0 },
@@ -165,6 +176,16 @@ static const struct nv_list qos_options[] =
   { NULL,     0 }
 };
 
+static const struct nv_list node_name_formats[] =
+{
+  {"none",      N_NONE },
+  {"hostname",  N_HOSTNAME },
+  {"fqd",       N_FQD },
+  {"numeric",   N_NUMERIC },
+  {"user",      N_USER },
+  { NULL,  0 }
+};
+
 const char *email_command = "/usr/lib/sendmail";
 static int allow_links = 0;
 
@@ -185,25 +206,27 @@ static void clear_config(struct daemon_conf *config)
 	config->sender_ctx = NULL;
 	config->log_file = strdup("/var/log/audit/audit.log");
 	config->log_format = LF_RAW;
-	config->priority_boost = 3;
+	config->log_group = 0;
+	config->priority_boost = 4;
 	config->flush =  FT_NONE;
 	config->freq = 0;
 	config->num_logs = 0L;
 	config->dispatcher = NULL;
+	config->node_name_format = N_NONE;
+	config->node_name = NULL;
 	config->max_log_size = 0L;
 	config->max_log_size_action = SZ_IGNORE;
 	config->space_left = 0L;
 	config->space_left_action = FA_IGNORE;
-        config->space_left_exe = NULL;
+	config->space_left_exe = NULL;
 	config->action_mail_acct = strdup("root");
 	config->admin_space_left= 0L;
 	config->admin_space_left_action = FA_IGNORE;
-        config->admin_space_left_exe = NULL;
+	config->admin_space_left_exe = NULL;
 	config->disk_full_action = FA_IGNORE;
-        config->disk_full_exe = NULL;
+	config->disk_full_exe = NULL;
 	config->disk_error_action = FA_SYSLOG;
-        config->disk_error_exe = NULL;
-
+	config->disk_error_exe = NULL;
 }
 
 static log_test_t log_test = TEST_AUDITD;
@@ -483,11 +506,16 @@ static int log_file_parser(struct nv_pair *nv, int line,
 		audit_msg(LOG_ERR, "%s is not owned by root", nv->value);
 		return 1;
 	}
-	if (buf.st_mode & (S_IRWXU|S_IRWXG|S_IRWXO) != 
-			  (S_IRUSR|S_IWUSR|S_IRGRP)) {
-		audit_msg(LOG_ERR, "%s permissions should be 0640", nv->value);
+	if ( (buf.st_mode & (S_IXUSR|S_IWGRP|S_IXGRP|S_IRWXO)) ) {
+		audit_msg(LOG_ERR, "%s permissions should be 0600 or 0640",
+				nv->value);
 		return 1;
 	}
+	if ( !(buf.st_mode & S_IWUSR) ) {
+		audit_msg(LOG_ERR, "audit log is not writable by owner");
+		return 1;
+	}
+
 	free((void *)config->log_file);
 	config->log_file = strdup(nv->value);
 	if (config->log_file == NULL)
@@ -613,6 +641,31 @@ static int dispatch_parser(struct nv_pair *nv, int line,
 	return 0;
 }
 
+static int name_format_parser(struct nv_pair *nv, int line,
+		struct daemon_conf *config)
+{
+	int i;
+
+	for (i=0; node_name_formats[i].name != NULL; i++) {
+		if (strcasecmp(nv->value, node_name_formats[i].name) == 0) {
+			config->node_name_format = node_name_formats[i].option;
+			return 0;
+		}
+	}
+	audit_msg(LOG_ERR, "Option %s not found - line %d", nv->value, line);
+	return 1;
+}
+
+static int name_parser(struct nv_pair *nv, int line,
+		struct daemon_conf *config)
+{
+	if (nv->value == NULL)
+		config->node_name = NULL;
+	else
+		config->node_name = strdup(nv->value);
+	return 0;
+}
+
 static int max_log_size_parser(struct nv_pair *nv, int line, 
 		struct daemon_conf *config)
 {
@@ -675,6 +728,38 @@ static int log_format_parser(struct nv_pair *nv, int line,
 	}
 	audit_msg(LOG_ERR, "Option %s not found - line %d", nv->value, line);
 	return 1;
+}
+
+static int log_group_parser(struct nv_pair *nv, int line, 
+		struct daemon_conf *config)
+{
+	gid_t gid = 0;
+	
+	audit_msg(LOG_DEBUG, "log_group_parser called with: %s",
+							nv->value);
+	if (isdigit(nv->value[0])) {
+		errno = 0;
+		gid = strtoul(nv->value,NULL,10);
+		if (errno) {
+			audit_msg(LOG_ERR,
+		    "Numeric group ID conversion error (%s) for %s - line %d\n",
+				strerror(errno), nv->value, line);
+			return 1;
+		}
+	} else {
+		struct group *gr ;
+
+		gr = getgrnam(nv->value);
+		if (gr == NULL) {
+			audit_msg(LOG_ERR,
+			 "Group ID is non-numeric and unknown (%s) - line %d\n",
+				nv->value, line);
+			return 1;
+		}
+		gid = gr->gr_gid;
+	}
+	config->log_group = gid;
+	return 0;
 }
 
 static int flush_parser(struct nv_pair *nv, int line,
@@ -1072,7 +1157,7 @@ static int sanity_check(struct daemon_conf *config)
 	/* Error checking */
 	if (config->space_left <= config->admin_space_left) {
 		audit_msg(LOG_ERR, 
-		    "Error - space_left(%lu) must be larger than admin_space_left(%lu)",
+	    "Error - space_left(%lu) must be larger than admin_space_left(%lu)",
 		    config->space_left, config->admin_space_left);
 		return 1;
 	}
@@ -1084,7 +1169,7 @@ static int sanity_check(struct daemon_conf *config)
 	/* Warnings */
 	if (config->flush > FT_INCREMENTAL && config->freq != 0) {
 		audit_msg(LOG_WARNING, 
-		    "Warning - freq is non-zero and incremental flushing not selected.");
+           "Warning - freq is non-zero and incremental flushing not selected.");
 	}
 	return 0;
 }
@@ -1117,10 +1202,96 @@ void free_config(struct daemon_conf *config)
 	free((void *)config->sender_ctx);
 	free((void *)config->log_file);
 	free((void *)config->dispatcher);
+	free((void *)config->node_name);
 	free((void *)config->action_mail_acct);
 	free((void *)config->space_left_exe);
         free((void *)config->admin_space_left_exe);
         free((void *)config->disk_full_exe);
         free((void *)config->disk_error_exe);
+}
+
+int resolve_node(struct daemon_conf *config)
+{
+	int rc = 0;
+	char tmp_name[255];
+
+	/* Get the host name representation */
+	switch (config->node_name_format)
+	{
+		case N_NONE:
+			break;
+		case N_HOSTNAME:
+			if (gethostname(tmp_name, sizeof(tmp_name))) {
+				audit_msg(LOG_ERR,
+					"Unable to get machine name");
+				rc = -1;
+			} else
+				config->node_name = strdup(tmp_name);
+			break;
+		case N_USER:
+			if (config->node_name == NULL) {
+				audit_msg(LOG_ERR, "User defined name missing");
+				rc = -1;
+			}
+			break;
+		case N_FQD:
+			if (gethostname(tmp_name, sizeof(tmp_name))) {
+				audit_msg(LOG_ERR,
+					"Unable to get machine name");
+				rc = -1;
+			} else {
+				int rc2;
+				struct addrinfo *ai;
+				struct addrinfo hints;
+
+				memset(&hints, 0, sizeof(hints));
+				hints.ai_flags = AI_ADDRCONFIG | AI_CANONNAME;
+				hints.ai_socktype = SOCK_STREAM;
+
+				rc2 = getaddrinfo(tmp_name, NULL, &hints, &ai);
+				if (rc2 != 0) {
+					audit_msg(LOG_ERR,
+					"Cannot resolve hostname %s (%s)",
+					tmp_name, gai_strerror(rc));
+					rc = -1;
+					break;
+				}
+				config->node_name = strdup(ai->ai_canonname);
+				freeaddrinfo(ai);
+			}
+			break;
+ 		case N_NUMERIC:
+			if (gethostname(tmp_name, sizeof(tmp_name))) {
+				audit_msg(LOG_ERR,
+						"Unable to get machine name");
+				rc = -1;
+			} else {
+				int rc2;
+				struct addrinfo *ai;
+				struct addrinfo hints;
+
+				memset(&hints, 0, sizeof(hints));
+				hints.ai_flags = AI_ADDRCONFIG | AI_PASSIVE;
+				hints.ai_socktype = SOCK_STREAM;
+
+				rc2 = getaddrinfo(tmp_name, NULL, &hints, &ai);
+				if (rc2 != 0) {
+					audit_msg(LOG_ERR,
+					"Cannot resolve hostname %s (%s)",
+					tmp_name, gai_strerror(rc));
+					rc = -1;
+					break;
+				}
+				inet_ntop(ai->ai_family,
+						ai->ai_family == AF_INET ?
+		(void *) &((struct sockaddr_in *)ai->ai_addr)->sin_addr :
+		(void *) &((struct sockaddr_in6 *)ai->ai_addr)->sin6_addr,
+						tmp_name, INET6_ADDRSTRLEN);
+				freeaddrinfo(ai);
+				config->node_name = strdup(tmp_name);
+			}
+			break;
+	}
+	return rc;
 }
 

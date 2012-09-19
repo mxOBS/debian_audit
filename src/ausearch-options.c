@@ -1,5 +1,5 @@
 /* ausearch-options.c - parse commandline options and configure ausearch
- * Copyright 2005-06 Red Hat Inc., Durham, North Carolina.
+ * Copyright 2005-08 Red Hat Inc., Durham, North Carolina.
  * All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -36,6 +36,7 @@
 
 /* Global vars that will be accessed by the main program */
 char *user_file = NULL;
+int force_logs = 0;
 
 /* Global vars that will be accessed by the match model */
 unsigned int event_id = -1;
@@ -47,7 +48,10 @@ int event_exact_match = 0;
 uid_t event_uid = -1, event_euid = -1, event_loginuid = -1;
 int event_syscall = -1;
 int event_ua = 0, event_ga = 0, event_se = 0;
+int just_one = 0;
+int event_session_id = -1;
 const char *event_key = NULL;
+const char *event_node = NULL;
 const char *event_filename = NULL;
 const char *event_exe = NULL;
 const char *event_comm = NULL;
@@ -67,7 +71,7 @@ enum { S_EVENT, S_COMM, S_FILENAME, S_ALL_GID, S_EFF_GID, S_GID, S_HELP,
 S_HOSTNAME, S_INTERP, S_INFILE, S_MESSAGE_TYPE, S_PID, S_SYSCALL, S_OSUCCESS,
 S_TIME_END, S_TIME_START, S_TERMINAL, S_ALL_UID, S_EFF_UID, S_UID, S_LOGINID,
 S_VERSION, S_EXACT_MATCH, S_EXECUTABLE, S_CONTEXT, S_SUBJECT, S_OBJECT,
-S_PPID, S_KEY, S_RAW };
+S_PPID, S_KEY, S_RAW, S_NODE, S_IN_LOGS, S_JUST_ONE, S_SESSION };
 
 static struct nv_pair optiontab[] = {
 	{ S_EVENT, "-a" },
@@ -90,10 +94,14 @@ static struct nv_pair optiontab[] = {
 	{ S_INTERP, "--interpret" },
 	{ S_INFILE, "-if" },
 	{ S_INFILE, "--input" },
+	{ S_IN_LOGS, "--input-logs" },
+	{ S_JUST_ONE, "--just-one" },
 	{ S_KEY, "-k" },
 	{ S_KEY, "--key" },
 	{ S_MESSAGE_TYPE, "-m" },
 	{ S_MESSAGE_TYPE, "--message" },
+	{ S_NODE, "-n" },
+	{ S_NODE, "--node" },
 	{ S_OBJECT, "-o" },
 	{ S_OBJECT, "--object" },
 	{ S_PID, "-p" },
@@ -106,6 +114,7 @@ static struct nv_pair optiontab[] = {
 	{ S_SYSCALL, "--syscall" },
 	{ S_CONTEXT, "-se" },
 	{ S_CONTEXT, "--context" },
+	{ S_SESSION, "--session" },
 	{ S_SUBJECT, "-su" },
 	{ S_SUBJECT, "--subject" },
 	{ S_OSUCCESS, "-sv" },
@@ -154,17 +163,21 @@ static void usage(void)
 	"\t-ge,--gid-effective <effective Group id>  search based on Effective\n\t\t\t\t\tgroup id\n"
 	"\t-gi,--gid <Group Id>\t\tsearch based on group id\n"
 	"\t-h,--help\t\t\thelp\n"
-	"\t-hn,--host <Host Name>\t\tsearch based on host name\n"
+	"\t-hn,--host <Host Name>\t\tsearch based on remote host name\n"
 	"\t-i,--interpret\t\t\tInterpret results to be human readable\n"
 	"\t-if,--input <Input File name>\tuse this file instead of current logs\n"
+	"\t--input-logs\t\t\tUse the logs even if stdin is a pipe\n"
+	"\t--just-one\t\t\tEmit just one event\n"
 	"\t-k,--key  <key string>\t\tsearch based on key field\n"
 	"\t-m,--message  <Message type>\tsearch based on message type\n"
+	"\t-n,--node  <Node name>\t\tsearch based on machine's name\n"
 	"\t-o,--object  <SE Linux Object context> search based on context of object\n"
 	"\t-p,--pid  <Process id>\t\tsearch based on process id\n"
 	"\t-pp,--ppid <Parent Process id>\tsearch based on parent process id\n"
 	"\t-r,--raw\t\t\toutput is completely unformatted\n"
 	"\t-sc,--syscall <SysCall name>\tsearch based on syscall name or number\n"
 	"\t-se,--context <SE Linux context> search based on either subject or\n\t\t\t\t\t object\n"
+	"\t--session <login session id>\tsearch based on login session id\n"
 	"\t-su,--subject <SE Linux context> search based on context of the Subject\n"
 	"\t-sv,--success <Success Value>\tsearch based on syscall or event\n\t\t\t\t\tsuccess value\n"
 	"\t-te,--end [end date] [end time]\tending date & time for search\n"
@@ -562,6 +575,19 @@ int check_params(int count, char *vars[])
         	                retval = -1;
 			}
 			break;
+		case S_NODE:
+			if (!optarg) {
+				fprintf(stderr, 
+					"Argument is required for %s\n",
+					vars[c]);
+				retval = -1;
+			} else {
+				event_node = strdup(optarg);
+				if (event_node == NULL)
+					retval = -1;
+				c++;
+			}
+			break;
 		case S_SYSCALL:
 			if (!optarg) {
 				fprintf(stderr, 
@@ -652,6 +678,27 @@ int check_params(int count, char *vars[])
                 	}
 			c++;
 			break;
+		case S_SESSION:
+			if (!optarg) {
+				fprintf(stderr, 
+					"Argument is required for %s\n",
+					vars[c]);
+				retval = -1;
+				break;
+			}
+			if (isdigit(optarg[0])) {
+				errno = 0;
+				event_session_id = strtol(optarg,NULL,10);
+				if (errno)
+					retval = -1;
+				c++;
+			} else {
+				fprintf(stderr, 
+				"Session id must be a numeric value, was %s\n",
+					optarg);
+				retval = -1;
+			}
+			break;
 		case S_TIME_END:
 			if (optarg) {
 				if ( (c+2 < count) && vars[c+2] && 
@@ -671,32 +718,9 @@ int check_params(int count, char *vars[])
 					// Check against recognized words
 					int t = lookup_time(optarg);
 					if (t >= 0) {
-						struct tm d;
-						switch (t)
-						{
-							case T_NOW:
-							    set_tm_now(&d);
-								break;
-							case T_RECENT:
-							    set_tm_recent(&d);
-								break;
-							case T_TODAY:
-							    set_tm_today(&d);
-								break;
-							case T_YESTERDAY:
-							   set_tm_yesterday(&d);
-								break;
-							case T_THIS_WEEK:
-							   set_tm_this_week(&d);
-								break;
-							case T_THIS_MONTH:
-							  set_tm_this_month(&d);
-								break;
-							case T_THIS_YEAR:
-							   set_tm_this_year(&d);
-								break;
-						}
-						end_time = mktime(&d); 
+						if (ausearch_time_end(optarg,
+								NULL) != 0)
+							retval = -1;
 					} else if ( (strchr(optarg, ':')) == NULL) {
 						/* Only have date */
 						if (ausearch_time_end(optarg,
@@ -736,37 +760,14 @@ int check_params(int count, char *vars[])
 					// Check against recognized words
 					int t = lookup_time(optarg);
 					if (t >= 0) {
-						struct tm d;
-						switch (t)
-						{
-							case T_NOW:
-							    set_tm_now(&d);
-								break;
-							case T_RECENT:
-							    set_tm_recent(&d);
-								break;
-							case T_TODAY:
-							    set_tm_today(&d);
-								break;
-							case T_YESTERDAY:
-							   set_tm_yesterday(&d);
-								break;
-							case T_THIS_WEEK:
-							   set_tm_this_week(&d);
-								break;
-							case T_THIS_MONTH:
-							  set_tm_this_month(&d);
-								break;
-							case T_THIS_YEAR:
-							   set_tm_this_year(&d);
-								break;
-						}
-						start_time = mktime(&d); 
+						if (ausearch_time_start(optarg,
+							"00:00:00") != 0)
+							retval = -1;
 					}
 					else if ( strchr(optarg, ':') == NULL) {
 						/* Only have date */
 						if (ausearch_time_start(optarg,
-							"00:00:01") != 0)
+							"00:00:00") != 0)
 							retval = -1;
 					} else {
 						/* Only have time */
@@ -933,6 +934,12 @@ int check_params(int count, char *vars[])
 			break;
 		case S_EXACT_MATCH:
 			event_exact_match=1;
+			break;
+		case S_IN_LOGS:
+			force_logs = 1;
+			break;
+		case S_JUST_ONE:
+			just_one = 1;
 			break;
 		case S_EXECUTABLE:
 			if (!optarg) {

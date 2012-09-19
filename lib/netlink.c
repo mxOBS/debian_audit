@@ -130,6 +130,7 @@ retry:
 		len = -errno;
 	return len; 
 }
+hidden_def(audit_get_reply)
 
 
 /* 
@@ -148,7 +149,15 @@ static int adjust_reply(struct audit_reply *rep, int len)
 	rep->signal_info = NULL;
 	rep->conf     = NULL;
 	if (!NLMSG_OK(rep->nlh, (unsigned int)len)) {
-		errno = EBADE;
+		if (len == sizeof(rep->msg)) {
+			audit_msg(LOG_ERR, 
+				"Netlink event from kernel is too big");
+			errno = EFBIG;
+		} else {
+			audit_msg(LOG_ERR, 
+			"Netlink message from kernel was not OK");
+			errno = EBADE;
+		}
 		return 0;
 	}
 
@@ -237,7 +246,6 @@ int audit_send(int fd, int type, const void *data, unsigned int size)
 
 	return 0;
 }
-hidden_def(audit_send)
 
 /*
  * This function will take a peek into the next packet and see if there's
