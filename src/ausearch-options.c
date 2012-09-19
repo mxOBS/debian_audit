@@ -1,5 +1,5 @@
 /* ausearch-options.c - parse commandline options and configure ausearch
- * Copyright 2005-08 Red Hat Inc., Durham, North Carolina.
+ * Copyright 2005-08,2010-11 Red Hat Inc., Durham, North Carolina.
  * All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -31,6 +31,7 @@
 #include <grp.h>
 #include "ausearch-options.h"
 #include "ausearch-time.h"
+#include "ausearch-int.h"
 #include "libaudit.h"
 
 
@@ -45,11 +46,11 @@ ilist *event_type = NULL;
 pid_t event_pid = -1, event_ppid = -1;
 success_t event_success = S_UNSET;
 int event_exact_match = 0;
-uid_t event_uid = -1, event_euid = -1, event_loginuid = -1;
+uid_t event_uid = -1, event_euid = -1, event_loginuid = -2;
 int event_syscall = -1;
 int event_ua = 0, event_ga = 0, event_se = 0;
 int just_one = 0;
-int event_session_id = -1;
+int event_session_id = -2;
 int event_exit = 0, event_exit_is_set = 0;
 int line_buffered = 0;
 const char *event_key = NULL;
@@ -61,6 +62,7 @@ const char *event_terminal = NULL;
 const char *event_subject = NULL;
 const char *event_object = NULL;
 report_t report_format = RPT_DEFAULT;
+ilist *event_type;
 
 const slist *event_node_list = NULL;
 
