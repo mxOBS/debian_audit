@@ -1,0 +1,83 @@
+/* auditd-config.h -- 
+ * Copyright 2004-2006 Red Hat Inc., Durham, North Carolina.
+ * All Rights Reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ *
+ * Authors:
+ *   Steve Grubb <sgrubb@redhat.com>
+ * 
+ */
+
+#ifndef AUDITD_CONFIG_H
+#define AUDITD_CONFIG_H
+
+#include "libaudit.h"
+#define CONFIG_FILE "/etc/audit/auditd.conf"
+#define MEGABYTE 1048576UL
+
+typedef enum { D_FOREGROUND, D_BACKGROUND } daemon_t;
+typedef enum { LF_RAW, LF_NOLOG } logging_formats;
+typedef enum { FT_NONE, FT_INCREMENTAL, FT_DATA, FT_SYNC } flush_technique;
+typedef enum { FA_IGNORE, FA_SYSLOG, FA_EMAIL, FA_EXEC, FA_SUSPEND,
+		FA_SINGLE, FA_HALT } failure_action_t;
+typedef enum { SZ_IGNORE, SZ_SYSLOG, SZ_SUSPEND, SZ_ROTATE, 
+		SZ_KEEP_LOGS } size_action;
+typedef enum { QOS_NON_BLOCKING, QOS_BLOCKING } qos_t;
+typedef enum { TEST_AUDITD, TEST_SEARCH } log_test_t;
+
+struct daemon_conf
+{
+	daemon_t daemonize;
+	qos_t qos;		/* use blocking/non-blocking sockets */
+	uid_t sender_uid;	/* the uid for sender of sighup */
+	pid_t sender_pid;	/* the pid for sender of sighup */
+	const char *sender_ctx;	/* the context for the sender of sighup */
+	const char *log_file;
+	logging_formats log_format;
+	unsigned int priority_boost;
+	flush_technique flush;
+	unsigned int freq;
+	unsigned int num_logs;
+	const char *dispatcher;
+	unsigned long max_log_size;
+	size_action max_log_size_action;
+	unsigned long space_left;
+	failure_action_t space_left_action;
+	const char *space_left_exe;
+	const char *action_mail_acct;
+	unsigned long admin_space_left;
+	failure_action_t admin_space_left_action;
+	const char *admin_space_left_exe;
+	failure_action_t disk_full_action;
+	const char *disk_full_exe;
+	failure_action_t disk_error_action;
+	const char *disk_error_exe;
+};
+
+void set_allow_links(int allow);
+int load_config(struct daemon_conf *config, log_test_t lt);
+const char *audit_lookup_format(int fmt);
+int create_log_file(const char *val);
+int validate_email(const char *acct);
+
+void init_config_manager(void);
+int start_config_manager(struct auditd_reply_list *rep);
+void shutdown_config(void);
+void free_config(struct daemon_conf *config);
+
+
+#endif
+

@@ -1,0 +1,10 @@
+To build the package, try this: rpmbuild --rebuild audit-1.0.12-1.src.rpm
+substituting the proper version.
+
+If you insist on doing it the hard way...
+
+autoreconf -fv --install
+./configure --sbindir=/sbin --mandir=/usr/share/man --libdir=/lib
+make
+make install
+

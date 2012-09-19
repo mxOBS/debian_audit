@@ -1,0 +1,212 @@
+1.5.3
+- Change buffer size to prevent truncation of DAEMON events with large labels
+- Fix memory leaks in auparse (John Dennis)
+- Update syscall tables for 2.6.21 kernel
+- Update capp & lspp rules
+- New python bindings for libauparse (John Dennis)
+
+1.5.2
+- Totally re-written event dispatcher (James Antill)
+- Apply patches fixing man pages and Makefile.am (Philipp Hahn)
+- Apply patch correcting python libs permissions (Philipp Hahn)
+- Fix auditd segfault on reload
+- Add support for segfault anomaly message type
+- Fix bug in auparse library for file pointers and descriptors
+- Extract subject information out of daemon events for ausearch
+
+1.5.1 
+- Updated autrace to monitor *at syscalls
+- Add support in libaudit for AUDIT_BIT_TEST(&=) and AUDIT_MASK_TEST (&)
+- Finish reworking auditd config parser
+- In auparse, interpret open, fcntl, and clone flags
+- In auparse, when interpreting execve record types, run args through unencode
+- Add support for OBJ_PID message type
+- Event dispatcher updates
+
+1.5
+- NEW audit dispatcher program & plugin framework
+- Correct hidden variables in libauparse
+- Added NISPOM sample rules
+- Verify accessibility of files passed in auparse_init
+- Fix bug in parser library interpreting socketcalls
+- Add support for stdio FILE pointer in auparse_init
+- Adjust init script to allow anyone to status auditd (#230626)
+
+1.4.2
+- Add man pages
+- Reduce text relocations in parser library
+- Add -n option to auditd for no fork
+- Add exec option to space_left, admin_space_left, disk_full,
+  and disk_error - eg EXEC /usr/local/script
+
+1.4.1
+- updated audit_rule_fieldpair_data to handle perm correctly (#226780)
+- Finished search options for audit parsing library
+- Fix ausearch -se to work correctly
+- Fix auditd init script for /usr on netdev (#228528)
+- Parse avc seperms better when there are more than one
+
+1.4
+- New report about authentication attempts
+- Updates for python 2.5
+- update autrace to have resource usage mode
+- update auditctl to support immutable config
+- added audit_log_user_command function to api
+- interpret capabilities
+- added audit event parsing library
+- updates for 2.6.20 kernel
+
+1.3.1
+- Fix a couple parsing problems (#217952)
+- Add tgkill to S390* syscall tables (#218484)
+- Fix error messages in ausearch/aureport command options
+
+1.3
+- ausearch & aureport implement uid/gid caching
+- In ausearch & aureport, extract addr when hostname is unknown
+- In ausearch & aureport, test audit log presence O_RDONLY
+- New ausearch/aureport time keywords: recent, this-week, this-month, this-year
+- Added --add & --delete option to aureport
+- Update res parsing in config change events
+- Increase the size on audit daemon buffers
+- Parse avc_path records in ausearch/aureport
+- ausearch has new output mode, raw, for extracting events
+- ausearch/aureport can now read stdin
+- Rework AVC processing in ausearch/aureport
+- Added long options to ausearch and aureport
+
+1.2.9
+- In auditd if num_logs is zero, don't rotate on SIGUSR1 (#208834)
+- Fix some defines in libaudit.h
+- Some auditd config strings were not initialized in aureport (#211443)
+- Updated man pages
+- Add Netlabel event types to libaudit
+- Update aureports to current audit event types
+- Update autrace a little
+- Deprecated all the old audit_rule functions from public API
+- Drop auparse library for the moment
+
+1.2.8
+- Make internal auditd buffers bigger for context info
+- Correct address resolving of hostname in logging functions
+- Do not allow multiple msgtypes in same audit rule in auditctl (#207666)
+- Only =, != operators for arch & inode fields in auditctl (#206427)
+- Add disp_qos & dispatcher to auditd reconfigure
+- Send sighup to child when no change in dispatcher during auditd reconfigure
+- Cleanup file descriptor handling in auditd
+- Updated audit message type table
+- Remove watches from aureport since FS_WATCH is deprecated
+- Add audit_log_avc back temporarily (#208152)
+
+1.2.7
+- Fix logging messages to use addr if passed.
+- Apply patches from Tony Jones correcting no kernel support messages
+- Updated syscall tables for 2.6.18 kernel
+- Remove deprecated functions: audit_log, audit_log_avc, audit_log_if_enabled
+- Disallow syscall auditing on exclude list
+- Improve time handling in ausearch and aureport (#191394)
+- Attempt to reconstruct full path from relative for searching
+
+1.2.6
+- Apply updates to dispatcher
+- Fix a couple bugs regarding MLS labels
+- Resurrect -p option
+- Tighten rules with exclude filter
+- Fix parsing issue which lead to segfault in some cases
+- Fix option parsing to ignore malformed lines
+
+1.2.5
+- Switch out dispatcher
+- Fix bug upgrading rule types
+
+1.2.4
+- Add support for the new filter key
+- Update syscall tables for 2.6.17
+- Add audit failure query function
+- Switch out gethostbyname call with getaddrinfo
+- Add audit by obj capability for 2.6.18 kernel
+- Ausearch & aureport now fail if no args to -te
+- New auditd.conf option to choose blocking/non-blocking dispatcher comm
+- Ausearch improved search by label
+
+1.2.3
+- Apply patch to ensure watches only associate with exit filter
+- Apply patch to correctly show new operators when new listing format is used
+- Apply patch to pull kernel's audit.h into python bindings
+- Collect signal sender's context
+
+1.2.2
+- Updates for new glibc-kernheaders
+- Change auditctl to collect list of rules then delete them on -D
+- Update capp.rules and lspp.rules to comment out rules for the possible list
+- Add new message types
+- Support sigusr1 sender identity of newer kernels
+- Add support for ppid in auditctl and ausearch
+- fix auditctl to trim the '/' from watches
+- Move audit daemon config files to /etc/audit for better SE Linux protection
+
+1.2.1
+- New message type for trusted apps
+- Add new keywords today, yesterday, now for ausearch and aureport
+- Make audit_log_user_avc_message really send to syslog on error
+- Updated syscall tables in auditctl
+- Deprecated the 'possible' action for syscall rules in auditctl
+- Update watch code to use file syscalls instead of 'all' in auditctl
+
+1.2
+- Add support for new file system auditing kernel subsystem
+
+1.1.6
+- New message types
+- Support new rule format found in 2.6.17 and later kernels
+- Add support for audit by role, clearance, type, sensitivity
+
+1.1.5
+- Changed audit_log_semanage_message to take new params
+- In aureport, add class between syscall and permission in avc report
+- Fix bug where fsync is called in debug mode
+- Add optional support for tty in SYSCALL records for ausearch/aureport
+- Reinstate legacy rule operator support
+- Add man pages
+- Auditd ignore most signals
+
+1.1.4
+- Fix bug in autrace where it didn't run on kernels without file watch support
+- Add syslog message to auditd saying what program was started for dispatcher
+- Apply patch for AppArmor message type
+- Remove audit_send_user from public api
+- Fix bug in USER_LOGIN messages where ausearch does not translate
+  msg='uid=500: into acct name (#178102).
+- Change comm with dispatcher to socketpair from pipe
+- Change auditd to use custom daemonize to avoid race in init scripts
+- Update error message when deleting a rule that doesn't exist (#176239)
+- Call shutdown_dispatcher when auditd stops
+- Add new logging function audit_log_semanage_message
+
+1.1.3
+- Add timestamp to daemon_config messages (#174865)
+- Add error checking of year for aureport & ausearch
+- Treat af_unix sockets as files for searching and reporting
+- Update capp & lspp rules to combine syscalls for higher performance
+- Adjusted the chkconfig line for auditd to start a little earlier
+- Added skeleton program to docs for people to write their own dispatcher with
+- Apply patch from Ulrich Drepper that optimizes resource utilization
+- Change ausearch and aureport to unlocked IO
+
+1.1.2
+- Add more message types
+
+1.1.1
+- Add support for alpha processors
+- Update the audisp code
+- Add locale code in ausearch and aureport
+- Add new rule operator patch
+- Add exclude filter patch
+- Cleanup make files
+- Add python bindings
+
+1.1
+- Add initial version of audisp. Just a placeholder at this point
+- Remove -t from auditctl
+
+<see audit-1.0.12 for 1.0 change history>

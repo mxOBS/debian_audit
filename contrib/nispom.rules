@@ -1,0 +1,104 @@
+##
+## This file contains the a sample audit configuration intended to
+## meet the NISPOM Chapter 8 rules.
+##
+## This file should be saved as /etc/audit/audit.rules.
+##
+
+## Remove any existing rules
+-D
+
+## Increase buffer size to handle the increased number of messages.
+## Feel free to increase this if the machine panic's
+-b 8192
+
+## Set failure mode to panic
+-f 2
+
+## Audit 1, 1(a) Enough information to determine the date and time of
+## action (e.g., common network time), the system locale of the action,
+## the system entity that initiated or completed the action, the resources
+## involved, and the action involved.
+
+## Things that could affect time
+-a entry,always -S adjtimex -S settimeofday -k time-change
+-w /etc/localtime -p wa -k time-change
+
+## Things that could affect system locale
+-a exit,always -S sethostname -k system-locale
+-w /etc/issue -p wa -k system-locale
+-w /etc/issue.net -p wa -k system-locale
+-w /etc/hosts -p wa -k system-locale
+-w /etc/sysconfig/network -p wa -k system-locale
+
+## Audit 1, 1(b) Successful and unsuccessful logons and logoffs.
+## This is covered by patches to login, gdm, and openssh
+## Might also want to watch these files if needing extra information
+#-w /var/log/faillog -p wa -k logins
+#-w /var/log/lastlog -p wa -k logins
+
+## Audit 1, 1(c) Successful and unsuccessful accesses to
+## security-relevant objects and directories, including
+## creation, open, close, modification, and deletion.
+
+## unsuccessful creation
+-a exit,always -S creat -S mkdir -S mknod -S link -S symlink -F exit=-13 -k creation
+-a exit,always -S mkdirat -S mknodat -S linkat -S symlinkat -F exit=-13 -k creation
+
+## unsuccessful open
+-a exit,always -S open -F exit=-13 -k open
+-a exit,always -S openat -F exit=-13 -k open
+
+## unsuccessful close
+-a exit,always -S close -F exit=-13 -k close
+
+## unsuccessful modifications
+-a exit,always -S rename -S truncate -S ftruncate -F exit=-13 -k mods
+-a exit,always -S renameat -F exit=-13 -k mods
+-a exit,always -F perm=a -F exit=-13 -k mods
+-a exit,always -F perm=a -F exit=-1 -k mods
+
+## unsuccessful deletion
+-a exit,always -S rmdir -S unlink -F exit=-13 -k delete 
+-a exit,always -S unlinkat -F exit=-13 -k delete
+
+## Audit 1, 1(d) Changes in user authenticators.
+## Covered by patches to libpam, passwd, and shadow-utils
+## Might also want to watch these files for changes
+-w /etc/group -p wa -k auth
+-w /etc/passwd -p wa -k auth
+-w /etc/gshadow -p wa -k auth
+-w /etc/shadow -p wa -k auth
+-w /etc/security/opasswd -p wa -k auth
+
+## Audit 1, 1(e) The blocking or blacklisting of a user ID,
+## terminal, or access port and the reason for the action.
+## Covered by patches to pam_tally
+
+## Audit 1, 1(f) Denial of access resulting from an excessive
+## number of unsuccessful logon attempts.
+## Covered by patches to pam_tally
+
+## Audit 1, 2 Audit Trail Protection. The contents of audit trails
+## shall be protected against unauthorized access, modification,
+## or deletion.
+## This should be covered by file permissions, but we can watch it
+## to see any activity
+-w /var/log/audit/ -k audit-logs
+-w /var/log/audit/audit.log -k audit-logs
+#-w /var/log/audit/audit.log.1 -k audit-logs
+#-w /var/log/audit/audit.log.2 -k audit-logs
+#-w /var/log/audit/audit.log.3 -k audit-logs
+#-w /var/log/audit/audit.log.4 -k audit-logs
+
+## Not specifically required by NISPOM; but common sense items
+## Optional - could indicate someone trying to do something bad or
+## just debugging
+#-a entry,always -S ptrace
+
+## Optional - could be an attempt to bypass audit or simply legacy program
+#-a exit,always -S personality
+
+## Put your own watches after this point
+# -w /your-file -p rwxa -k mykey
+

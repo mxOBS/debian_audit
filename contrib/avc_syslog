@@ -1,0 +1,34 @@
+#! /usr/bin/env python
+import os, select, struct, syslog, sys
+import audit, traceback
+import AuditMsg
+
+try:
+    syslog.openlog("avc_syslog")
+    syslog.syslog("Starting avc_syslog")
+    while 1:
+        input,output, err = select.select([0],[], [], 500)
+        try:
+            if 0 in input:
+                msg = AuditMsg.AuditMsg()
+                if not msg.read_from_fd(0):
+                    syslog.syslog("Connection closing")
+                    break
+                if msg.get_type() == audit.AUDIT_AVC:
+                    syslog.syslog(msg.get_body())
+                
+        except struct.error, e:
+            syslog.syslog("struct exception %s " % e.args)
+        except TypeError, e:
+            syslog.syslog("Type exception %s " % e.args)
+
+except IOError,e:
+    syslog.syslog("IOError exception %s" % e.args)
+
+except Exception, e:
+    syslog.syslog("Unexpected exception %s " % e.args)
+    syslog.syslog(traceback.format_exc())
+   
+except:
+    syslog.syslog("Caught Exception")
+    syslog.syslog(traceback.format_exc())
