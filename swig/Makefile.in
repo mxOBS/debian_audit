@@ -34,7 +34,7 @@ build_triplet = @build@
 host_triplet = @host@
 target_triplet = @target@
 subdir = swig
-DIST_COMMON = $(python_PYTHON) $(srcdir)/Makefile.am \
+DIST_COMMON = $(pyexec_PYTHON) $(srcdir)/Makefile.am \
 	$(srcdir)/Makefile.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/src/libev/libev.m4 \
@@ -49,7 +49,7 @@ am__vpath_adj = case $$p in \
     *) f=$$p;; \
   esac;
 am__strip_dir = `echo $$p | sed -e 's|^.*/||'`;
-am__installdirs = "$(DESTDIR)$(pyexecdir)" "$(DESTDIR)$(pythondir)"
+am__installdirs = "$(DESTDIR)$(pyexecdir)" "$(DESTDIR)$(pyexecdir)"
 pyexecLTLIBRARIES_INSTALL = $(INSTALL)
 LTLIBRARIES = $(pyexec_LTLIBRARIES)
 _audit_la_LIBADD =
@@ -72,7 +72,7 @@ LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) \
 	$(LDFLAGS) -o $@
 SOURCES = $(nodist__audit_la_SOURCES)
 DIST_SOURCES =
-pythonPYTHON_INSTALL = $(INSTALL_DATA)
+pyexecPYTHON_INSTALL = $(INSTALL_DATA)
 py_compile = $(top_srcdir)/py-compile
 ETAGS = etags
 CTAGS = ctags
@@ -94,6 +94,7 @@ CXXCPP = @CXXCPP@
 CXXDEPMODE = @CXXDEPMODE@
 CXXFLAGS = @CXXFLAGS@
 CYGPATH_W = @CYGPATH_W@
+DEBUG = @DEBUG@
 DEFS = @DEFS@
 DEPDIR = @DEPDIR@
 ECHO = @ECHO@
@@ -229,7 +230,7 @@ EXTRA_DIST = auditswig.i
 CONFIG_CLEAN_FILES = *.loT *.rej *.orig
 AM_CFLAGS = -fPIC -DPIC
 INCLUDES = -I. -I$(top_builddir) -I${top_srcdir}/lib -I/usr/include/$(PYLIBVER)
-python_PYTHON = audit.py
+pyexec_PYTHON = audit.py
 pyexec_LTLIBRARIES = _audit.la
 pyexec_SOLIBRARIES = _audit.so
 _audit_la_LDFLAGS = -module -avoid-version
@@ -333,33 +334,33 @@ mostlyclean-libtool:
 
 clean-libtool:
 	-rm -rf .libs _libs
-install-pythonPYTHON: $(python_PYTHON)
+install-pyexecPYTHON: $(pyexec_PYTHON)
 	@$(NORMAL_INSTALL)
-	test -z "$(pythondir)" || $(MKDIR_P) "$(DESTDIR)$(pythondir)"
-	@list='$(python_PYTHON)'; dlist=''; for p in $$list; do\
+	test -z "$(pyexecdir)" || $(MKDIR_P) "$(DESTDIR)$(pyexecdir)"
+	@list='$(pyexec_PYTHON)'; dlist=''; for p in $$list; do\
 	  if test -f "$$p"; then b=; else b="$(srcdir)/"; fi; \
 	  if test -f $$b$$p; then \
 	    f=$(am__strip_dir) \
 	    dlist="$$dlist $$f"; \
-	    echo " $(pythonPYTHON_INSTALL) '$$b$$p' '$(DESTDIR)$(pythondir)/$$f'"; \
-	    $(pythonPYTHON_INSTALL) "$$b$$p" "$(DESTDIR)$(pythondir)/$$f"; \
+	    echo " $(pyexecPYTHON_INSTALL) '$$b$$p' '$(DESTDIR)$(pyexecdir)/$$f'"; \
+	    $(pyexecPYTHON_INSTALL) "$$b$$p" "$(DESTDIR)$(pyexecdir)/$$f"; \
 	  else :; fi; \
 	done; \
 	if test -n "$$dlist"; then \
 	  if test -z "$(DESTDIR)"; then \
-	    PYTHON=$(PYTHON) $(py_compile) --basedir "$(pythondir)" $$dlist; \
+	    PYTHON=$(PYTHON) $(py_compile) --basedir "$(pyexecdir)" $$dlist; \
 	  else \
-	    PYTHON=$(PYTHON) $(py_compile) --destdir "$(DESTDIR)" --basedir "$(pythondir)" $$dlist; \
+	    PYTHON=$(PYTHON) $(py_compile) --destdir "$(DESTDIR)" --basedir "$(pyexecdir)" $$dlist; \
 	  fi; \
 	else :; fi
 
-uninstall-pythonPYTHON:
+uninstall-pyexecPYTHON:
 	@$(NORMAL_UNINSTALL)
-	@list='$(python_PYTHON)'; dlist=''; for p in $$list; do\
+	@list='$(pyexec_PYTHON)'; dlist=''; for p in $$list; do\
 	  f=$(am__strip_dir) \
-	  rm -f "$(DESTDIR)$(pythondir)/$$f"; \
-	  rm -f "$(DESTDIR)$(pythondir)/$${f}c"; \
-	  rm -f "$(DESTDIR)$(pythondir)/$${f}o"; \
+	  rm -f "$(DESTDIR)$(pyexecdir)/$$f"; \
+	  rm -f "$(DESTDIR)$(pyexecdir)/$${f}c"; \
+	  rm -f "$(DESTDIR)$(pyexecdir)/$${f}o"; \
 	done
 
 ID: $(HEADERS) $(SOURCES) $(LISP) $(TAGS_FILES)
@@ -439,7 +440,7 @@ check-am: all-am
 check: check-am
 all-am: Makefile $(LTLIBRARIES)
 installdirs:
-	for dir in "$(DESTDIR)$(pyexecdir)" "$(DESTDIR)$(pythondir)"; do \
+	for dir in "$(DESTDIR)$(pyexecdir)" "$(DESTDIR)$(pyexecdir)"; do \
 	  test -z "$$dir" || $(MKDIR_P) "$$dir"; \
 	done
 install: install-am
@@ -488,11 +489,11 @@ info: info-am
 
 info-am:
 
-install-data-am: install-pythonPYTHON
+install-data-am:
 
 install-dvi: install-dvi-am
 
-install-exec-am: install-pyexecLTLIBRARIES
+install-exec-am: install-pyexecLTLIBRARIES install-pyexecPYTHON
 
 install-html: install-html-am
 
@@ -524,7 +525,7 @@ ps: ps-am
 
 ps-am:
 
-uninstall-am: uninstall-pyexecLTLIBRARIES uninstall-pythonPYTHON
+uninstall-am: uninstall-pyexecLTLIBRARIES uninstall-pyexecPYTHON
 
 .MAKE: install-am install-strip
 
@@ -536,12 +537,12 @@ uninstall-am: uninstall-pyexecLTLIBRARIES uninstall-pythonPYTHON
 	install-dvi-am install-exec install-exec-am install-html \
 	install-html-am install-info install-info-am install-man \
 	install-pdf install-pdf-am install-ps install-ps-am \
-	install-pyexecLTLIBRARIES install-pythonPYTHON install-strip \
+	install-pyexecLTLIBRARIES install-pyexecPYTHON install-strip \
 	installcheck installcheck-am installdirs maintainer-clean \
 	maintainer-clean-generic mostlyclean mostlyclean-compile \
 	mostlyclean-generic mostlyclean-libtool pdf pdf-am ps ps-am \
 	tags uninstall uninstall-am uninstall-pyexecLTLIBRARIES \
-	uninstall-pythonPYTHON
+	uninstall-pyexecPYTHON
 
 PYLIBVER ?= python$(PYTHON_VERSION)
 _audit_la_HEADERS: $(top_builddir)/config.h 
