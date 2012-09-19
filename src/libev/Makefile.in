@@ -49,7 +49,7 @@ LIBRARIES = $(noinst_LIBRARIES)
 ARFLAGS = cru
 libev_a_AR = $(AR) $(ARFLAGS)
 libev_a_LIBADD =
-am_libev_a_OBJECTS = ev.$(OBJEXT)
+am_libev_a_OBJECTS = ev.$(OBJEXT) event.$(OBJEXT)
 libev_a_OBJECTS = $(am_libev_a_OBJECTS)
 DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)
 depcomp = $(SHELL) $(top_srcdir)/depcomp
@@ -217,11 +217,12 @@ top_srcdir = @top_srcdir@
 # Authors:
 #   Steve Grubb <sgrubb@redhat.com>
 #
-EXTRA_DIST = README ev_epoll.c ev_poll.c ev_select.c ev.c libev.m4
+VERSION_INFO = 3:0
+EXTRA_DIST = README ev_epoll.c ev_poll.c ev_select.c libev.m4
 AM_CFLAGS = -fPIC -DPIC -fno-strict-aliasing
-noinst_HEADERS = ev.h ev_vars.h ev_wrap.h 
+noinst_HEADERS = ev.h ev_vars.h ev_wrap.h event.h
 noinst_LIBRARIES = libev.a
-libev_a_SOURCES = ev.c
+libev_a_SOURCES = ev.c event.c
 all: all-am
 
 .SUFFIXES:
@@ -270,6 +271,7 @@ distclean-compile:
 	-rm -f *.tab.c
 
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ev.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/event.Po@am__quote@
 
 .c.o:
 @am__fastdepCC_TRUE@	$(COMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ $<

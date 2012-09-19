@@ -58,9 +58,10 @@ build_triplet = @build@
 host_triplet = @host@
 target_triplet = @target@
 noinst_PROGRAMS = gen_captabs_h$(EXEEXT) gen_clone-flagtabs_h$(EXEEXT) \
-	gen_famtabs_h$(EXEEXT) gen_fcntl-cmdtabs_h$(EXEEXT) \
-	gen_flagtabs_h$(EXEEXT) gen_ipctabs_h$(EXEEXT) \
-	gen_open-flagtabs_h$(EXEEXT) gen_socktabs_h$(EXEEXT) \
+	gen_epoll_ctls_h$(EXEEXT) gen_famtabs_h$(EXEEXT) \
+	gen_fcntl-cmdtabs_h$(EXEEXT) gen_flagtabs_h$(EXEEXT) \
+	gen_ipctabs_h$(EXEEXT) gen_open-flagtabs_h$(EXEEXT) \
+	gen_seeks_h$(EXEEXT) gen_socktabs_h$(EXEEXT) \
 	gen_typetabs_h$(EXEEXT)
 subdir = auparse
 DIST_COMMON = $(include_HEADERS) $(srcdir)/Makefile.am \
@@ -106,6 +107,12 @@ gen_clone_flagtabs_h_LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) \
 	$(LIBTOOLFLAGS) --mode=link $(CCLD) \
 	$(gen_clone_flagtabs_h_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) \
 	$(LDFLAGS) -o $@
+am_gen_epoll_ctls_h_OBJECTS = gen_epoll_ctls_h-gen_tables.$(OBJEXT)
+gen_epoll_ctls_h_OBJECTS = $(am_gen_epoll_ctls_h_OBJECTS)
+gen_epoll_ctls_h_LDADD = $(LDADD)
+gen_epoll_ctls_h_LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) \
+	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(gen_epoll_ctls_h_CFLAGS) \
+	$(CFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -o $@
 am_gen_famtabs_h_OBJECTS = gen_famtabs_h-gen_tables.$(OBJEXT)
 gen_famtabs_h_OBJECTS = $(am_gen_famtabs_h_OBJECTS)
 gen_famtabs_h_LDADD = $(LDADD)
@@ -140,6 +147,12 @@ gen_open_flagtabs_h_LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) \
 	$(LIBTOOLFLAGS) --mode=link $(CCLD) \
 	$(gen_open_flagtabs_h_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) \
 	$(LDFLAGS) -o $@
+am_gen_seeks_h_OBJECTS = gen_seeks_h-gen_tables.$(OBJEXT)
+gen_seeks_h_OBJECTS = $(am_gen_seeks_h_OBJECTS)
+gen_seeks_h_LDADD = $(LDADD)
+gen_seeks_h_LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) \
+	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(gen_seeks_h_CFLAGS) \
+	$(CFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -o $@
 am_gen_socktabs_h_OBJECTS = gen_socktabs_h-gen_tables.$(OBJEXT)
 gen_socktabs_h_OBJECTS = $(am_gen_socktabs_h_OBJECTS)
 gen_socktabs_h_LDADD = $(LDADD)
@@ -166,14 +179,16 @@ LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) \
 	$(LDFLAGS) -o $@
 SOURCES = $(libauparse_la_SOURCES) $(nodist_libauparse_la_SOURCES) \
 	$(gen_captabs_h_SOURCES) $(gen_clone_flagtabs_h_SOURCES) \
-	$(gen_famtabs_h_SOURCES) $(gen_fcntl_cmdtabs_h_SOURCES) \
-	$(gen_flagtabs_h_SOURCES) $(gen_ipctabs_h_SOURCES) \
-	$(gen_open_flagtabs_h_SOURCES) $(gen_socktabs_h_SOURCES) \
-	$(gen_typetabs_h_SOURCES)
-DIST_SOURCES = $(libauparse_la_SOURCES) $(gen_captabs_h_SOURCES) \
-	$(gen_clone_flagtabs_h_SOURCES) $(gen_famtabs_h_SOURCES) \
+	$(gen_epoll_ctls_h_SOURCES) $(gen_famtabs_h_SOURCES) \
 	$(gen_fcntl_cmdtabs_h_SOURCES) $(gen_flagtabs_h_SOURCES) \
 	$(gen_ipctabs_h_SOURCES) $(gen_open_flagtabs_h_SOURCES) \
+	$(gen_seeks_h_SOURCES) $(gen_socktabs_h_SOURCES) \
+	$(gen_typetabs_h_SOURCES)
+DIST_SOURCES = $(libauparse_la_SOURCES) $(gen_captabs_h_SOURCES) \
+	$(gen_clone_flagtabs_h_SOURCES) $(gen_epoll_ctls_h_SOURCES) \
+	$(gen_famtabs_h_SOURCES) $(gen_fcntl_cmdtabs_h_SOURCES) \
+	$(gen_flagtabs_h_SOURCES) $(gen_ipctabs_h_SOURCES) \
+	$(gen_open_flagtabs_h_SOURCES) $(gen_seeks_h_SOURCES) \
 	$(gen_socktabs_h_SOURCES) $(gen_typetabs_h_SOURCES)
 RECURSIVE_TARGETS = all-recursive check-recursive dvi-recursive \
 	html-recursive info-recursive install-data-recursive \
@@ -333,8 +348,9 @@ nodist_libauparse_la_SOURCES = $(BUILT_SOURCES)
 libauparse_la_LIBADD = ${top_builddir}/lib/libaudit.la
 libauparse_la_DEPENDENCIES = $(libauparse_la_SOURCES) ${top_builddir}/config.h
 libauparse_la_LDFLAGS = -Wl,-z,relro
-BUILT_SOURCES = captabs.h clone-flagtabs.h famtabs.h fcntl-cmdtabs.h \
-	flagtabs.h ipctabs.h open-flagtabs.h socktabs.h typetabs.h
+BUILT_SOURCES = captabs.h clone-flagtabs.h epoll_ctls.h famtabs.h \
+	fcntl-cmdtabs.h flagtabs.h ipctabs.h open-flagtabs.h \
+	seeks.h socktabs.h typetabs.h
 
 gen_captabs_h_SOURCES = ../lib/gen_tables.c ../lib/gen_tables.h captab.h
 gen_captabs_h_CFLAGS = $(AM_CFLAGS) '-DTABLE_H="captab.h"'
@@ -342,6 +358,8 @@ gen_clone_flagtabs_h_SOURCES = ../lib/gen_tables.c ../lib/gen_tables.h \
 	clone-flagtab.h
 
 gen_clone_flagtabs_h_CFLAGS = $(AM_CFLAGS) '-DTABLE_H="clone-flagtab.h"'
+gen_epoll_ctls_h_SOURCES = ../lib/gen_tables.c ../lib/gen_tables.h epoll_ctl.h
+gen_epoll_ctls_h_CFLAGS = $(AM_CFLAGS) '-DTABLE_H="epoll_ctl.h"'
 gen_famtabs_h_SOURCES = ../lib/gen_tables.c ../lib/gen_tables.h famtab.h
 gen_famtabs_h_CFLAGS = $(AM_CFLAGS) '-DTABLE_H="famtab.h"'
 gen_flagtabs_h_SOURCES = ../lib/gen_tables.c ../lib/gen_tables.h flagtab.h
@@ -357,6 +375,8 @@ gen_open_flagtabs_h_SOURCES = ../lib/gen_tables.c ../lib/gen_tables.h \
 	open-flagtab.h
 
 gen_open_flagtabs_h_CFLAGS = $(AM_CFLAGS) '-DTABLE_H="open-flagtab.h"'
+gen_seeks_h_SOURCES = ../lib/gen_tables.c ../lib/gen_tables.h seek.h
+gen_seeks_h_CFLAGS = $(AM_CFLAGS) '-DTABLE_H="seek.h"'
 gen_socktabs_h_SOURCES = ../lib/gen_tables.c ../lib/gen_tables.h socktab.h
 gen_socktabs_h_CFLAGS = $(AM_CFLAGS) '-DTABLE_H="socktab.h"'
 gen_typetabs_h_SOURCES = ../lib/gen_tables.c ../lib/gen_tables.h typetab.h
@@ -437,6 +457,9 @@ gen_captabs_h$(EXEEXT): $(gen_captabs_h_OBJECTS) $(gen_captabs_h_DEPENDENCIES)
 gen_clone-flagtabs_h$(EXEEXT): $(gen_clone_flagtabs_h_OBJECTS) $(gen_clone_flagtabs_h_DEPENDENCIES) 
 	@rm -f gen_clone-flagtabs_h$(EXEEXT)
 	$(gen_clone_flagtabs_h_LINK) $(gen_clone_flagtabs_h_OBJECTS) $(gen_clone_flagtabs_h_LDADD) $(LIBS)
+gen_epoll_ctls_h$(EXEEXT): $(gen_epoll_ctls_h_OBJECTS) $(gen_epoll_ctls_h_DEPENDENCIES) 
+	@rm -f gen_epoll_ctls_h$(EXEEXT)
+	$(gen_epoll_ctls_h_LINK) $(gen_epoll_ctls_h_OBJECTS) $(gen_epoll_ctls_h_LDADD) $(LIBS)
 gen_famtabs_h$(EXEEXT): $(gen_famtabs_h_OBJECTS) $(gen_famtabs_h_DEPENDENCIES) 
 	@rm -f gen_famtabs_h$(EXEEXT)
 	$(gen_famtabs_h_LINK) $(gen_famtabs_h_OBJECTS) $(gen_famtabs_h_LDADD) $(LIBS)
@@ -452,6 +475,9 @@ gen_ipctabs_h$(EXEEXT): $(gen_ipctabs_h_OBJECTS) $(gen_ipctabs_h_DEPENDENCIES)
 gen_open-flagtabs_h$(EXEEXT): $(gen_open_flagtabs_h_OBJECTS) $(gen_open_flagtabs_h_DEPENDENCIES) 
 	@rm -f gen_open-flagtabs_h$(EXEEXT)
 	$(gen_open_flagtabs_h_LINK) $(gen_open_flagtabs_h_OBJECTS) $(gen_open_flagtabs_h_LDADD) $(LIBS)
+gen_seeks_h$(EXEEXT): $(gen_seeks_h_OBJECTS) $(gen_seeks_h_DEPENDENCIES) 
+	@rm -f gen_seeks_h$(EXEEXT)
+	$(gen_seeks_h_LINK) $(gen_seeks_h_OBJECTS) $(gen_seeks_h_LDADD) $(LIBS)
 gen_socktabs_h$(EXEEXT): $(gen_socktabs_h_OBJECTS) $(gen_socktabs_h_DEPENDENCIES) 
 	@rm -f gen_socktabs_h$(EXEEXT)
 	$(gen_socktabs_h_LINK) $(gen_socktabs_h_OBJECTS) $(gen_socktabs_h_LDADD) $(LIBS)
@@ -472,11 +498,13 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/expression.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/gen_captabs_h-gen_tables.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/gen_clone_flagtabs_h-gen_tables.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/gen_epoll_ctls_h-gen_tables.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/gen_famtabs_h-gen_tables.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/gen_fcntl_cmdtabs_h-gen_tables.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/gen_flagtabs_h-gen_tables.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/gen_ipctabs_h-gen_tables.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/gen_open_flagtabs_h-gen_tables.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/gen_seeks_h-gen_tables.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/gen_socktabs_h-gen_tables.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/gen_typetabs_h-gen_tables.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/interpret.Plo@am__quote@
@@ -532,6 +560,20 @@ gen_clone_flagtabs_h-gen_tables.obj: ../lib/gen_tables.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='../lib/gen_tables.c' object='gen_clone_flagtabs_h-gen_tables.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(gen_clone_flagtabs_h_CFLAGS) $(CFLAGS) -c -o gen_clone_flagtabs_h-gen_tables.obj `if test -f '../lib/gen_tables.c'; then $(CYGPATH_W) '../lib/gen_tables.c'; else $(CYGPATH_W) '$(srcdir)/../lib/gen_tables.c'; fi`
+
+gen_epoll_ctls_h-gen_tables.o: ../lib/gen_tables.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(gen_epoll_ctls_h_CFLAGS) $(CFLAGS) -MT gen_epoll_ctls_h-gen_tables.o -MD -MP -MF $(DEPDIR)/gen_epoll_ctls_h-gen_tables.Tpo -c -o gen_epoll_ctls_h-gen_tables.o `test -f '../lib/gen_tables.c' || echo '$(srcdir)/'`../lib/gen_tables.c
+@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/gen_epoll_ctls_h-gen_tables.Tpo $(DEPDIR)/gen_epoll_ctls_h-gen_tables.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='../lib/gen_tables.c' object='gen_epoll_ctls_h-gen_tables.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(gen_epoll_ctls_h_CFLAGS) $(CFLAGS) -c -o gen_epoll_ctls_h-gen_tables.o `test -f '../lib/gen_tables.c' || echo '$(srcdir)/'`../lib/gen_tables.c
+
+gen_epoll_ctls_h-gen_tables.obj: ../lib/gen_tables.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(gen_epoll_ctls_h_CFLAGS) $(CFLAGS) -MT gen_epoll_ctls_h-gen_tables.obj -MD -MP -MF $(DEPDIR)/gen_epoll_ctls_h-gen_tables.Tpo -c -o gen_epoll_ctls_h-gen_tables.obj `if test -f '../lib/gen_tables.c'; then $(CYGPATH_W) '../lib/gen_tables.c'; else $(CYGPATH_W) '$(srcdir)/../lib/gen_tables.c'; fi`
+@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/gen_epoll_ctls_h-gen_tables.Tpo $(DEPDIR)/gen_epoll_ctls_h-gen_tables.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='../lib/gen_tables.c' object='gen_epoll_ctls_h-gen_tables.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(gen_epoll_ctls_h_CFLAGS) $(CFLAGS) -c -o gen_epoll_ctls_h-gen_tables.obj `if test -f '../lib/gen_tables.c'; then $(CYGPATH_W) '../lib/gen_tables.c'; else $(CYGPATH_W) '$(srcdir)/../lib/gen_tables.c'; fi`
 
 gen_famtabs_h-gen_tables.o: ../lib/gen_tables.c
 @am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(gen_famtabs_h_CFLAGS) $(CFLAGS) -MT gen_famtabs_h-gen_tables.o -MD -MP -MF $(DEPDIR)/gen_famtabs_h-gen_tables.Tpo -c -o gen_famtabs_h-gen_tables.o `test -f '../lib/gen_tables.c' || echo '$(srcdir)/'`../lib/gen_tables.c
@@ -602,6 +644,20 @@ gen_open_flagtabs_h-gen_tables.obj: ../lib/gen_tables.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='../lib/gen_tables.c' object='gen_open_flagtabs_h-gen_tables.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(gen_open_flagtabs_h_CFLAGS) $(CFLAGS) -c -o gen_open_flagtabs_h-gen_tables.obj `if test -f '../lib/gen_tables.c'; then $(CYGPATH_W) '../lib/gen_tables.c'; else $(CYGPATH_W) '$(srcdir)/../lib/gen_tables.c'; fi`
+
+gen_seeks_h-gen_tables.o: ../lib/gen_tables.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(gen_seeks_h_CFLAGS) $(CFLAGS) -MT gen_seeks_h-gen_tables.o -MD -MP -MF $(DEPDIR)/gen_seeks_h-gen_tables.Tpo -c -o gen_seeks_h-gen_tables.o `test -f '../lib/gen_tables.c' || echo '$(srcdir)/'`../lib/gen_tables.c
+@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/gen_seeks_h-gen_tables.Tpo $(DEPDIR)/gen_seeks_h-gen_tables.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='../lib/gen_tables.c' object='gen_seeks_h-gen_tables.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(gen_seeks_h_CFLAGS) $(CFLAGS) -c -o gen_seeks_h-gen_tables.o `test -f '../lib/gen_tables.c' || echo '$(srcdir)/'`../lib/gen_tables.c
+
+gen_seeks_h-gen_tables.obj: ../lib/gen_tables.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(gen_seeks_h_CFLAGS) $(CFLAGS) -MT gen_seeks_h-gen_tables.obj -MD -MP -MF $(DEPDIR)/gen_seeks_h-gen_tables.Tpo -c -o gen_seeks_h-gen_tables.obj `if test -f '../lib/gen_tables.c'; then $(CYGPATH_W) '../lib/gen_tables.c'; else $(CYGPATH_W) '$(srcdir)/../lib/gen_tables.c'; fi`
+@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/gen_seeks_h-gen_tables.Tpo $(DEPDIR)/gen_seeks_h-gen_tables.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='../lib/gen_tables.c' object='gen_seeks_h-gen_tables.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(gen_seeks_h_CFLAGS) $(CFLAGS) -c -o gen_seeks_h-gen_tables.obj `if test -f '../lib/gen_tables.c'; then $(CYGPATH_W) '../lib/gen_tables.c'; else $(CYGPATH_W) '$(srcdir)/../lib/gen_tables.c'; fi`
 
 gen_socktabs_h-gen_tables.o: ../lib/gen_tables.c
 @am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(gen_socktabs_h_CFLAGS) $(CFLAGS) -MT gen_socktabs_h-gen_tables.o -MD -MP -MF $(DEPDIR)/gen_socktabs_h-gen_tables.Tpo -c -o gen_socktabs_h-gen_tables.o `test -f '../lib/gen_tables.c' || echo '$(srcdir)/'`../lib/gen_tables.c
@@ -949,6 +1005,8 @@ captabs.h: gen_captabs_h Makefile
 	./gen_captabs_h --i2s cap > $@
 clone-flagtabs.h: gen_clone-flagtabs_h Makefile
 	./gen_clone-flagtabs_h --i2s-transtab clone_flag > $@
+epoll_ctls.h: gen_epoll_ctls_h Makefile
+	./gen_epoll_ctls_h --i2s epoll_ctl > $@
 famtabs.h: gen_famtabs_h Makefile
 	./gen_famtabs_h --i2s fam > $@
 flagtabs.h: gen_flagtabs_h Makefile
@@ -959,6 +1017,8 @@ ipctabs.h: gen_ipctabs_h Makefile
 	./gen_ipctabs_h --i2s ipc > $@
 open-flagtabs.h: gen_open-flagtabs_h Makefile
 	./gen_open-flagtabs_h --i2s-transtab open_flag > $@
+seeks.h: gen_seeks_h Makefile
+	./gen_seeks_h --i2s seek > $@
 socktabs.h: gen_socktabs_h Makefile
 	./gen_socktabs_h --i2s sock > $@
 typetabs.h: gen_typetabs_h Makefile

@@ -84,7 +84,7 @@ static char *escape(const char *tmp)
 	char *name;
 	const unsigned char *p = (unsigned char *)tmp;
 	while (*p) {
-		if (*p == '"' || *p < 0x21 || *p > 0x7f) {
+		if (*p == '"' || *p < 0x21 || *p > 0x7e) {
 			int len = strlen(tmp);
 			name = malloc((2*len)+1);
 			return _audit_c2x(name, tmp, len);
@@ -212,6 +212,7 @@ static int parse_up_record(rnode* r)
 		} else if (r->type == AUDIT_AVC || r->type == AUDIT_USER_AVC) {
 			// We special case these 2 fields because selinux
 			// avc messages do not label these fields.
+			n.name = NULL;
 			if (nvlist_get_cnt(&r->nv) == (1 + offset)) {
 				// skip over 'avc:'
 				if (strncmp(ptr, "avc", 3) == 0)
@@ -282,7 +283,7 @@ int aup_list_append(event_list_t *l, char *record, int list_idx,
 	nvlist_create(&r->nv);
 
 	// if we are at top, fix this up
-	if (l->head == 0)
+	if (l->head == NULL)
 		l->head = r;
 	else {	// Otherwise add pointer to newnode
 		aup_list_last(l);

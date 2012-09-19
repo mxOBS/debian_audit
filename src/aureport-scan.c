@@ -200,9 +200,9 @@ int scan(llist *l)
 			int rc = extract_search_items(l);
 			if (rc == 0) {
                                 if (event_node) {
-                                        if (l->s.node == NULL)
+                                        if (l->e.node == NULL)
                                                 return 0;
-                                        if (strcasecmp(event_node, l->s.node))
+                                        if (strcasecmp(event_node, l->e.node))
                                                 return 0;
                                 }
 				if (classify_success(l) && classify_conf(l))
@@ -432,6 +432,9 @@ static int per_event_summary(llist *l)
 					sn=slist_next(sptr);
 				} 
 			}
+			break;
+		case RPT_TTY:
+			UNIMPLEMENTED;
 			break;
 		default:
 			break;
@@ -673,6 +676,12 @@ static int per_event_detailed(llist *l)
 				}
 			} else { //  specific key report
 				UNIMPLEMENTED;
+			}
+			break;
+		case RPT_TTY:
+			if (l->head->type == AUDIT_TTY) {
+				print_per_event_item(l);
+				rc = 1;
 			}
 			break;
 		default:

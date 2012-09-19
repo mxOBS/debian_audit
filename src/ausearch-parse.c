@@ -26,13 +26,14 @@
 #include <string.h>
 #include <errno.h>
 #include <stdlib.h>
-#include <ctype.h>
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <netdb.h>
 #include <limits.h>	/* PATH_MAX */
+#include <ctype.h>
 #include "libaudit.h"
 #include "ausearch-options.h"
+#include "ausearch-lookup.h"
 #include "ausearch-parse.h"
 
 #define NAME_OFFSET 36
@@ -50,68 +51,8 @@ static int parse_sockaddr(const lnode *n, search_items *s);
 static int parse_avc(const lnode *n, search_items *s);
 static int parse_kernel_anom(const lnode *n, search_items *s);
 static int parse_simple_message(const lnode *n, search_items *s);
+static int parse_tty(const lnode *n, search_items *s);
 
-/*
- * This function will take a pointer to a 2 byte Ascii character buffer and 
- * return the actual hex value.
- */
-static unsigned char x2c(unsigned char *buf)
-{
-	static const char AsciiArray[17] = "0123456789ABCDEF";
-        char *ptr;
-        unsigned char total=0;
-
-        ptr = strchr(AsciiArray, (char)toupper(buf[0]));
-        if (ptr)
-                total = (unsigned char)(((ptr-AsciiArray) & 0x0F)<<4);
-        ptr = strchr(AsciiArray, (char)toupper(buf[1]));
-        if (ptr)
-                total += (unsigned char)((ptr-AsciiArray) & 0x0F);
-
-        return total;
-}
-
-/* returns a freshly malloc'ed and converted buffer */
-char *unescape(char *buf)
-{
-	int len, i;
-	char saved, *ptr = buf, *str;
-
-	/* Find the end of the name */
-	if (*ptr == '(') {
-		ptr = strchr(ptr, ')');
-		if (ptr == NULL)
-			return NULL;
-		else
-			ptr++;
-	} else {
-		while (isxdigit(*ptr))
-			ptr++;
-	}
-	saved = *ptr;
-	*ptr = 0;
-	str = strdup(buf);
-	*ptr = saved;
-
-	if (*buf == '(')
-		return str;
-
-	/* We can get away with this since the buffer is 2 times
-	 * bigger than what we are putting there.
-	 */
-	len = strlen(str);
-	if (len < 2) {
-		free(str);
-		return NULL;
-	}
-	ptr = str;
-	for (i=0; i<len; i+=2) {
-		*ptr = x2c((unsigned char *)&str[i]);
-		ptr++;
-	}
-	*ptr = 0;
-	return str;
-}
 
 static int audit_avc_init(search_items *s)
 {
@@ -138,38 +79,6 @@ int extract_search_items(llist *l)
 	n = list_get_cur(l);
 	if (n) {
 		do {
-			char *ptr, *str, *term;
-			// get node if its there
-			if ((strncmp(n->message, "node=", 5) == 0) &&
-							s->node == NULL) {
-				str = n->message;
-				ptr = str+5;
-				term = strchr(ptr, ' ');
-				if (term == NULL)
-					return -1;
-				*term = 0;
-				s->node = strdup(ptr);
-				*term = ' ';
-			}
-			// get type
-			str = strstr(n->message, "type=");
-			if (str == NULL)
-				return -2;
-			ptr = str+5;
-			term = strchr(ptr, ' ');
-			if (term == NULL)
-				return -3;
-			*term = 0;
-			n->type = audit_name_to_msg_type(ptr);
-			*term = ' ';
-			if (n->type < 0) {
-/*				fprintf(stderr, "Error converting type:%s\n", 
-					ptr);
-				return 3; */
-
-				// If we don't know, don't extract.
-				return 0;
-			}
 			switch (n->type) {
 			case AUDIT_SYSCALL:
 				ret = parse_syscall(n, s);
@@ -218,6 +127,9 @@ int extract_search_items(llist *l)
 			case AUDIT_IPC:
 			case AUDIT_SELINUX_ERR:
 				// Nothing to parse
+				break;
+			case AUDIT_TTY:
+				ret = parse_tty(n, s);
 				break;
 			default:
 				break;
@@ -820,39 +732,40 @@ static int parse_user(const lnode *n, search_items *s)
 		if (errno)
 			return 13;
 		*term = saved;
-	} else {
-		str = strstr(term, "acct=");
-		if (str != NULL) {
-			ptr = str + 5;
+	}
+	mptr = term + 1;
 
-			term = ptr + 1;
-			if (*ptr == '"') {
-				while (*term != '"')
-					term++;
+	// Get acct for user/group add/del
+	str = strstr(mptr, "acct=");
+	if (str != NULL) {
+		ptr = str + 5;
+		term = ptr + 1;
+		if (*ptr == '"') {
+			while (*term != '"')
+				term++;
+			saved = *term;
+			*term = 0;
+			ptr++;
+			s->acct = strdup(ptr);
+			*term = saved;
+		} else { 
+			/* Handle legacy accts */
+			char *end = ptr;
+			int legacy = 0;
+
+			while (*end != ' ') {
+				if (!isxdigit(*end))
+					legacy = 1;
+				end++;
+			}
+			term = end;
+			if (!legacy)
+				s->acct = unescape(ptr);
+			else {
 				saved = *term;
 				*term = 0;
-				ptr++;
 				s->acct = strdup(ptr);
 				*term = saved;
-			} else { 
-				/* Handle legacy accts */
-				char *end = ptr;
-				int legacy = 0;
-
-				while (*end != ' ') {
-					if (!isxdigit(*end))
-						legacy = 1;
-					end++;
-				}
-				term = end;
-				if (!legacy)
-					s->acct = unescape(ptr);
-				else {
-					saved = *term;
-					*term = 0;
-					s->acct = strdup(ptr);
-					*term = saved;
-				}
 			}
 		}
 	}
@@ -1640,6 +1553,116 @@ static int parse_simple_message(const lnode *n, search_items *s)
 			if (term)
 				*term = ' ';
 		}
+	}
+
+	return 0;
+}
+
+static int parse_tty(const lnode *n, search_items *s)
+{
+	char *str, *ptr, *term=n->message;
+
+	// get pid
+	if (event_pid != -1) {
+		str = strstr(n->message, "pid=");
+		if (str) {
+			ptr = str + 4;
+			term = strchr(ptr, ' ');
+			if (term == NULL)
+				return 1;
+			*term = 0;
+			errno = 0;
+			s->pid = strtoul(ptr, NULL, 10);
+			if (errno)
+				return 2;
+			*term = ' ';
+		}
+	}
+
+	// get uid
+	str = strstr(term, " uid="); // if promiscuous, we start over
+	if (str) {
+		ptr = str + 4;
+		term = strchr(ptr, ' ');
+		if (term == NULL)
+			return 3;
+		*term = 0;
+		errno = 0;
+		s->uid = strtoul(ptr, NULL, 10);
+		if (errno)
+			return 4;
+		*term = ' ';
+	}
+
+	// get loginuid
+	str = strstr(term, "auid=");
+	if (str == NULL)
+		return 5;
+	ptr = str + 5;
+	term = strchr(ptr, ' ');
+	if (term)
+		*term = 0;
+	errno = 0;
+	s->loginuid = strtoul(ptr, NULL, 10);
+	if (errno)
+		return 6;
+	if (term)
+		*term = ' ';
+
+	// ses
+	if (event_session_id != -1 ) {
+		str = strstr(term, "ses=");
+		if (str) {
+			ptr = str + 4;
+			term = strchr(ptr, ' ');
+			if (term == NULL)
+				return 7;
+			*term = 0;
+			errno = 0;
+			s->session_id = strtoul(ptr, NULL, 10);
+			if (errno)
+				return 8;
+			*term = ' ';
+		}
+	}
+
+/*	if (event_subject) {
+		// scontext
+		str = strstr(term, "subj=");
+		if (str) {
+			str += 5;
+			term = strchr(str, ' ');
+			if (term == NULL)
+				return 9;
+			*term = 0;
+			if (audit_avc_init(s) == 0) {
+				anode an;
+
+				anode_init(&an);
+				an.scontext = strdup(str);
+				alist_append(s->avc, &an);
+				*term = ' ';
+			} else
+				return 10;
+		}
+	} */
+
+	if (event_comm) {
+		// dont do this search unless needed
+		str = strstr(term, "comm=");
+		if (str) {
+			str += 5;
+			if (*str == '"') {
+				str++;
+				term = strchr(str, '"');
+				if (term == NULL)
+					return 11;
+				*term = 0;
+				s->comm = strdup(str);
+				*term = '"';
+			} else 
+				s->comm = unescape(str);
+		} 
 	}
 
 	return 0;

@@ -153,8 +153,11 @@ auparse_state_t *auparse_init(ausource_t source, const void *b)
 		case AUSOURCE_BUFFER:
 			buf = buf;
 			len = strlen(buf);
-			if (databuf_init(&au->databuf, len, DATABUF_FLAG_PRESERVE_HEAD) < 0) goto bad_exit;
-			if (databuf_append(&au->databuf, buf, len) < 0) goto bad_exit;
+			if (databuf_init(&au->databuf, len,
+					 DATABUF_FLAG_PRESERVE_HEAD) < 0)
+				goto bad_exit;
+			if (databuf_append(&au->databuf, buf, len) < 0)
+				goto bad_exit;
 			break;
 		case AUSOURCE_BUFFER_ARRAY:
 			size = 0;
@@ -166,10 +169,13 @@ auparse_state_t *auparse_init(ausource_t source, const void *b)
 					size += len;
 				}
 			}
-			if (databuf_init(&au->databuf, size, DATABUF_FLAG_PRESERVE_HEAD) < 0) goto bad_exit;
+			if (databuf_init(&au->databuf, size,
+					DATABUF_FLAG_PRESERVE_HEAD) < 0)
+				goto bad_exit;
 			for (n = 0; (buf = bb[n]); n++) {
 				len = strlen(buf);
-				if (databuf_append(&au->databuf, buf, len) < 0) goto bad_exit;
+				if (databuf_append(&au->databuf, buf, len) < 0)
+					goto bad_exit;
 			}
 			break;
 		case AUSOURCE_DESCRIPTOR:
@@ -391,7 +397,7 @@ int ausearch_add_timestamp_item(auparse_state_t *au, const char *op, time_t sec,
 {
 	static const struct {
 		unsigned value;
-		char name[3];
+		const char name[3];
 	} ts_tab[] = {
 		{EO_VALUE_LT, "<"},
 		{EO_VALUE_LE, "<="},
@@ -638,7 +644,8 @@ static int readline_buf(auparse_state_t *au)
 		return -2;
 	}
 
-	if ((p_newline = strnchr(databuf_beg(&au->databuf), '\n', au->databuf.len)) != NULL) {
+	if ((p_newline = strnchr(databuf_beg(&au->databuf), '\n',
+						au->databuf.len)) != NULL) {
 		line_len = p_newline - databuf_beg(&au->databuf);
 		
 		/* dup the line */
@@ -699,7 +706,7 @@ static int extract_timestamp(const char *b, au_event_t *e)
 	ptr = strtok(tmp, " ");
 	if (ptr) {
 		// Optionally grab the node - may or may not be included
-		if (strncmp(ptr, "node=", 5 ) == 0) {
+		if (*ptr == 'n') {
 			e->host = strdup(ptr+5);
 			ptr = strtok(NULL, " "); // Bump along to the next one
 		}
@@ -734,23 +741,23 @@ static int extract_timestamp(const char *b, au_event_t *e)
 	return rc;
 }
 
-static int events_are_equal(au_event_t *e1, au_event_t *e2)
+static int inline events_are_equal(au_event_t *e1, au_event_t *e2)
 {
-	// If both have a host, only a string compare can tell if they
-	// are the same. Otherwise, if only one of them have a host, they
-	// are definitely not the same. Its a boundary on daemon config.
+	// Check time & serial first since its most likely way
+	// to spot 2 different events
+	if (!(e1->serial == e2->serial && e1->milli == e2->milli &&
+					e1->sec == e2->sec))
+		return 0;
+	// Hmm...same so far, check if both have a host, only a string
+	// compare can tell if they are the same. Otherwise, if only one
+	// of them have a host, they are definitely not the same. Its
+	// a boundary on daemon config.
 	if (e1->host && e2->host) {
 		if (strcmp(e1->host, e2->host))
 			return 0;
 	} else if (e1->host || e2->host)
 		return 0;
-
-	// Hosts are same at this point, check time & serial
-	if (e1->serial == e2->serial && e1->milli == e2->milli &&
-			e1->sec == e2->sec)
-		return 1;
-	else
-		return 0;
+	return 1;
 }
 
 /* This function will figure out how to get the next line of input.
@@ -983,7 +990,6 @@ int auparse_next_event(auparse_state_t *au)
 						au->list_idx, au->line_number);
 				au->parse_state = EVENT_ACCUMULATING;
 				au->cur_buf = NULL; 
-			// FIXME: Need to see if hosts are the same, too.
 			} else if (events_are_equal(&au->le.e, &event)) {
 				// Accumulate data into existing event
 				if (debug)
