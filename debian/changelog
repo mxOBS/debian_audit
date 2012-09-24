@@ -15,8 +15,10 @@ audit (1:2.2.1-2) UNRELEASED; urgency=low
   * Drop debian/auditd.postinst: this was needed before squeeze release
   * Drop useless debian/patches/ld-no-add-needed.diff: libkrb5 is already
     properly passed at link time
+  * Drop debian/patches/mode.diff: Upstream is now checking if the mode of the
+    executable is either 0750 or 0755 and not only 0750
 
- -- Laurent Bigonville <bigon@debian.org>  Mon, 29 Oct 2012 14:07:24 +0100
+ -- Laurent Bigonville <bigon@debian.org>  Mon, 29 Oct 2012 14:59:44 +0100
 
 audit (1:2.2.1-1) experimental; urgency=low
 
