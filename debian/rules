@@ -25,7 +25,8 @@ debian/config-python-stamp:
 		--enable-gssapi-krb5 \
 		--with-apparmor \
 		--with-prelude \
-		--with-libwrap
+		--with-libwrap \
+		--with-libcap-ng
 	touch $@
 debian/config-python%-stamp: debian/config-python-stamp
 	cp -lpr debian/build/swig            debian/build/swig.$*
