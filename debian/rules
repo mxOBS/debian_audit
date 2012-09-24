@@ -3,6 +3,8 @@ include /usr/share/python/python.mk
 DPKG_EXPORT_BUILDFLAGS = 1
 include /usr/share/dpkg/buildflags.mk
 
+DEB_HOST_MULTIARCH ?= $(shell dpkg-architecture -qDEB_HOST_MULTIARCH)
+
 LDFLAGS += -Wl,--as-needed
 
 # For building swig/ and bindings/python/ for all Python version, these directories are cloned and build in addition to the main library
@@ -17,10 +19,8 @@ override_dh_auto_configure: debian/config-python-stamp $(PYVERS:%=debian/config-
 debian/config-python-stamp:
 	dh_testdir
 	dh_auto_configure -- \
-		--sysconfdir=/etc \
 		--sbindir=/sbin \
-		--libdir='$${exec_prefix}'/lib \
-		--libexecdir=/lib \
+		--libdir=/lib/${DEB_HOST_MULTIARCH} \
 		--enable-shared=audit \
 		--enable-gssapi-krb5 \
 		--with-apparmor \
@@ -59,13 +59,21 @@ override_dh_auto_install: debian/install-python-stamp $(PYVERS:%=debian/install-
 	$(RM) debian/tmp/etc/rc.d/init.d/auditd
 	$(RM) debian/tmp/etc/sysconfig/auditd
 
-	# Move the library to /lib
-	$(RM) debian/tmp/usr/lib/libaudit.so
-	$(RM) debian/tmp/usr/lib/libauparse.so
+	# Move the development library to /usr/lib
+	$(RM) debian/tmp/lib/${DEB_HOST_MULTIARCH}/libaudit.so
+	$(RM) debian/tmp/lib/${DEB_HOST_MULTIARCH}/libauparse.so
 
-	# Remove .la files for Debian
-	$(RM) debian/tmp/usr/lib/libauparse.la
-	$(RM) debian/tmp/usr/lib/libaudit.la
+	mkdir -p debian/tmp/usr/lib/${DEB_HOST_MULTIARCH}/
+
+	ln -s /lib/${DEB_HOST_MULTIARCH}/libaudit.so.1.0.0 \
+		debian/tmp/usr/lib/${DEB_HOST_MULTIARCH}/libaudit.so
+	ln -s /lib/${DEB_HOST_MULTIARCH}/libauparse.so.0.0.0 \
+		debian/tmp/usr/lib/${DEB_HOST_MULTIARCH}/libauparse.so
+
+	mv debian/tmp/lib/${DEB_HOST_MULTIARCH}/libaudit.a \
+		debian/tmp/usr/lib/${DEB_HOST_MULTIARCH}/libaudit.a
+	mv debian/tmp/lib/${DEB_HOST_MULTIARCH}/libauparse.a \
+		debian/tmp/usr/lib/${DEB_HOST_MULTIARCH}/libauparse.a
 
 	# The Debian way compiles Python packages on install
 	$(RM) debian/tmp/usr/lib/python*/*-packages/_au*.*a

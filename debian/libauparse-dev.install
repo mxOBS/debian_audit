@@ -1,4 +1,5 @@
-usr/lib/libauparse.a
+usr/lib/*/libauparse.a
+usr/lib/*/libauparse.so
 usr/include/auparse.h
 usr/include/auparse-defs.h
 usr/share/man/man3/auparse*

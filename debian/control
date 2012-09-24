@@ -27,9 +27,11 @@ Description: User space tools for security auditing
 Package: libauparse0
 Architecture: any
 Priority: optional
+Pre-Depends: ${misc:Pre-Depends}
 Depends: ${shlibs:Depends}, ${misc:Depends}
 Breaks: libaudit0, libaudit1 (<< 1:2.2.1-2)
 Replaces: libaudit0, libaudit1 (<< 1:2.2.1-2)
+Multi-Arch: same
 Description: Dynamic library for parsing security auditing
  The libauparse package contains the dynamic libraries needed for
  applications to use the audit framework. It is used to monitor systems for
@@ -51,7 +53,9 @@ Description: Header files and static library for the libauparse0 library
 Package: libaudit1
 Architecture: any
 Priority: optional
+Pre-Depends: ${misc:Pre-Depends}
 Depends: ${shlibs:Depends}, ${misc:Depends}, libaudit-common (= ${source:Version})
+Multi-Arch: same
 Description: Dynamic library for security auditing
  The audit-libs package contains the dynamic libraries needed for
  applications to use the audit framework. It is used to monitor systems for
@@ -63,6 +67,7 @@ Priority: optional
 Depends: ${misc:Depends}
 Breaks: libaudit0, libaudit1 (<< 1:2.2.1-2)
 Replaces: libaudit0, libaudit1 (<< 1:2.2.1-2)
+Multi-Arch: foreign
 Description: Dynamic library for security auditing - common files
  The audit-libs package contains the dynamic libraries needed for
  applications to use the audit framework. It is used to monitor systems for
