@@ -4,8 +4,10 @@ audit (1:2.2.1-2) UNRELEASED; urgency=low
     own package thanks to Alban Browaeys (Closes: #682251)
   * Drop useless debian/patches/rpath.diff and call to chrpath, call
     dh_autoreconf to be sure autofoo are up-to-date instead.
+  * debian/auditd.install: Install auvirt executable, thanks to Guido Günther
+    (Closes: #688440)
 
- -- Laurent Bigonville <bigon@debian.org>  Mon, 24 Sep 2012 16:01:20 +0200
+ -- Laurent Bigonville <bigon@debian.org>  Mon, 24 Sep 2012 17:10:34 +0200
 
 audit (1:2.2.1-1) experimental; urgency=low
 
