@@ -7,8 +7,9 @@ audit (1:2.2.1-2) UNRELEASED; urgency=low
   * debian/auditd.install: Install auvirt executable, thanks to Guido Günther
     (Closes: #688440)
   * Convert to multiarch policy (Closes: #687121)
+  * Add missing X-Python-Version header
 
- -- Laurent Bigonville <bigon@debian.org>  Mon, 24 Sep 2012 17:28:54 +0200
+ -- Laurent Bigonville <bigon@debian.org>  Mon, 24 Sep 2012 17:31:30 +0200
 
 audit (1:2.2.1-1) experimental; urgency=low
 
