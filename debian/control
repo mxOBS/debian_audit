@@ -15,7 +15,6 @@ Package: auditd
 Section: admin
 Architecture: any
 Depends: lsb-base (>= 3.0-6),
- libpam-runtime (>= 1.0.1-6),
  ${shlibs:Depends}, ${misc:Depends}
 Suggests: audispd-plugins
 Description: User space tools for security auditing

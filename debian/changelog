@@ -10,8 +10,10 @@ audit (1:2.2.1-2) UNRELEASED; urgency=low
   * Add missing X-Python-Version header
   * Enable libcap-ng support
   * Let's dh_python2 take care of removing *.p[co] files
+  * Drop pam-config stanza for loginuid, it's only intended to be called from
+    entry point PAM services (Closes: #676527)
 
- -- Laurent Bigonville <bigon@debian.org>  Mon, 24 Sep 2012 18:12:52 +0200
+ -- Laurent Bigonville <bigon@debian.org>  Mon, 24 Sep 2012 18:30:56 +0200
 
 audit (1:2.2.1-1) experimental; urgency=low
 

@@ -26,4 +26,3 @@ usr/share/man/man8/ausearch.8
 usr/share/man/man8/ausyscall.8
 usr/share/man/man8/autrace.8
 usr/share/man/man8/auvirt.8
-../../debian/pam-configs/* usr/share/pam-configs/
