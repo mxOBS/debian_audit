@@ -11,12 +11,11 @@ PYVERS := $(shell pyversions --requested --version debian/control)
 PYVERS := $(filter-out $(PYDEFAULTVER), $(PYVERS)) # $(PYDEFAULTVER)
 
 %:
-	dh $@ --builddirectory=debian/build --buildsystem=autoconf --with autotools_dev --with python2
+	dh $@ --builddirectory=debian/build --buildsystem=autoconf --with autoreconf --with python2
 
 override_dh_auto_configure: debian/config-python-stamp $(PYVERS:%=debian/config-python%-stamp)
 debian/config-python-stamp:
 	dh_testdir
-	#autoreconf -fv --install
 	dh_auto_configure -- \
 		--sysconfdir=/etc \
 		--sbindir=/sbin \
@@ -91,17 +90,6 @@ override_dh_fixperms:
 	#chmod 750 debian/auditd/sbin/audispd
 	chmod -R o-rwx debian/auditd/var/log/audit
 	chmod -R o-rwx debian/auditd/etc/audit debian/auditd/etc/audisp debian/auditd/etc/audisp/plugins.d
-
-override_dh_makeshlibs:
-	chrpath -d debian/audispd-plugins/sbin/audispd-zos-remote
-	chrpath -d debian/audispd-plugins/sbin/audisp-prelude
-	chrpath -d debian/auditd/usr/bin/aulast
-	chrpath -d debian/auditd/usr/bin/aulastlog
-	chrpath -d debian/auditd/usr/bin/ausyscall
-	chrpath -d debian/libauparse0/lib/libauparse.so.0.0.0
-	chrpath -d debian/python-audit/usr/lib/python*/*-packages/_audit.so
-	chrpath -d debian/python-audit/usr/lib/python*/*-packages/auparse.so
-	dh_makeshlibs
 
 get-orig-source:
 	-uscan --upstream-version 0
