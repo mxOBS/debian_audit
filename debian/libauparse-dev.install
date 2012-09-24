@@ -1,0 +1,5 @@
+usr/lib/libauparse.a
+usr/include/auparse.h
+usr/include/auparse-defs.h
+usr/share/man/man3/auparse*
+usr/share/man/man3/ausearch*
