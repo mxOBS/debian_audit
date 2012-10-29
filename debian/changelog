@@ -21,8 +21,9 @@ audit (1:2.2.1-2) UNRELEASED; urgency=low
     on disk
   * Refresh and reapply debian/patches/manpage-dash.diff
   * debian/control: Add Vcs-* fields
+  * Add debian/gbp.conf file
 
- -- Laurent Bigonville <bigon@debian.org>  Mon, 29 Oct 2012 16:11:41 +0100
+ -- Laurent Bigonville <bigon@debian.org>  Mon, 29 Oct 2012 16:15:41 +0100
 
 audit (1:2.2.1-1) experimental; urgency=low
 
