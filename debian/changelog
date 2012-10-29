@@ -17,8 +17,10 @@ audit (1:2.2.1-2) UNRELEASED; urgency=low
     properly passed at link time
   * Drop debian/patches/mode.diff: Upstream is now checking if the mode of the
     executable is either 0750 or 0755 and not only 0750
+  * Drop several patches and files that were not used anymore but not dropped
+    on disk
 
- -- Laurent Bigonville <bigon@debian.org>  Mon, 29 Oct 2012 14:59:44 +0100
+ -- Laurent Bigonville <bigon@debian.org>  Mon, 29 Oct 2012 15:10:04 +0100
 
 audit (1:2.2.1-1) experimental; urgency=low
 
