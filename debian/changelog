@@ -1,5 +1,7 @@
 audit (1:2.2.1-2) UNRELEASED; urgency=low
 
+  * QA upload.
+  * Orphan audit package with maintainer approval
   * Split libauparse out of libaudit package and put /etc/libaudit.conf in its
     own package thanks to Alban Browaeys (Closes: #682251)
   * Drop useless debian/patches/rpath.diff and call to chrpath, call
@@ -23,7 +25,7 @@ audit (1:2.2.1-2) UNRELEASED; urgency=low
   * debian/control: Add Vcs-* fields
   * Add debian/gbp.conf file
 
- -- Laurent Bigonville <bigon@debian.org>  Mon, 29 Oct 2012 16:15:41 +0100
+ -- Laurent Bigonville <bigon@debian.org>  Mon, 29 Oct 2012 16:40:41 +0100
 
 audit (1:2.2.1-1) experimental; urgency=low
 
