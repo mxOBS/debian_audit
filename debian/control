@@ -22,7 +22,7 @@ X-Python-Version: >= 2.5
 
 Package: auditd
 Section: admin
-Architecture: any
+Architecture: linux-any
 Depends: lsb-base (>= 3.0-6), ${misc:Depends}, ${shlibs:Depends}
 Suggests: audispd-plugins
 Description: User space tools for security auditing
@@ -33,7 +33,7 @@ Description: User space tools for security auditing
  Also contains the audit dispatcher "audisp".
 
 Package: libauparse0
-Architecture: any
+Architecture: linux-any
 Priority: optional
 Pre-Depends: ${misc:Pre-Depends}
 Depends: ${misc:Depends}, ${shlibs:Depends}
@@ -49,7 +49,7 @@ Description: Dynamic library for parsing security auditing
 
 Package: libauparse-dev
 Section: libdevel
-Architecture: any
+Architecture: linux-any
 Depends: libauparse0 (= ${binary:Version}), ${misc:Depends}
 Breaks: libaudit-dev (<< 1:2.2.1-2)
 Replaces: libaudit-dev (<< 1:2.2.1-2)
@@ -59,7 +59,7 @@ Description: Header files and static library for the libauparse0 library
  security related events.
 
 Package: libaudit1
-Architecture: any
+Architecture: linux-any
 Priority: optional
 Pre-Depends: ${misc:Pre-Depends}
 Depends: libaudit-common (= ${source:Version}),
@@ -88,7 +88,7 @@ Description: Dynamic library for security auditing - common files
 
 Package: libaudit-dev
 Section: libdevel
-Architecture: any
+Architecture: linux-any
 Depends: libaudit1 (= ${binary:Version}), ${misc:Depends}
 Description: Header files and static library for security auditing
  The audit-libs-devel package contains the static libraries and header
@@ -97,7 +97,7 @@ Description: Header files and static library for security auditing
 
 Package: python-audit
 Section: python
-Architecture: any
+Architecture: linux-any
 Depends: ${misc:Depends}, ${python:Depends}, ${shlibs:Depends}
 Provides: ${python:Provides}
 Description: Python bindings for security auditing
@@ -107,7 +107,7 @@ Description: Python bindings for security auditing
 
 Package: audispd-plugins
 Section: admin
-Architecture: any
+Architecture: linux-any
 Depends: auditd, ${misc:Depends}, ${shlibs:Depends}
 Description: Plugins for the audit event dispatcher
  The audispd-plugins package provides plugins for the real-time
