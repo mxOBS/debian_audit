@@ -1,4 +1,4 @@
-audit (1:2.2.1-2) UNRELEASED; urgency=low
+audit (1:2.2.1-2) experimental; urgency=low
 
   * QA upload.
   * Orphan audit package with maintainer approval
@@ -27,7 +27,7 @@ audit (1:2.2.1-2) UNRELEASED; urgency=low
   * Run wrap-and-sort script
   * Only attempt to build on linux-any architectures
 
- -- Laurent Bigonville <bigon@debian.org>  Wed, 31 Oct 2012 17:01:10 +0100
+ -- Laurent Bigonville <bigon@debian.org>  Mon, 12 Nov 2012 00:01:27 +0100
 
 audit (1:2.2.1-1) experimental; urgency=low
 
