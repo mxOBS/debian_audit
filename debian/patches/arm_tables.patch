@@ -1,0 +1,14 @@
+Description: Add support for arm processors
+Origin: upstream
+
+--- a/lib/machinetab.h
++++ b/lib/machinetab.h
+@@ -35,4 +35,8 @@ _S(MACH_ALPHA,   "alpha"  )
+ #endif
+ #ifdef WITH_ARMEB
+ _S(MACH_ARMEB,   "armeb"  )
++_S(MACH_ARMEB,   "armv5tel")
++_S(MACH_ARMEB,   "armv5tejl")
++_S(MACH_ARMEB,   "armv7l")
++_S(MACH_ARMEB,   "armv6l")
+ #endif

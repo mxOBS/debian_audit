@@ -4,6 +4,7 @@ DPKG_EXPORT_BUILDFLAGS = 1
 include /usr/share/dpkg/buildflags.mk
 
 DEB_HOST_MULTIARCH ?= $(shell dpkg-architecture -qDEB_HOST_MULTIARCH)
+DEB_HOST_ARCH := $(shell dpkg-architecture -qDEB_HOST_ARCH)
 
 LDFLAGS += -Wl,--as-needed
 
@@ -11,6 +12,10 @@ LDFLAGS += -Wl,--as-needed
 PYDEFAULTVER := $(shell pyversions --default --version)                                                                                        
 PYVERS := $(shell pyversions --requested --version debian/control)                                                                             
 PYVERS := $(filter-out $(PYDEFAULTVER), $(PYVERS)) # $(PYDEFAULTVER)
+
+ifeq ($(DEB_HOST_ARCH),alpha)
+  EXTRA_ARCH_TABLE := --with-alpha
+endif
 
 %:
 	dh $@ --builddirectory=debian/build --buildsystem=autoconf --with autoreconf --with python2
@@ -26,7 +31,8 @@ debian/config-python-stamp:
 		--with-apparmor \
 		--with-prelude \
 		--with-libwrap \
-		--with-libcap-ng
+		--with-libcap-ng \
+		--with-armeb ${EXTRA_ARCH_TABLE}
 	touch $@
 debian/config-python%-stamp: debian/config-python-stamp
 	cp -lpr debian/build/swig            debian/build/swig.$*

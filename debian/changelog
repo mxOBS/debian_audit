@@ -1,3 +1,15 @@
+audit (1:2.2.1-3) UNRELEASED; urgency=low
+
+  * QA upload.
+  * Enable support for Alpha and ARM ABI (Closes: #681457)
+    - debian/patches/arm_tables.patch: Add support for ARM processors
+    - debian/patches/fix-arm-test-failure.patch: Fix tests when compiling ARM
+      support
+    - debian/patches/fix-ftbfs-arm-alpha.patch: Fix FTBFS when compiling both
+      ARM and Alpha support
+
+ -- Laurent Bigonville <bigon@debian.org>  Sat, 01 Dec 2012 14:52:13 +0100
+
 audit (1:2.2.1-2) experimental; urgency=low
 
   * QA upload.
