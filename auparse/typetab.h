@@ -1,5 +1,5 @@
 /* typetab.h --
- * Copyright 2007-09,2011 Red Hat Inc., Durham, North Carolina.
+ * Copyright 2007-09,2011-12 Red Hat Inc., Durham, North Carolina.
  * All Rights Reserved.
  *
  * This library is free software; you can redistribute it and/or
@@ -85,6 +85,15 @@ _S(AUPARSE_TYPE_CAP_BITMAP,	"cap_pe"	)
 _S(AUPARSE_TYPE_CAP_BITMAP,	"cap_pp"	)
 _S(AUPARSE_TYPE_CAP_BITMAP,	"cap_fi"	)
 _S(AUPARSE_TYPE_CAP_BITMAP,	"cap_fp"	)
+_S(AUPARSE_TYPE_CAP_BITMAP,	"fp"		)
+_S(AUPARSE_TYPE_CAP_BITMAP,	"fi"		)
+_S(AUPARSE_TYPE_CAP_BITMAP,	"fe"		)
+_S(AUPARSE_TYPE_CAP_BITMAP,	"old_pp"	)
+_S(AUPARSE_TYPE_CAP_BITMAP,	"old_pi"	)
+_S(AUPARSE_TYPE_CAP_BITMAP,	"old_pe"	)
+_S(AUPARSE_TYPE_CAP_BITMAP,	"new_pp"	)
+_S(AUPARSE_TYPE_CAP_BITMAP,	"new_pi"	)
+_S(AUPARSE_TYPE_CAP_BITMAP,	"new_pe"	)
 _S(AUPARSE_TYPE_NFPROTO,	"family"	)
 _S(AUPARSE_TYPE_ICMPTYPE,	"icmptype"	)
 _S(AUPARSE_TYPE_PROTOCOL,	"proto"		)
@@ -98,3 +107,5 @@ _S(AUPARSE_TYPE_ESCAPED,	"profile"	)
 _S(AUPARSE_TYPE_ESCAPED,	"requested_mask")
 #endif
 _S(AUPARSE_TYPE_PERSONALITY,	"per"		)
+_S(AUPARSE_TYPE_SECCOMP,	"code"		)
+

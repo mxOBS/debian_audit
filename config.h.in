@@ -146,6 +146,9 @@
 /* Define if you want to use GSSAPI */
 #undef USE_GSSAPI
 
+/* Define if you want to use the auditd network listener. */
+#undef USE_LISTENER
+
 /* Version number of package */
 #undef VERSION
 

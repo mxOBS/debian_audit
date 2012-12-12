@@ -61,7 +61,7 @@ struct nv_pair {
 enum { T_UID, T_GID, T_SYSCALL, T_ARCH, T_EXIT, T_ESCAPED, T_PERM, T_MODE, 
 T_SOCKADDR, T_FLAGS, T_PROMISC, T_CAPABILITY, T_A0, T_A1, T_A2, T_A3,
 T_SIGNAL, T_KEY, T_LIST, T_TTY_DATA, T_SESSION, T_CAP_BITMAP, T_NFPROTO,
-T_ICMPTYPE, T_PROTOCOL, T_ADDR, T_PERSONALITY };
+T_ICMPTYPE, T_PROTOCOL, T_ADDR, T_PERSONALITY, T_SECCOMP };
 
 /* Function in ausearch-lookup for unescaping filenames */
 extern char *unescape(const char *buf);
@@ -383,6 +383,15 @@ static struct nv_pair typetab[] = {
 	{T_CAP_BITMAP, "cap_pp"},
 	{T_CAP_BITMAP, "cap_fi"},
 	{T_CAP_BITMAP, "cap_fp"},
+	{T_CAP_BITMAP, "fp"},
+	{T_CAP_BITMAP, "fi"},
+	{T_CAP_BITMAP, "fe"},
+	{T_CAP_BITMAP, "old_pp"},
+	{T_CAP_BITMAP, "old_pi"},
+	{T_CAP_BITMAP, "old_pe"},
+	{T_CAP_BITMAP, "new_pp"},
+	{T_CAP_BITMAP, "new_pi"},
+	{T_CAP_BITMAP, "new_pe"},
 	{T_ESCAPED, "vm"},
 	{T_ESCAPED, "old-disk"},
 	{T_ESCAPED, "new-disk"},
@@ -394,6 +403,7 @@ static struct nv_pair typetab[] = {
 	{T_ICMPTYPE, "icmptype"},
 	{T_PROTOCOL, "proto"},
 	{T_PERSONALITY, "per"},
+	{T_SECCOMP, "code"},
 };
 #define TYPE_NAMES (sizeof(typetab)/sizeof(typetab[0]))
 
@@ -928,6 +938,8 @@ static struct nv_pair captab[] = {
         {33, "mac_admin"},
         {34, "syslog"},
         {35, "wake_alarm"},
+	{36, "block_suspend"},
+	{37, "compromise_kernel"},
 };
 #define CAP_NAMES (sizeof(captab)/sizeof(captab[0]))
 
@@ -1604,6 +1616,7 @@ static struct nv_pair recvtab[] =
   {0x00004000,    "MSG_NOSIGNAL"},
   {0x00008000,    "MSG_MORE"},
   {0x00010000,    "MSG_WAITFORONE"},
+  {0x20000000,    "MSG_FASTOPEN"},
   {0x40000000,    "MSG_CMSG_CLOEXEC"}
 };
 #define RECV_NAMES (sizeof(recvtab)/sizeof(recvtab[0]))
@@ -1780,8 +1793,8 @@ static void print_cap_bitmap(char *val)
 		return;
 	}
 
-	caps[0] = temp & 0xFFFFFFFF;
-	caps[1] = (temp & 0xFFFFFFFF) >> 32;
+	caps[0] =  temp & 0x00000000FFFFFFFFLL;
+	caps[1] = (temp & 0xFFFFFFFF00000000LL) >> 32;
 	for (i=0; i< CAP_NAMES; i++) {
 		if (MASK(i%32) & caps[i/32]) {
 			if (found)
@@ -1939,6 +1952,20 @@ static void print_session(char *val)
 		printf("%s ", val);
 }
 
+static void print_seccomp_code(const char *val)
+{
+	unsigned long code;
+
+	errno = 0;
+	code = strtoul(val, NULL, 16);
+	if (errno) {
+		printf("conversion error(%s) ", val);
+		return;
+	}
+
+	printf("%s ", aulookup_seccomp_code(code));
+}
+
 static void interpret(char *name, char *val, int comma, int rtype)
 {
 	int type;
@@ -1948,7 +1975,8 @@ static void interpret(char *name, char *val, int comma, int rtype)
 
 
 	/* Do some fixups */
-	if (rtype == AUDIT_EXECVE && name[0] == 'a' && strcmp(name, "argc"))
+	if (rtype == AUDIT_EXECVE && name[0] == 'a' && strcmp(name, "argc") &&
+			!strstr(name, "_len"))
 		type = T_ESCAPED;
 	else if (rtype == AUDIT_AVC && strcmp(name, "saddr") == 0)
 		type = -1;
@@ -2050,6 +2078,9 @@ static void interpret(char *name, char *val, int comma, int rtype)
 			break;
 		case T_PERSONALITY:
 			print_personality(val);
+			break;
+		case T_SECCOMP:
+			print_seccomp_code(val);
 			break;
 		default:
 			printf("%s%c", val, comma ? ',' : ' ');
