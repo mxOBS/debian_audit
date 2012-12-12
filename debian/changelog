@@ -1,6 +1,7 @@
-audit (1:2.2.1-3) UNRELEASED; urgency=low
+audit (1:2.2.2-1) UNRELEASED; urgency=low
 
   * QA upload.
+  * New upstream release
   * Enable support for Alpha and ARM ABI (Closes: #681457)
     - debian/patches/arm_tables.patch: Add support for ARM processors
     - debian/patches/fix-arm-test-failure.patch: Fix tests when compiling ARM
