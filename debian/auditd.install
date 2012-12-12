@@ -2,6 +2,7 @@ etc/audisp/audispd.conf
 etc/audisp/plugins.d/af_unix.conf
 etc/audisp/plugins.d/syslog.conf
 etc/audit
+init.d/auditd.service lib/systemd/system
 sbin/audispd
 sbin/auditctl
 sbin/auditd
