@@ -29,7 +29,7 @@ define([AC_INIT_NOTICE],
 ])
 
 AC_REVISION($Revision: 1.3 $)dnl
-AC_INIT(audit,2.2.1)
+AC_INIT(audit,2.2.2)
 AC_PREREQ(2.12)dnl
 AM_CONFIG_HEADER(config.h)
 
@@ -104,6 +104,20 @@ fi
 fi
 AM_CONDITIONAL(HAVE_PYTHON, test ${python_found} = "yes")
 
+#auditd listener
+AC_MSG_CHECKING(whether to include auditd network listener support)
+AC_ARG_ENABLE(listener,
+	      [AS_HELP_STRING([--disable-listener],
+			      [Disable auditd network listener support])],
+	      enable_listener=$enableval,
+	      enable_listener=yes)
+if test "x$enable_listener" != "xno"; then
+	AC_DEFINE(USE_LISTENER, 1,
+		  [Define if you want to use the auditd network listener.])
+fi
+AM_CONDITIONAL(ENABLE_LISTENER, test "x$enable_listener" != "xno")
+AC_MSG_RESULT($enable_listener)
+
 #gssapi
 AC_ARG_ENABLE(gssapi_krb5,
 	[AS_HELP_STRING([--enable-gssapi-krb5],[Enable GSSAPI Kerberos 5 support @<:@default=no@:>@])],
@@ -125,6 +139,18 @@ if test $want_gssapi_krb5 = yes; then
 	])
 fi
 AM_CONDITIONAL(ENABLE_GSSAPI, test x$want_gssapi_krb5 = xyes)
+
+#systemd
+AC_ARG_ENABLE(systemd,
+	[AS_HELP_STRING([--enable-systemd],[Enable systemd init scripts @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) want_systemd="yes" ;;
+          no) want_systemd="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-systemd) ;;
+         esac],
+	[want_systemd="no"]
+)
+AM_CONDITIONAL(ENABLE_SYSTEMD, test x$want_systemd = xyes)
 
 ALLDEBUG="-g"
 AC_ARG_WITH(debug,

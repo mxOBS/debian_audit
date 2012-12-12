@@ -1,5 +1,5 @@
 /* msg_typetab.h --
- * Copyright 2005-07,2009-11 Red Hat Inc., Durham, North Carolina.
+ * Copyright 2005-07,2009-12 Red Hat Inc., Durham, North Carolina.
  * All Rights Reserved.
  *
  * This library is free software; you can redistribute it and/or
@@ -107,6 +107,7 @@ _S(AUDIT_CAPSET,                     "CAPSET"                        )
 _S(AUDIT_MMAP,                       "MMAP"                          )
 _S(AUDIT_NETFILTER_PKT,              "NETFILTER_PKT"                 )
 _S(AUDIT_NETFILTER_CFG,              "NETFILTER_CFG"                 )
+_S(AUDIT_SECCOMP,                    "SECCOMP"                       )
 _S(AUDIT_AVC,                        "AVC"                           )
 _S(AUDIT_SELINUX_ERR,                "SELINUX_ERR"                   )
 _S(AUDIT_AVC_PATH,                   "AVC_PATH"                      )
@@ -127,6 +128,7 @@ _S(AUDIT_MAC_UNLBL_STCADD,           "MAC_UNLBL_STCADD"              )
 _S(AUDIT_MAC_UNLBL_STCDEL,           "MAC_UNLBL_STCDEL"              )
 _S(AUDIT_ANOM_PROMISCUOUS,           "ANOM_PROMISCUOUS"              )
 _S(AUDIT_ANOM_ABEND,                 "ANOM_ABEND"                    )
+_S(AUDIT_ANOM_LINK,                  "ANOM_LINK"                     )
 _S(AUDIT_INTEGRITY_DATA,             "INTEGRITY_DATA"                )
 _S(AUDIT_INTEGRITY_METADATA,         "INTEGRITY_METADATA"            )
 _S(AUDIT_INTEGRITY_STATUS,           "INTEGRITY_STATUS"              )

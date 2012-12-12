@@ -75,6 +75,7 @@ typedef struct ev_tcp {
 
 static int listen_socket;
 static struct ev_io tcp_listen_watcher;
+static struct ev_periodic periodic_watcher;
 static int min_port, max_port, max_per_addr;
 static int use_libwrap = 1;
 #ifdef USE_GSSAPI
@@ -742,7 +743,7 @@ static int check_num_connections(struct sockaddr_in *aaddr)
 		if (memcmp(&aaddr->sin_addr, &client->addr.sin_addr, 
 					sizeof(struct in_addr)) == 0) {
 			num++;
-			if (num > max_per_addr)
+			if (num >= max_per_addr)
 				return 1;
 		}
 		client = client->next;
@@ -866,17 +867,49 @@ static void auditd_tcp_listen_handler( struct ev_loop *loop,
 	send_audit_event(AUDIT_DAEMON_ACCEPT, emsg);
 }
 
-void auditd_set_ports(int minp, int maxp, int max_p_addr)
+static void auditd_set_ports(int minp, int maxp, int max_p_addr)
 {
 	min_port = minp;
 	max_port = maxp;
 	max_per_addr = max_p_addr;
 }
 
+static void periodic_handler(struct ev_loop *loop, struct ev_periodic *per,
+			int revents )
+{
+	struct daemon_conf *config = (struct daemon_conf *) per->data;
+	struct ev_tcp *ev, *next = NULL;
+	int active;
+
+	if (!config->tcp_client_max_idle)
+		return;
+
+	for (ev = client_chain; ev; ev = next) {
+		active = ev->client_active;
+		ev->client_active = 0;
+		if (active)
+			continue;
+
+		audit_msg(LOG_NOTICE,
+			"client %s idle too long - closing connection\n",
+			sockaddr_to_addr4(&(ev->addr)));
+		ev_io_stop (loop, &ev->io);
+		release_client(ev);
+		next = ev->next;
+		free(ev);
+	}
+}
+
 int auditd_tcp_listen_init ( struct ev_loop *loop, struct daemon_conf *config )
 {
 	struct sockaddr_in address;
 	int one = 1;
+
+	ev_periodic_init (&periodic_watcher, periodic_handler,
+			  0, config->tcp_client_max_idle, NULL);
+	periodic_watcher.data = config;
+	if (config->tcp_client_max_idle)
+		ev_periodic_start (loop, &periodic_watcher);
 
 	/* If the port is not set, that means we aren't going to
 	  listen for connections.  */
@@ -963,7 +996,8 @@ int auditd_tcp_listen_init ( struct ev_loop *loop, struct daemon_conf *config )
 	return 0;
 }
 
-void auditd_tcp_listen_uninit ( struct ev_loop *loop )
+void auditd_tcp_listen_uninit ( struct ev_loop *loop,
+				struct daemon_conf *config )
 {
 #ifdef USE_GSSAPI
 	OM_uint32 status;
@@ -987,25 +1021,45 @@ void auditd_tcp_listen_uninit ( struct ev_loop *loop )
 		ev_io_stop (loop, &client_chain->io);
 		close_client (client_chain);
 	}
+
+	if (config->tcp_client_max_idle)
+		ev_periodic_stop (loop, &periodic_watcher);
 }
 
-void auditd_tcp_listen_check_idle (struct ev_loop *loop )
+static void periodic_reconfigure(struct daemon_conf *config)
 {
-	struct ev_tcp *ev, *next = NULL;
-	int active;
+	struct ev_loop *loop = ev_default_loop (EVFLAG_AUTO);
+	if (config->tcp_client_max_idle) {
+		ev_periodic_set (&periodic_watcher, ev_now (loop),
+				 config->tcp_client_max_idle, NULL);
+		ev_periodic_start (loop, &periodic_watcher);
+	} else {
+		ev_periodic_stop (loop, &periodic_watcher);
+	}
+}
 
-	for (ev = client_chain; ev; ev = next) {
-		active = ev->client_active;
-		ev->client_active = 0;
-		if (active)
-			continue;
-
-		audit_msg(LOG_NOTICE,
-			"client %s idle too long - closing connection\n",
-			sockaddr_to_addr4(&(ev->addr)));
-		ev_io_stop (loop, &ev->io);
-		release_client(ev);
-		next = ev->next;
-		free(ev);
+void auditd_tcp_listen_reconfigure ( struct daemon_conf *nconf,
+				     struct daemon_conf *oconf )
+{
+	/* Look at network things that do not need restarting */
+	if (oconf->tcp_client_min_port != nconf->tcp_client_min_port ||
+		    oconf->tcp_client_max_port != nconf->tcp_client_max_port ||
+		    oconf->tcp_max_per_addr != nconf->tcp_max_per_addr) {
+		oconf->tcp_client_min_port = nconf->tcp_client_min_port;
+		oconf->tcp_client_max_port = nconf->tcp_client_max_port;
+		oconf->tcp_max_per_addr = nconf->tcp_max_per_addr;
+		auditd_set_ports(oconf->tcp_client_min_port,
+				oconf->tcp_client_max_port,
+				oconf->tcp_max_per_addr);
+	}
+	if (oconf->tcp_client_max_idle != nconf->tcp_client_max_idle) {
+		oconf->tcp_client_max_idle = nconf->tcp_client_max_idle;
+		periodic_reconfigure(oconf);
+	}
+	if (oconf->tcp_listen_port != nconf->tcp_listen_port ||
+			oconf->tcp_listen_queue != nconf->tcp_listen_queue) {
+		oconf->tcp_listen_port = nconf->tcp_listen_port;
+		oconf->tcp_listen_queue = nconf->tcp_listen_queue;
+		// FIXME: need to restart the network stuff
 	}
 }

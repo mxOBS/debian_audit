@@ -87,6 +87,7 @@
 #include "typetabs.h"
 #include "nfprototabs.h"
 #include "icmptypetabs.h"
+#include "seccomptabs.h"
 
 typedef enum { AVC_UNSET, AVC_DENIED, AVC_GRANTED } avc_t;
 typedef enum { S_UNSET=-1, S_FAILED, S_SUCCESS } success_t;
@@ -800,8 +801,8 @@ static const char *print_cap_bitmap(const char *val)
                 return out;
 	}
 
-        caps[0] = temp & 0xFFFFFFFF;
-        caps[1] = (temp & 0xFFFFFFFF) >> 32;
+        caps[0] =  temp & 0x00000000FFFFFFFFLL;
+        caps[1] = (temp & 0xFFFFFFFF00000000LL) >> 32;
 	p = buf;
 	for (i=0; i <= CAP_LAST_CAP; i++) {
 		if (MASK(i%32) & caps[i/32]) {
@@ -842,7 +843,7 @@ static const char *print_open_flags(const char *val)
 	size_t i;
 	unsigned int flags;
 	int cnt = 0;
-	char *out, buf[144];
+	char *out, buf[160];
 
 	errno = 0;
 	flags = strtoul(val, NULL, 16);
@@ -1556,6 +1557,26 @@ static const char *print_session(const char *val)
 		return strdup(val);
 }
 
+#define SECCOMP_RET_ACTION      0x7fff0000U
+static const char *print_seccomp_code(const char *val)
+{
+	unsigned long code;
+	char *out;
+	const char *s;
+
+	errno = 0;
+        code = strtoul(val, NULL, 16);
+	if (errno) {
+		asprintf(&out, "conversion error(%s)", val);
+		return out;
+	}
+	s = seccomp_i2s(code & SECCOMP_RET_ACTION);
+	if (s != NULL)
+		return strdup(s);
+	asprintf(&out, "unknown seccomp code (%s)", val);
+	return out;
+}
+
 int lookup_type(const char *name)
 {
 	int i;
@@ -1575,7 +1596,8 @@ const char *interpret(const rnode *r)
 	const char *val = nvlist_get_cur_val(nv);
 
 	/* Do some fixups */
-	if (r->type == AUDIT_EXECVE && name[0] == 'a' && strcmp(name, "argc"))
+	if (r->type == AUDIT_EXECVE && name[0] == 'a' && strcmp(name, "argc") &&
+			!strstr(name, "_len"))
 		type = AUPARSE_TYPE_ESCAPED;
 	else if (r->type == AUDIT_AVC && strcmp(name, "saddr") == 0)
 		type = -1;
@@ -1674,6 +1696,9 @@ const char *interpret(const rnode *r)
 			break;
 		case AUPARSE_TYPE_PERSONALITY:
 			out = print_personality(val);
+			break;
+		case AUPARSE_TYPE_SECCOMP:
+			out = print_seccomp_code(val);
 			break;
 		case AUPARSE_TYPE_UNCLASSIFIED:
 		default:

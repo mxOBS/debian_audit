@@ -1,5 +1,5 @@
 /* libaudit.h -- 
- * Copyright 2004-2011 Red Hat Inc., Durham, North Carolina.
+ * Copyright 2004-2012 Red Hat Inc., Durham, North Carolina.
  * All Rights Reserved.
  *
  * This library is free software; you can redistribute it and/or
@@ -224,6 +224,13 @@ extern "C" {
 #define AUDIT_NETFILTER_CFG	1325 /* Netfilter chain modifications */
 #endif
 
+#ifndef AUDIT_SECCOMP
+#define AUDIT_SECCOMP		1326 /* Secure Computing event */
+#endif
+
+#ifndef AUDIT_ANOM_LINK
+#define AUDIT_ANOM_LINK		1702 /* Suspicious use of file links */
+#endif
 
 /* This is related to the filterkey patch */
 #define AUDIT_KEY_SEPARATOR 0x01
