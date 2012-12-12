@@ -1,5 +1,2 @@
 fix-typos.diff
 manpage-dash.diff
-arm_tables.patch
-fix-ftbfs-arm-alpha.patch
-fix-arm-test-failure.patch
