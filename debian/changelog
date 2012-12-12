@@ -4,6 +4,7 @@ audit (1:2.2.2-1) UNRELEASED; urgency=low
   * New upstream release
     - Add debian/patches/fix-make-check.diff: Try to unbreak make check
     - debian/auditd.install: Install systemd service file
+    - debian/libauparse0.symbols: Adjust .symbols file
   * Enable support for Alpha and ARM ABI (Closes: #681457)
 
  -- Laurent Bigonville <bigon@debian.org>  Sat, 01 Dec 2012 14:52:13 +0100

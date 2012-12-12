@@ -2,6 +2,7 @@ libauparse.so.0 libauparse0 #MINVER#
  auparse_add_callback@Base 1:2.2.1
  auparse_destroy@Base 1:2.2.1
  auparse_feed@Base 1:2.2.1
+ auparse_feed_has_data@Base 1:2.2.2
  auparse_find_field@Base 1:2.2.1
  auparse_find_field_next@Base 1:2.2.1
  auparse_first_field@Base 1:2.2.1
