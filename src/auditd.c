@@ -256,29 +256,38 @@ static int write_pid_file(void)
 		pidfile = 0;
 		return 1;
 	}
-	(void)write(pidfd, val, (unsigned int)len);
+	if (write(pidfd, val, (unsigned int)len) != len) {
+		audit_msg(LOG_ERR, "Unable to write pidfile (%s)",
+			strerror(errno));
+		close(pidfd);
+		pidfile = 0;
+		return 1;
+	}
 	close(pidfd);
 	return 0;
 }
 
 static void avoid_oom_killer(void)
 {
-	int oomfd;
+	int oomfd, len, rc;
+	char *score = NULL;
 
 	/* New kernels use different technique */	
-	oomfd = open("/proc/self/oom_score_adj", O_NOFOLLOW | O_WRONLY);
-	if (oomfd >= 0) {
-		(void)write(oomfd, "-1000", 5);
-		close(oomfd);
-		return;
-	}
-	oomfd = open("/proc/self/oom_adj", O_NOFOLLOW | O_WRONLY);
-	if (oomfd >= 0) {
-		(void)write(oomfd, "-17", 3);
-		close(oomfd);
-		return;
-	}
-	// Old style kernel...perform another action here
+	if ((oomfd = open("/proc/self/oom_score_adj",
+				O_NOFOLLOW | O_WRONLY)) >= 0) {
+		score = "-1000";
+	} else if ((oomfd = open("/proc/self/oom_adj",
+				O_NOFOLLOW | O_WRONLY)) >= 0) {
+		score = "-17";
+	} else
+		audit_msg(LOG_NOTICE, "Cannot open out of memory adjuster");
+
+	len = strlen(score);
+	rc = write(oomfd, score, len);
+	if (rc != len)
+		audit_msg(LOG_NOTICE, "Unable to adjust out of memory score");
+
+	close(oomfd);
 }
 
 /*
@@ -328,7 +337,12 @@ static int become_daemon(void)
 			close(fd);
 
 			/* Change to '/' */
-			chdir("/");
+			rc = chdir("/");
+			if (rc < 0) {
+				audit_msg(LOG_ERR,
+					"Cannot change working directory to /");
+				return -1;
+			}
 
 			/* Become session/process group leader */
 			setsid();
@@ -446,10 +460,9 @@ int main(int argc, char *argv[])
 {
 	struct sigaction sa;
 	struct rlimit limit;
-	int i;
+	int i, c, rc;
 	int opt_foreground = 0, opt_allow_links = 0;
 	enum startup_state opt_startup = startup_enable;
-	int c;
 	extern char *optarg;
 	extern int optind;
 	struct ev_loop *loop;
@@ -459,7 +472,6 @@ int main(int argc, char *argv[])
 	struct ev_signal sigusr1_watcher;
 	struct ev_signal sigusr2_watcher;
 	struct ev_signal sigchld_watcher;
-	int rc;
 
 	/* Get params && set mode */
 	while ((c = getopt(argc, argv, "flns:")) != -1) {
@@ -540,8 +552,8 @@ int main(int argc, char *argv[])
 
 	if (config.priority_boost != 0) {
 		errno = 0;
-		(void) nice((int)-config.priority_boost);
-		if (errno) {
+		rc = nice((int)-config.priority_boost);
+		if (rc == -1 && errno) {
 			audit_msg(LOG_ERR, "Cannot change priority (%s)", 
 					strerror(errno));
 			return 1;

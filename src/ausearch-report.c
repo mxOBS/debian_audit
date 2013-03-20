@@ -1,6 +1,6 @@
 /*
 * ausearch-report.c - Format and output events
-* Copyright (c) 2005-09,2011-12 Red Hat Inc., Durham, North Carolina.
+* Copyright (c) 2005-09,2011-13 Red Hat Inc., Durham, North Carolina.
 * All Rights Reserved. 
 *
 * This software may be freely redistributed and/or modified under the
@@ -404,6 +404,8 @@ static struct nv_pair typetab[] = {
 	{T_PROTOCOL, "proto"},
 	{T_PERSONALITY, "per"},
 	{T_SECCOMP, "code"},
+	{T_ESCAPED, "old-rng"},
+	{T_ESCAPED, "new-rng"},
 };
 #define TYPE_NAMES (sizeof(typetab)/sizeof(typetab[0]))
 
@@ -964,7 +966,7 @@ static void print_capabilities(const char *val)
 
 static const char *signals[]=
 {
-	"0",
+	"SIG0",
 	"SIGHUP",
 	"SIGINT",
 	"SIGQUIT",
@@ -1422,6 +1424,7 @@ static struct nv_pair fcntltab[]=
  {14,          "F_SETLKW64" },
  {15,          "F_SETOWN_EX"},
  {16,          "F_GETOWN_EX"},
+ {17,          "F_GETOWNER_UIDS"},
  {1024,        "F_SETLEASE" },
  {1025,        "F_GETLEASE" },
  {1026,        "F_NOTIFY" },
@@ -1573,7 +1576,7 @@ static struct nv_pair clonetab[] =
 
 static void print_clone(const char *val)
 {
-	unsigned int clones, i, found = 0;
+	unsigned int clones, i, clone_sig, found = 0;
 
 	errno = 0;
 	clones = strtoul(val, NULL, 16);
@@ -1590,6 +1593,14 @@ static void print_clone(const char *val)
 			} else
 				printf("|%s", clonetab[i].name);
 		}
+	}
+	clone_sig = clones & 0xFF;
+	if (clone_sig && (clone_sig < 32)) {
+			if (found == 0)
+				found = 1;
+			else
+				printf("|");	
+			printf("%s ", signals[clone_sig]);
 	}
 	if (!found)
 		printf("0x%s ", val);
@@ -1647,6 +1658,14 @@ static void print_recv(const char *val)
 		putchar(' ');
 }
 
+static void print_dirfd(const char *val)
+{
+	if (strcmp(val, "-100") == 0)
+		printf("AT_FDCWD ");
+	else
+		printf("%s ", val);
+}
+
 static void print_a0(const char *val)
 {
 	if (sys) {
@@ -1678,6 +1697,34 @@ static void print_a0(const char *val)
 			return print_rlimit(val);
 		else if (strcmp(sys, "socket") == 0)
 			return print_socket_domain(val);
+		else if (strcmp(sys, "openat") == 0)
+			return print_dirfd(val);
+		else if (strcmp(sys, "mkdirat") == 0)
+			return print_dirfd(val);
+		else if (strcmp(sys, "mknodat") == 0)
+			return print_dirfd(val);
+		else if (strcmp(sys, "fchownat") == 0)
+			return print_dirfd(val);
+		else if (strcmp(sys, "futimesat") == 0)
+			return print_dirfd(val);
+		else if (strcmp(sys, "newfstatat") == 0)
+			return print_dirfd(val);
+		else if (strcmp(sys, "unlinkat") == 0)
+			return print_dirfd(val);
+		else if (strcmp(sys, "renameat") == 0)
+			return print_dirfd(val);
+		else if (strcmp(sys, "linkat") == 0)
+			return print_dirfd(val);
+		else if (strcmp(sys, "readlinkat") == 0)
+			return print_dirfd(val);
+		else if (strcmp(sys, "fchmodat") == 0)
+			return print_dirfd(val);
+		else if (strcmp(sys, "faccessat") == 0)
+			return print_dirfd(val);
+		else if (strcmp(sys, "futimensat") == 0)
+			return print_dirfd(val);
+		else if (strcmp(sys, "unshare") == 0)
+			return print_clone(val);
 		else goto normal;
 	} else
 normal:
@@ -1719,6 +1766,8 @@ static void print_a1(const char *val)
 			return print_mode(val, 16);
 		else if (strcmp(sys, "socket") == 0)
 			return print_socket_type(val);
+		else if (strcmp(sys, "setns") == 0)
+			return print_clone(val);
 		else goto normal;
 	} else
 normal:
@@ -1742,6 +1791,8 @@ static void print_a2(const char *val)
 			return print_signals(val, 16);
 		else if (strcmp(sys, "mkdirat") == 0)
 			return print_mode_short(val);
+		else if (strcmp(sys, "mknodat") == 0)
+			return print_mode_short(val);
 		else if (strcmp(sys, "mmap") == 0)
 			return print_prot(val, 1);
 		else if (strcmp(sys, "mprotect") == 0)
@@ -1752,6 +1803,12 @@ static void print_a2(const char *val)
 			return print_clone(val);
 		else if (strcmp(sys, "recvmsg") == 0)
 			print_recv(val);
+		else if (strcmp(sys, "linkat") == 0)
+			return print_dirfd(val);
+		else if (strcmp(sys, "readlinkat") == 0)
+			return print_dirfd(val);
+		else if (strcmp(sys, "faccessat") == 0)
+			return print_access(val);
 		else goto normal;
 	} else
 normal:
