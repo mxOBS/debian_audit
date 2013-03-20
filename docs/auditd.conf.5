@@ -89,7 +89,7 @@ is the name returned by the gethostname syscall. The
 means that it takes the hostname and resolves it with dns for a fully qualified
 domain name of that machine.
 .IR Numeric
-is similar to fqd except it resolves the IP address of the machine. In order to use this option, you might want to test that 'hostname -i' or 'domainname -i' returns a numeric address. Also, this option is not recommended if dhcp is used because you could have different addresses over time for the same machine.
+is similar to fqd except it resolves the IP address of the machine. In order to use this option, you might want to test that 'hostname \-i' or 'domainname \-i' returns a numeric address. Also, this option is not recommended if dhcp is used because you could have different addresses over time for the same machine.
 .IR User
 is an admin defined string from the name option. The default value is
 .IR none ".
@@ -147,7 +147,7 @@ as well as sending the message to syslog.
 .I suspend
 will cause the audit daemon to stop writing records to the disk. The daemon will still be alive. The
 .I single
-option will cause the audit daemon to put the computer system in single user mode.
+option will cause the audit daemon to put the computer system in single user mode. The
 .I halt
 option will cause the audit daemon to shutdown the computer system.
 .TP
@@ -177,8 +177,9 @@ as well as sending the message to syslog.
 .I Suspend
 will cause the audit daemon to stop writing records to the disk. The daemon will still be alive. The
 .I single
-option will cause the audit daemon to put the computer system in single user mode.
+option will cause the audit daemon to put the computer system in single user mode. The
 .I halt
+option will cause the audit daemon to shutdown the computer system.
 .TP
 .I disk_full_action
 This parameter tells the system what action to take when the system has

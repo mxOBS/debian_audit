@@ -369,9 +369,11 @@ int main(int argc, char *argv[])
 
 	/* Now boost priority to make sure we are getting time slices */
 	if (daemon_config.priority_boost != 0) {
+		int rc;
+
 		errno = 0;
-		(void) nice((int)-daemon_config.priority_boost);
-		if (errno) {
+		rc = nice((int)-daemon_config.priority_boost);
+		if (rc == -1 && errno) {
 			syslog(LOG_ERR, "Cannot change priority (%s)",
 					strerror(errno));
 			/* Stay alive as this is better than stopping */
@@ -613,6 +615,7 @@ static int event_loop(void)
 			len = asprintf(&v, "type=%s msg=%.*s\n", 
 				type, e->hdr.size, e->data);
 		if (len <= 0) {
+			v = NULL;
 			free(e); /* Either corrupted event or no memory */
 			continue;
 		}

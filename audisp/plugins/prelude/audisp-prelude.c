@@ -967,7 +967,9 @@ static int add_execve_data(auparse_state_t *au, idmef_alert_t *alert)
 			int len2;
 			len2 = asprintf(&ptr, "%s=%s ", var,
 					auparse_interpret_field(au));
-			if (len2 > 0 && (len2 + len) < sizeof(msg)) {
+			if (len2 < 0) {
+				ptr = NULL;
+			} else if (len2 > 0 && (len2 + len + 1) < sizeof(msg)) {
 				strcat(msg, ptr);
 				len += len2;
 			}
@@ -2091,7 +2093,7 @@ static int tty_alert(auparse_state_t *au, idmef_message_t *idmef,
 static void handle_event(auparse_state_t *au,
 		auparse_cb_event_t cb_event_type, void *user_data)
 {
-	int type, rc, num=0;
+	int type, num=0;
 	idmef_message_t *idmef;
 	idmef_alert_t *alert;
 
@@ -2103,7 +2105,6 @@ static void handle_event(auparse_state_t *au,
 	// move the cursor accidentally skipping a record.
 	while (auparse_goto_record_num(au, num) > 0) {
 		type = auparse_get_type(au);
-		rc = 0;
 		switch (type) {
 			case AUDIT_AVC:
 //			case AUDIT_USER_AVC: ignore USER_AVC for now
