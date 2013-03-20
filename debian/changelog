@@ -4,6 +4,10 @@ audit (1:2.2.3-1) UNRELEASED; urgency=low
   * New upstream release
     - Properly document audit_open() can fails and sets errno (Closes: #642501)
     - Drop all the patches, they have been applied upstream
+  * Remove libev-dev Build-Dependency
+    - debian/control: The upstream audit sources embed and build against their
+      own version of libev. This is not desirable, but there's no reason to
+      list libev-dev as a build dependency at this time. (Closes: #699933)
 
  -- Laurent Bigonville <bigon@debian.org>  Wed, 20 Mar 2013 12:08:04 +0100
 
