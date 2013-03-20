@@ -2,6 +2,7 @@ audit (1:2.2.3-1) UNRELEASED; urgency=low
 
   * QA upload.
   * New upstream release
+    - Drop all the patches, they have been applied upstream
 
  -- Laurent Bigonville <bigon@debian.org>  Wed, 20 Mar 2013 12:08:04 +0100
 
