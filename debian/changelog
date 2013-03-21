@@ -1,4 +1,4 @@
-audit (1:2.2.3-1) UNRELEASED; urgency=low
+audit (1:2.2.3-1) experimental; urgency=low
 
   * QA upload.
   * New upstream release
@@ -9,7 +9,7 @@ audit (1:2.2.3-1) UNRELEASED; urgency=low
       own version of libev. This is not desirable, but there's no reason to
       list libev-dev as a build dependency at this time. (Closes: #699933)
 
- -- Laurent Bigonville <bigon@debian.org>  Wed, 20 Mar 2013 12:08:04 +0100
+ -- Laurent Bigonville <bigon@debian.org>  Thu, 21 Mar 2013 21:39:45 +0100
 
 audit (1:2.2.2-1) experimental; urgency=low
 
