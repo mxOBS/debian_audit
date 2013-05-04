@@ -1,5 +1,5 @@
 # Makefile.am--
-# Copyright 2004-07,2012 Red Hat Inc., Durham, North Carolina.
+# Copyright 2004-07,2012-13 Red Hat Inc., Durham, North Carolina.
 # All Rights Reserved.
 #
 # This program is free software; you can redistribute it and/or modify
@@ -22,19 +22,24 @@
 
 CONFIG_CLEAN_FILES = *.rej *.orig
 EXTRA_DIST = auditd.init auditd.service auditd.sysconfig auditd.conf \
-	audit.rules auditd.cron libaudit.conf audispd.conf
+	audit.rules auditd.cron libaudit.conf audispd.conf \
+	auditd.resume auditd.rotate augenrules
 libconfig = libaudit.conf
 dispconfig = audispd.conf
 dispconfigdir = $(sysconfdir)/audisp
 if ENABLE_SYSTEMD
 initdir = /usr/lib/systemd/system
+legacydir = $(libexecdir)/initscripts/legacy-actions/auditd
 else
 initdir = $(sysconfdir)/rc.d/init.d
 sysconfigdir = $(sysconfdir)/sysconfig
 endif
 
 auditdir = $(sysconfdir)/audit
-dist_audit_DATA = auditd.conf audit.rules
+auditrdir = $(auditdir)/rules.d
+dist_audit_DATA = auditd.conf
+dist_auditr_DATA = audit.rules
+sbin_SCRIPTS = augenrules
 
 install-data-hook:
 	$(INSTALL_DATA) -D -m 640 ${srcdir}/${dispconfig} ${DESTDIR}${dispconfigdir}
@@ -47,10 +52,15 @@ endif
 install-exec-hook:
 if ENABLE_SYSTEMD
 	mkdir -p ${DESTDIR}${initdir}
+	mkdir -p ${DESTDIR}${legacydir}
 	$(INSTALL_SCRIPT) -D -m 640 ${srcdir}/auditd.service ${DESTDIR}${initdir}
+	$(INSTALL_SCRIPT) -D -m 750 ${srcdir}/auditd.rotate ${DESTDIR}${legacydir}/rotate
+	$(INSTALL_SCRIPT) -D -m 750 ${srcdir}/auditd.resume ${DESTDIR}${legacydir}/resume
 else
 	$(INSTALL_SCRIPT) -D ${srcdir}/auditd.init ${DESTDIR}${initdir}/auditd
 endif
+	chmod 0750 $(DESTDIR)$(sbindir)/augenrules
+
 
 uninstall-hook:
 	rm ${DESTDIR}${dispconfigdir}/${dispconfig}

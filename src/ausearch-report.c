@@ -61,7 +61,7 @@ struct nv_pair {
 enum { T_UID, T_GID, T_SYSCALL, T_ARCH, T_EXIT, T_ESCAPED, T_PERM, T_MODE, 
 T_SOCKADDR, T_FLAGS, T_PROMISC, T_CAPABILITY, T_A0, T_A1, T_A2, T_A3,
 T_SIGNAL, T_KEY, T_LIST, T_TTY_DATA, T_SESSION, T_CAP_BITMAP, T_NFPROTO,
-T_ICMPTYPE, T_PROTOCOL, T_ADDR, T_PERSONALITY, T_SECCOMP };
+T_ICMPTYPE, T_PROTOCOL, T_ADDR, T_PERSONALITY, T_SECCOMP, T_OFLAG };
 
 /* Function in ausearch-lookup for unescaping filenames */
 extern char *unescape(const char *buf);
@@ -406,6 +406,7 @@ static struct nv_pair typetab[] = {
 	{T_SECCOMP, "code"},
 	{T_ESCAPED, "old-rng"},
 	{T_ESCAPED, "new-rng"},
+	{T_OFLAG, "oflag"},
 };
 #define TYPE_NAMES (sizeof(typetab)/sizeof(typetab[0]))
 
@@ -694,7 +695,8 @@ static struct nv_pair famtab[] = {
 	{AF_IEEE802154, "ieee802154"},
 	{37, "caif"},
 	{38, "alg"},
-	{39, "nfc"}
+	{39, "nfc"},
+	{40, "vsock"},
 };
 #define FAM_NAMES (sizeof(famtab)/sizeof(famtab[0]))
 
@@ -1024,14 +1026,16 @@ static const char *oflags[] =
 	"O_TRUNC",
 	"O_APPEND",
 	"O_NONBLOCK",
-	"O_SYNC",
+	"O_DSYNC",
 	"O_ASYNC",
 	"O_DIRECT",
 	"UNKNOWN",
 	"O_DIRECTORY",
 	"O_NOFOLLOW",
 	"O_NOATIME",
-	"O_CLOEXEC"
+	"O_CLOEXEC",
+	"__O_SYNC",
+	"O_PATH"
 };
 #define OPEN_FLAG_NUM_ENTRIES (sizeof(oflags)/sizeof(oflags[0]))
 
@@ -1373,6 +1377,7 @@ static struct nv_pair mount_tab[]=
  {MS_KERNMOUNT, "MS_KERNMOUNT"},
  {MS_I_VERSION, "MS_I_VERSION"},
  {(1<<24), "MS_STRICTATIME"},
+ {(1<<27), "MS_SNAP_STABLE"},
  {(1<<28), "MS_NOSEC"},
  {(1<<29), "MS_BORN"},
  {MS_ACTIVE, "MS_ACTIVE"},
@@ -1627,6 +1632,7 @@ static struct nv_pair recvtab[] =
   {0x00004000,    "MSG_NOSIGNAL"},
   {0x00008000,    "MSG_MORE"},
   {0x00010000,    "MSG_WAITFORONE"},
+  {0x00020000,    "MSG_SENDPAGE_NOTLAST"},
   {0x20000000,    "MSG_FASTOPEN"},
   {0x40000000,    "MSG_CMSG_CLOEXEC"}
 };
@@ -1723,6 +1729,8 @@ static void print_a0(const char *val)
 			return print_dirfd(val);
 		else if (strcmp(sys, "futimensat") == 0)
 			return print_dirfd(val);
+		else if (strcmp(sys, "clone") == 0)
+			return print_clone(val);
 		else if (strcmp(sys, "unshare") == 0)
 			return print_clone(val);
 		else goto normal;
@@ -1768,6 +1776,8 @@ static void print_a1(const char *val)
 			return print_socket_type(val);
 		else if (strcmp(sys, "setns") == 0)
 			return print_clone(val);
+		else if (strcmp(sys, "mq_open") == 0)
+			return print_open_flags(val);
 		else goto normal;
 	} else
 normal:
@@ -1799,8 +1809,6 @@ static void print_a2(const char *val)
 			return print_prot(val, 0);
 		else if (strcmp(sys, "socket") == 0)
 			return print_socket_proto(val);
-		else if (strcmp(sys, "clone") == 0)
-			return print_clone(val);
 		else if (strcmp(sys, "recvmsg") == 0)
 			print_recv(val);
 		else if (strcmp(sys, "linkat") == 0)
@@ -1809,6 +1817,8 @@ static void print_a2(const char *val)
 			return print_dirfd(val);
 		else if (strcmp(sys, "faccessat") == 0)
 			return print_access(val);
+		else if (strcmp(sys, "mq_open") == 0)
+			return print_mode_short(val);
 		else goto normal;
 	} else
 normal:
@@ -2138,6 +2148,9 @@ static void interpret(char *name, char *val, int comma, int rtype)
 			break;
 		case T_SECCOMP:
 			print_seccomp_code(val);
+			break;
+		case T_OFLAG:
+			print_open_flags(val);
 			break;
 		default:
 			printf("%s%c", val, comma ? ',' : ' ');

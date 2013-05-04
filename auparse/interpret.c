@@ -742,6 +742,7 @@ static const char *print_sockaddr(const char *val)
 	return out;
 }
 
+/* This is only used in the RHEL4 kernel */
 static const char *print_flags(const char *val)
 {
         int flags, cnt = 0;
@@ -878,7 +879,7 @@ static const char *print_open_flags(const char *val)
 	size_t i;
 	unsigned int flags;
 	int cnt = 0;
-	char *out, buf[160];
+	char *out, buf[178];
 
 	errno = 0;
 	flags = strtoul(val, NULL, 16);
@@ -1150,7 +1151,7 @@ static const char *print_mount(const char *val)
 {
 	unsigned int mounts, i;
 	int cnt = 0;
-	char buf[318];
+	char buf[334];
 	char *out;
 
 	errno = 0;
@@ -1203,7 +1204,7 @@ static const char *print_recv(const char *val)
 {
 	unsigned int rec, i;
 	int cnt = 0;
-	char buf[212];
+	char buf[234];
 	char *out;
 
 	errno = 0;
@@ -1339,6 +1340,8 @@ static const char *print_a0(const char *val, const rnode *r)
 			return print_dirfd(val);
 		else if (strcmp(sys, "futimensat") == 0)
 			return print_dirfd(val);
+		else if (strcmp(sys, "clone") == 0)
+			return print_clone_flags(val);
 		else if (strcmp(sys, "unshare") == 0)
 			return print_clone_flags(val);
 	}
@@ -1384,6 +1387,8 @@ static const char *print_a1(const char *val, const rnode *r)
 			return print_socket_type(val);
 		else if (strcmp(sys, "setns") == 0)
 			return print_clone_flags(val);
+		else if (strcmp(sys, "mq_open") == 0)
+			return print_open_flags(val);
 	}
 	return strdup(val);
 }
@@ -1441,8 +1446,6 @@ static const char *print_a2(const char *val, const rnode *r)
 			return print_prot(val, 0);
                 else if (strcmp(sys, "socket") == 0)
 			return print_socket_proto(val);
-		else if (strcmp(sys, "clone") == 0)
-			return print_clone_flags(val);
                 else if (strcmp(sys, "recvmsg") == 0)
 			return print_recv(val);
 		else if (strcmp(sys, "linkat") == 0)
@@ -1451,6 +1454,8 @@ static const char *print_a2(const char *val, const rnode *r)
 			return print_dirfd(val);
 		else if (strcmp(sys, "faccessat") == 0)
 			return print_access(val);
+		else if (strcmp(sys, "mq_open") == 0)
+			return print_mode_short(val);
 	}
 	return strdup(val);
 }
@@ -1863,6 +1868,9 @@ const char *interpret(const rnode *r)
 			break;
 		case AUPARSE_TYPE_SECCOMP:
 			out = print_seccomp_code(val);
+			break;
+		case AUPARSE_TYPE_OFLAG:
+			out = print_open_flags(val);
 			break;
 		case AUPARSE_TYPE_UNCLASSIFIED:
 		default:
