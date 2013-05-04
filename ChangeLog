@@ -1,3 +1,17 @@
+2.3
+- The clone(2) man page is really clone(3), fix interpretation of clone syscall
+- Add systemd support for reload (#901533)
+- Allow -F msgtype on the user filter
+- Add legacy support for resuming logging under systemd (#830780)
+- Add legacy support for rotating logs under systemd (#916611)
+- In auditd, collect SIGUSR2 info for DAEMON_RESUME events
+- Updated man pages
+- Update libev to 4.15
+- Update syscall tables for 3.9 kernel
+- Interpret MQ_OPEN events
+- Add augenrules support (Burn Alting)
+- Consume less stack sending audit events
+
 2.2.3
 - Code cleanups
 - In spec file, don't own lib64/audit

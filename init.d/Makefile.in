@@ -15,7 +15,7 @@
 @SET_MAKE@
 
 # Makefile.am--
-# Copyright 2004-07,2012 Red Hat Inc., Durham, North Carolina.
+# Copyright 2004-07,2012-13 Red Hat Inc., Durham, North Carolina.
 # All Rights Reserved.
 #
 # This program is free software; you can redistribute it and/or modify
@@ -35,6 +35,7 @@
 # Authors:
 #   Steve Grubb <sgrubb@redhat.com>
 #
+
 
 VPATH = @srcdir@
 am__make_dryrun = \
@@ -74,8 +75,8 @@ build_triplet = @build@
 host_triplet = @host@
 target_triplet = @target@
 subdir = init.d
-DIST_COMMON = $(dist_audit_DATA) $(srcdir)/Makefile.am \
-	$(srcdir)/Makefile.in
+DIST_COMMON = $(dist_audit_DATA) $(dist_auditr_DATA) \
+	$(srcdir)/Makefile.am $(srcdir)/Makefile.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/src/libev/libev.m4 \
 	$(top_srcdir)/configure.ac
@@ -84,13 +85,6 @@ am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 mkinstalldirs = $(install_sh) -d
 CONFIG_HEADER = $(top_builddir)/config.h
 CONFIG_CLEAN_VPATH_FILES =
-SOURCES =
-DIST_SOURCES =
-am__can_run_installinfo = \
-  case $$AM_UPDATE_INFO_DIR in \
-    n|no|NO) false;; \
-    *) (install-info --version) >/dev/null 2>&1;; \
-  esac
 am__vpath_adj_setup = srcdirstrip=`echo "$(srcdir)" | sed 's|.|.|g'`;
 am__vpath_adj = case $$p in \
     $(srcdir)/*) f=`echo "$$p" | sed "s|^$$srcdirstrip/||"`;; \
@@ -118,8 +112,17 @@ am__uninstall_files_from_dir = { \
     || { echo " ( cd '$$dir' && rm -f" $$files ")"; \
          $(am__cd) "$$dir" && rm -f $$files; }; \
   }
-am__installdirs = "$(DESTDIR)$(auditdir)"
-DATA = $(dist_audit_DATA)
+am__installdirs = "$(DESTDIR)$(sbindir)" "$(DESTDIR)$(auditdir)" \
+	"$(DESTDIR)$(auditrdir)"
+SCRIPTS = $(sbin_SCRIPTS)
+SOURCES =
+DIST_SOURCES =
+am__can_run_installinfo = \
+  case $$AM_UPDATE_INFO_DIR in \
+    n|no|NO) false;; \
+    *) (install-info --version) >/dev/null 2>&1;; \
+  esac
+DATA = $(dist_audit_DATA) $(dist_auditr_DATA)
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
 ACLOCAL = @ACLOCAL@
 AMTAR = @AMTAR@
@@ -256,16 +259,21 @@ top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 CONFIG_CLEAN_FILES = *.rej *.orig
 EXTRA_DIST = auditd.init auditd.service auditd.sysconfig auditd.conf \
-	audit.rules auditd.cron libaudit.conf audispd.conf
+	audit.rules auditd.cron libaudit.conf audispd.conf \
+	auditd.resume auditd.rotate augenrules
 
 libconfig = libaudit.conf
 dispconfig = audispd.conf
 dispconfigdir = $(sysconfdir)/audisp
 @ENABLE_SYSTEMD_FALSE@initdir = $(sysconfdir)/rc.d/init.d
 @ENABLE_SYSTEMD_TRUE@initdir = /usr/lib/systemd/system
+@ENABLE_SYSTEMD_TRUE@legacydir = $(libexecdir)/initscripts/legacy-actions/auditd
 @ENABLE_SYSTEMD_FALSE@sysconfigdir = $(sysconfdir)/sysconfig
 auditdir = $(sysconfdir)/audit
-dist_audit_DATA = auditd.conf audit.rules
+auditrdir = $(auditdir)/rules.d
+dist_audit_DATA = auditd.conf
+dist_auditr_DATA = audit.rules
+sbin_SCRIPTS = augenrules
 all: all-am
 
 .SUFFIXES:
@@ -299,6 +307,41 @@ $(top_srcdir)/configure:  $(am__configure_deps)
 $(ACLOCAL_M4):  $(am__aclocal_m4_deps)
 	cd $(top_builddir) && $(MAKE) $(AM_MAKEFLAGS) am--refresh
 $(am__aclocal_m4_deps):
+install-sbinSCRIPTS: $(sbin_SCRIPTS)
+	@$(NORMAL_INSTALL)
+	@list='$(sbin_SCRIPTS)'; test -n "$(sbindir)" || list=; \
+	if test -n "$$list"; then \
+	  echo " $(MKDIR_P) '$(DESTDIR)$(sbindir)'"; \
+	  $(MKDIR_P) "$(DESTDIR)$(sbindir)" || exit 1; \
+	fi; \
+	for p in $$list; do \
+	  if test -f "$$p"; then d=; else d="$(srcdir)/"; fi; \
+	  if test -f "$$d$$p"; then echo "$$d$$p"; echo "$$p"; else :; fi; \
+	done | \
+	sed -e 'p;s,.*/,,;n' \
+	    -e 'h;s|.*|.|' \
+	    -e 'p;x;s,.*/,,;$(transform)' | sed 'N;N;N;s,\n, ,g' | \
+	$(AWK) 'BEGIN { files["."] = ""; dirs["."] = 1; } \
+	  { d=$$3; if (dirs[d] != 1) { print "d", d; dirs[d] = 1 } \
+	    if ($$2 == $$4) { files[d] = files[d] " " $$1; \
+	      if (++n[d] == $(am__install_max)) { \
+		print "f", d, files[d]; n[d] = 0; files[d] = "" } } \
+	    else { print "f", d "/" $$4, $$1 } } \
+	  END { for (d in files) print "f", d, files[d] }' | \
+	while read type dir files; do \
+	     if test "$$dir" = .; then dir=; else dir=/$$dir; fi; \
+	     test -z "$$files" || { \
+	       echo " $(INSTALL_SCRIPT) $$files '$(DESTDIR)$(sbindir)$$dir'"; \
+	       $(INSTALL_SCRIPT) $$files "$(DESTDIR)$(sbindir)$$dir" || exit $$?; \
+	     } \
+	; done
+
+uninstall-sbinSCRIPTS:
+	@$(NORMAL_UNINSTALL)
+	@list='$(sbin_SCRIPTS)'; test -n "$(sbindir)" || exit 0; \
+	files=`for p in $$list; do echo "$$p"; done | \
+	       sed -e 's,.*/,,;$(transform)'`; \
+	dir='$(DESTDIR)$(sbindir)'; $(am__uninstall_files_from_dir)
 
 mostlyclean-libtool:
 	-rm -f *.lo
@@ -326,6 +369,27 @@ uninstall-dist_auditDATA:
 	@list='$(dist_audit_DATA)'; test -n "$(auditdir)" || list=; \
 	files=`for p in $$list; do echo $$p; done | sed -e 's|^.*/||'`; \
 	dir='$(DESTDIR)$(auditdir)'; $(am__uninstall_files_from_dir)
+install-dist_auditrDATA: $(dist_auditr_DATA)
+	@$(NORMAL_INSTALL)
+	@list='$(dist_auditr_DATA)'; test -n "$(auditrdir)" || list=; \
+	if test -n "$$list"; then \
+	  echo " $(MKDIR_P) '$(DESTDIR)$(auditrdir)'"; \
+	  $(MKDIR_P) "$(DESTDIR)$(auditrdir)" || exit 1; \
+	fi; \
+	for p in $$list; do \
+	  if test -f "$$p"; then d=; else d="$(srcdir)/"; fi; \
+	  echo "$$d$$p"; \
+	done | $(am__base_list) | \
+	while read files; do \
+	  echo " $(INSTALL_DATA) $$files '$(DESTDIR)$(auditrdir)'"; \
+	  $(INSTALL_DATA) $$files "$(DESTDIR)$(auditrdir)" || exit $$?; \
+	done
+
+uninstall-dist_auditrDATA:
+	@$(NORMAL_UNINSTALL)
+	@list='$(dist_auditr_DATA)'; test -n "$(auditrdir)" || list=; \
+	files=`for p in $$list; do echo $$p; done | sed -e 's|^.*/||'`; \
+	dir='$(DESTDIR)$(auditrdir)'; $(am__uninstall_files_from_dir)
 tags: TAGS
 TAGS:
 
@@ -367,9 +431,9 @@ distdir: $(DISTFILES)
 	done
 check-am: all-am
 check: check-am
-all-am: Makefile $(DATA)
+all-am: Makefile $(SCRIPTS) $(DATA)
 installdirs:
-	for dir in "$(DESTDIR)$(auditdir)"; do \
+	for dir in "$(DESTDIR)$(sbindir)" "$(DESTDIR)$(auditdir)" "$(DESTDIR)$(auditrdir)"; do \
 	  test -z "$$dir" || $(MKDIR_P) "$$dir"; \
 	done
 install: install-am
@@ -422,14 +486,14 @@ info: info-am
 
 info-am:
 
-install-data-am: install-dist_auditDATA
+install-data-am: install-dist_auditDATA install-dist_auditrDATA
 	@$(NORMAL_INSTALL)
 	$(MAKE) $(AM_MAKEFLAGS) install-data-hook
 install-dvi: install-dvi-am
 
 install-dvi-am:
 
-install-exec-am:
+install-exec-am: install-sbinSCRIPTS
 	@$(NORMAL_INSTALL)
 	$(MAKE) $(AM_MAKEFLAGS) install-exec-hook
 install-html: install-html-am
@@ -468,7 +532,8 @@ ps: ps-am
 
 ps-am:
 
-uninstall-am: uninstall-dist_auditDATA
+uninstall-am: uninstall-dist_auditDATA uninstall-dist_auditrDATA \
+	uninstall-sbinSCRIPTS
 	@$(NORMAL_INSTALL)
 	$(MAKE) $(AM_MAKEFLAGS) uninstall-hook
 .MAKE: install-am install-data-am install-exec-am install-strip \
@@ -478,14 +543,16 @@ uninstall-am: uninstall-dist_auditDATA
 	distclean distclean-generic distclean-libtool distdir dvi \
 	dvi-am html html-am info info-am install install-am \
 	install-data install-data-am install-data-hook \
-	install-dist_auditDATA install-dvi install-dvi-am install-exec \
-	install-exec-am install-exec-hook install-html install-html-am \
-	install-info install-info-am install-man install-pdf \
-	install-pdf-am install-ps install-ps-am install-strip \
-	installcheck installcheck-am installdirs maintainer-clean \
+	install-dist_auditDATA install-dist_auditrDATA install-dvi \
+	install-dvi-am install-exec install-exec-am install-exec-hook \
+	install-html install-html-am install-info install-info-am \
+	install-man install-pdf install-pdf-am install-ps \
+	install-ps-am install-sbinSCRIPTS install-strip installcheck \
+	installcheck-am installdirs maintainer-clean \
 	maintainer-clean-generic mostlyclean mostlyclean-generic \
 	mostlyclean-libtool pdf pdf-am ps ps-am uninstall uninstall-am \
-	uninstall-dist_auditDATA uninstall-hook
+	uninstall-dist_auditDATA uninstall-dist_auditrDATA \
+	uninstall-hook uninstall-sbinSCRIPTS
 
 
 install-data-hook:
@@ -495,8 +562,12 @@ install-data-hook:
 
 install-exec-hook:
 @ENABLE_SYSTEMD_TRUE@	mkdir -p ${DESTDIR}${initdir}
+@ENABLE_SYSTEMD_TRUE@	mkdir -p ${DESTDIR}${legacydir}
 @ENABLE_SYSTEMD_TRUE@	$(INSTALL_SCRIPT) -D -m 640 ${srcdir}/auditd.service ${DESTDIR}${initdir}
+@ENABLE_SYSTEMD_TRUE@	$(INSTALL_SCRIPT) -D -m 750 ${srcdir}/auditd.rotate ${DESTDIR}${legacydir}/rotate
+@ENABLE_SYSTEMD_TRUE@	$(INSTALL_SCRIPT) -D -m 750 ${srcdir}/auditd.resume ${DESTDIR}${legacydir}/resume
 @ENABLE_SYSTEMD_FALSE@	$(INSTALL_SCRIPT) -D ${srcdir}/auditd.init ${DESTDIR}${initdir}/auditd
+	chmod 0750 $(DESTDIR)$(sbindir)/augenrules
 
 uninstall-hook:
 	rm ${DESTDIR}${dispconfigdir}/${dispconfig}
