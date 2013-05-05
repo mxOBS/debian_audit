@@ -2,8 +2,9 @@ audit (1:2.3-1) UNRELEASED; urgency=low
 
   * QA upload.
   * New upstream release
+  * debian/auditd.install: Install /sbin/augenrules and the related manpage
 
- -- Laurent Bigonville <bigon@debian.org>  Sun, 05 May 2013 01:32:49 +0200
+ -- Laurent Bigonville <bigon@debian.org>  Sun, 05 May 2013 02:10:50 +0200
 
 audit (1:2.2.3-1) experimental; urgency=low
 
