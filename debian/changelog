@@ -1,4 +1,4 @@
-audit (1:2.3-1) UNRELEASED; urgency=low
+audit (1:2.3-1) experimental; urgency=low
 
   * QA upload.
   * New upstream release
@@ -14,7 +14,7 @@ audit (1:2.3-1) UNRELEASED; urgency=low
   * debian/auditd.default, debian/auditd.init: Add an option to disable the
     audit system when the daemon is stopped.
 
- -- Laurent Bigonville <bigon@debian.org>  Mon, 06 May 2013 21:46:19 +0200
+ -- Laurent Bigonville <bigon@debian.org>  Mon, 06 May 2013 22:01:18 +0200
 
 audit (1:2.2.3-1) experimental; urgency=low
 
