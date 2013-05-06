@@ -46,6 +46,11 @@ do_start()
 	start-stop-daemon --start --quiet --pidfile "$PIDFILE" --exec "$DAEMON" -- \
 		$EXTRAOPTIONS \
 		|| return 2
+        # Call augenrules to compile audit rules.
+        case "$USE_AUGENRULES" in
+                no|NO) ;;
+                *) [ -d /etc/audit/rules.d ] && /sbin/augenrules >/dev/null ;;
+        esac
 	if [ -f /etc/audit/audit.rules ]
 	then
 		/sbin/auditctl -R /etc/audit/audit.rules >/dev/null
