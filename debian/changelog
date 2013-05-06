@@ -3,8 +3,10 @@ audit (1:2.3-1) UNRELEASED; urgency=low
   * QA upload.
   * New upstream release
   * debian/auditd.install: Install /sbin/augenrules and the related manpage
+  * debian/auditd.post{inst,rm}: /etc/audit/audit.rules is no longer shipped
+    in the package, copy it on first installation and remove it on purge.
 
- -- Laurent Bigonville <bigon@debian.org>  Sun, 05 May 2013 02:10:50 +0200
+ -- Laurent Bigonville <bigon@debian.org>  Mon, 06 May 2013 20:11:56 +0200
 
 audit (1:2.2.3-1) experimental; urgency=low
 
