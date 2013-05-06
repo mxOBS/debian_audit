@@ -1,0 +1,17 @@
+Generating audit.rules from rules located under /etc/audit/rules.d
+------------------------------------------------------------------
+
+The /etc/audit/audit.rules file can be generated using the augenrules(8)
+executable. This action can be performed automatically on each startup, but is
+disabled by default to preserve existing rules.
+
+To enable it on a SysVinit system, go into /etc/default/auditd and look for the
+USE_AUGENRULES variable and set it to "yes". Then copy existing rules into
+/etc/audit/rules.d and restart the audit daemon.
+
+For systemd based systems, copy /lib/systemd/system/auditd.service to
+/etc/systemd/system/auditd.service. Then look for a commented out ExecStartPost
+variable and uncomment it. Then delete/comment out the auditctl line.
+The --load option to augenrules will call auditctl for you. Also copy any
+existing rules into /etc/audit/rules.d so they don't get lost. Then restart
+auditd.

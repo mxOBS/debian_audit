@@ -7,8 +7,10 @@ audit (1:2.3-1) UNRELEASED; urgency=low
     in the package, copy it on first installation and remove it on purge.
   * debian/auditd.default, debian/auditd.init: Automatically generate
     /etc/audit/audit.rules on start if USE_AUGENRULES is set to yes
+  * debian/auditd.NEWS, debian/auditd.README.Debian: Add documentation about
+    automatically generating the audit.rules file on startup.
 
- -- Laurent Bigonville <bigon@debian.org>  Mon, 06 May 2013 20:14:39 +0200
+ -- Laurent Bigonville <bigon@debian.org>  Mon, 06 May 2013 21:26:56 +0200
 
 audit (1:2.2.3-1) experimental; urgency=low
 
