@@ -14,7 +14,7 @@ Build-Depends: debhelper (>= 9),
                libwrap0-dev,
                python-all-dev (>= 2.6.6-3~),
                swig
-Standards-Version: 3.9.3
+Standards-Version: 3.9.4
 Section: libs
 Homepage: http://people.redhat.com/sgrubb/audit/
 Vcs-Git: git://anonscm.debian.org/git/collab-maint/audit.git
