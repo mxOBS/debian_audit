@@ -4,6 +4,8 @@ audit (1:2.3.1-1) UNRELEASED; urgency=low
     - debian/libauparse0.symbols: Adjust .symbols file
   * debian/control: Bump Standards-Version to 3.9.4 (no further changes)
   * debian/control: Use canonical URL for VCS field
+  * debian/auditd.init: Remove the usage of the VERBOSE variable
+    (see lintian error: init.d-script-call-internal-API)
 
  -- Laurent Bigonville <bigon@debian.org>  Fri, 31 May 2013 16:43:04 +0200
 
