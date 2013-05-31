@@ -1,6 +1,7 @@
 audit (1:2.3.1-1) UNRELEASED; urgency=low
 
   * New upstream release
+    - debian/libauparse0.symbols: Adjust .symbols file
   * debian/control: Bump Standards-Version to 3.9.4 (no further changes)
   * debian/control: Use canonical URL for VCS field
 
