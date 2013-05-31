@@ -1,5 +1,5 @@
-/* private.h -- 
- * Copyright 2007,2013 Red Hat Inc., Durham, North Carolina.
+/* pktoptnametab.h --
+ * Copyright 2013 Red Hat Inc., Durham, North Carolina.
  * All Rights Reserved.
  *
  * This library is free software; you can redistribute it and/or
@@ -15,35 +15,28 @@
  * You should have received a copy of the GNU Lesser General Public
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- * 
+ *
  * Authors:
- *	Steve Grubb <sgrubb@redhat.com>
+ *      Steve Grubb <sgrubb@redhat.com>
+ * Location: include/uapi/linux/if_packet.h
  */
-#ifndef _PRIVATE_H_
-#define _PRIVATE_H_
 
-#include "auparse.h"
-#include "libaudit.h"
-#include "dso.h"
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-/* Internal syslog messaging */
-#define audit_msg auparse_msg
-#define set_aumessage_mode set_aup_message_mode
-void auparse_msg(int priority, const char *fmt, ...) hidden
-#ifdef __GNUC__
-        __attribute__ ((format (printf, 2, 3)));
-#else
-        ;
-#endif
-void set_aumessage_mode(message_t mode, debug_message_t debug) hidden;
-
-#ifdef __cplusplus
-}
-#endif
-
-#endif
+_S(1, "PACKET_ADD_MEMBERSHIP")
+_S(2, "PACKET_DROP_MEMBERSHIP")
+_S(3, "PACKET_RECV_OUTPUT")
+_S(5, "PACKET_RX_RING")
+_S(6, "PACKET_STATISTICS")
+_S(7, "PACKET_COPY_THRESH")
+_S(8, "PACKET_AUXDATA")
+_S(9, "PACKET_ORIGDEV")
+_S(10, "PACKET_VERSION")
+_S(11, "PACKET_HDRLEN")
+_S(12, "PACKET_RESERVE")
+_S(13, "PACKET_TX_RING")
+_S(14, "PACKET_LOSS")
+_S(15, "PACKET_VNET_HDR")
+_S(16, "PACKET_TX_TIMESTAMP")
+_S(17, "PACKET_TIMESTAMP")
+_S(18, "PACKET_FANOUT")
+_S(19, "PACKET_TX_HAS_OFF")
 

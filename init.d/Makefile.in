@@ -260,7 +260,7 @@ top_srcdir = @top_srcdir@
 CONFIG_CLEAN_FILES = *.rej *.orig
 EXTRA_DIST = auditd.init auditd.service auditd.sysconfig auditd.conf \
 	audit.rules auditd.cron libaudit.conf audispd.conf \
-	auditd.resume auditd.rotate augenrules
+	auditd.resume auditd.rotate auditd.stop augenrules
 
 libconfig = libaudit.conf
 dispconfig = audispd.conf
@@ -566,6 +566,7 @@ install-exec-hook:
 @ENABLE_SYSTEMD_TRUE@	$(INSTALL_SCRIPT) -D -m 640 ${srcdir}/auditd.service ${DESTDIR}${initdir}
 @ENABLE_SYSTEMD_TRUE@	$(INSTALL_SCRIPT) -D -m 750 ${srcdir}/auditd.rotate ${DESTDIR}${legacydir}/rotate
 @ENABLE_SYSTEMD_TRUE@	$(INSTALL_SCRIPT) -D -m 750 ${srcdir}/auditd.resume ${DESTDIR}${legacydir}/resume
+@ENABLE_SYSTEMD_TRUE@	$(INSTALL_SCRIPT) -D -m 750 ${srcdir}/auditd.stop ${DESTDIR}${legacydir}/stop
 @ENABLE_SYSTEMD_FALSE@	$(INSTALL_SCRIPT) -D ${srcdir}/auditd.init ${DESTDIR}${initdir}/auditd
 	chmod 0750 $(DESTDIR)$(sbindir)/augenrules
 

@@ -286,8 +286,10 @@ static void avoid_oom_killer(void)
 	} else if ((oomfd = open("/proc/self/oom_adj",
 				O_NOFOLLOW | O_WRONLY)) >= 0) {
 		score = "-17";
-	} else
+	} else {
 		audit_msg(LOG_NOTICE, "Cannot open out of memory adjuster");
+		return;
+	}
 
 	len = strlen(score);
 	rc = write(oomfd, score, len);
@@ -666,29 +668,6 @@ int main(int argc, char *argv[])
 	/* let config manager init */
 	init_config_manager();
 
-	/* Tell the kernel we are alive */
-	if (audit_set_pid(fd, getpid(), WAIT_YES) < 0) {
-		char emsg[DEFAULT_BUF_SZ];
-		if (*subj)
-			snprintf(emsg, sizeof(emsg),
-			"auditd error halt, auid=%u pid=%d subj=%s res=failed",
-				audit_getloginuid(), getpid(), subj);
-		else
-			snprintf(emsg, sizeof(emsg),
-				"auditd error halt, auid=%u pid=%d res=failed",
-				audit_getloginuid(), getpid());
-		stop = 1;
-		send_audit_event(AUDIT_DAEMON_ABORT, emsg);
-		audit_msg(LOG_ERR, "Unable to set audit pid, exiting");
-		close_down();
-		if (pidfile)
-			unlink(pidfile);
-		shutdown_dispatcher();
-		tell_parent(FAILURE);
-		return 1;
-	}
-
-	/* Depending on value of opt_startup (-s) set initial audit state */
 	if (opt_startup != startup_nochange && (audit_is_enabled(fd) < 2) &&
 	    audit_set_enabled(fd, (int)opt_startup) < 0) {
 		char emsg[DEFAULT_BUF_SZ];
@@ -713,6 +692,29 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
+	/* Tell the kernel we are alive */
+	if (audit_set_pid(fd, getpid(), WAIT_YES) < 0) {
+		char emsg[DEFAULT_BUF_SZ];
+		if (*subj)
+			snprintf(emsg, sizeof(emsg),
+			"auditd error halt, auid=%u pid=%d subj=%s res=failed",
+				audit_getloginuid(), getpid(), subj);
+		else
+			snprintf(emsg, sizeof(emsg),
+				"auditd error halt, auid=%u pid=%d res=failed",
+				audit_getloginuid(), getpid());
+		stop = 1;
+		send_audit_event(AUDIT_DAEMON_ABORT, emsg);
+		audit_msg(LOG_ERR, "Unable to set audit pid, exiting");
+		close_down();
+		if (pidfile)
+			unlink(pidfile);
+		shutdown_dispatcher();
+		tell_parent(FAILURE);
+		return 1;
+	}
+
+	/* Depending on value of opt_startup (-s) set initial audit state */
 	loop = ev_default_loop (EVFLAG_NOENV);
 
 	ev_io_init (&netlink_watcher, netlink_handler, fd, EV_READ);

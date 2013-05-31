@@ -1,5 +1,5 @@
 # Makefile.am-- 
-# Copyright 2004-2006, 2008,2011-12 Red Hat Inc., Durham, North Carolina.
+# Copyright 2004-2006, 2008,2011-13 Red Hat Inc., Durham, North Carolina.
 # All Rights Reserved.
 #
 # This program is free software; you can redistribute it and/or modify
@@ -23,10 +23,10 @@
 CONFIG_CLEAN_FILES = *.rej *.orig
 AUTOMAKE_OPTIONS = no-dependencies
 SUBDIRS = test
-INCLUDES = -I${top_srcdir} -I${top_srcdir}/lib -I${top_srcdir}/src/libev
+INCLUDES = -I${top_srcdir} -I${top_srcdir}/lib -I${top_srcdir}/src/libev -I${top_srcdir}/auparse
 sbin_PROGRAMS = auditd auditctl aureport ausearch autrace
 AM_CFLAGS = -D_GNU_SOURCE
-noinst_HEADERS = auditd-config.h auditd-event.h auditd-listen.h ausearch-llist.h ausearch-options.h auditctl-llist.h aureport-options.h ausearch-parse.h aureport-scan.h ausearch-lookup.h ausearch-int.h auditd-dispatch.h ausearch-string.h ausearch-nvpair.h ausearch-common.h ausearch-avc.h ausearch-time.h ausearch-lol.h
+noinst_HEADERS = auditd-config.h auditd-event.h auditd-listen.h ausearch-llist.h ausearch-options.h auditctl-llist.h aureport-options.h ausearch-parse.h aureport-scan.h ausearch-lookup.h ausearch-int.h auditd-dispatch.h ausearch-string.h ausearch-nvpair.h ausearch-common.h ausearch-avc.h ausearch-time.h ausearch-lol.h 
 
 auditd_SOURCES = auditd.c auditd-event.c auditd-config.c auditd-reconfig.c auditd-sendmail.c auditd-dispatch.c
 if ENABLE_LISTENER
@@ -46,7 +46,7 @@ aureport_SOURCES = aureport.c auditd-config.c ausearch-llist.c aureport-options.
 aureport_LDADD = -L${top_builddir}/lib -laudit
 
 ausearch_SOURCES = ausearch.c auditd-config.c ausearch-llist.c ausearch-options.c ausearch-report.c ausearch-match.c ausearch-string.c ausearch-parse.c ausearch-int.c ausearch-time.c ausearch-nvpair.c ausearch-lookup.c ausearch-avc.c ausearch-lol.c
-ausearch_LDADD = -L${top_builddir}/lib -laudit
+ausearch_LDADD = -L${top_builddir}/lib -laudit -L${top_builddir}/auparse -lauparse
 
 autrace_SOURCES = autrace.c delete_all.c auditctl-llist.c
 autrace_LDADD = -L${top_builddir}/lib -laudit

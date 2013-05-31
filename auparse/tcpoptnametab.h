@@ -1,5 +1,5 @@
-/* private.h -- 
- * Copyright 2007,2013 Red Hat Inc., Durham, North Carolina.
+/* tcpoptnametab.h --
+ * Copyright 2013 Red Hat Inc., Durham, North Carolina.
  * All Rights Reserved.
  *
  * This library is free software; you can redistribute it and/or
@@ -15,35 +15,34 @@
  * You should have received a copy of the GNU Lesser General Public
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- * 
+ *
  * Authors:
- *	Steve Grubb <sgrubb@redhat.com>
+ *      Steve Grubb <sgrubb@redhat.com>
+ * Location: include/uapi/linux/tcp.h
  */
-#ifndef _PRIVATE_H_
-#define _PRIVATE_H_
 
-#include "auparse.h"
-#include "libaudit.h"
-#include "dso.h"
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-/* Internal syslog messaging */
-#define audit_msg auparse_msg
-#define set_aumessage_mode set_aup_message_mode
-void auparse_msg(int priority, const char *fmt, ...) hidden
-#ifdef __GNUC__
-        __attribute__ ((format (printf, 2, 3)));
-#else
-        ;
-#endif
-void set_aumessage_mode(message_t mode, debug_message_t debug) hidden;
-
-#ifdef __cplusplus
-}
-#endif
-
-#endif
+_S(1, "TCP_NODELAY")
+_S(2, "TCP_MAXSEG")
+_S(3, "TCP_CORK")
+_S(4, "TCP_KEEPIDLE")
+_S(5, "TCP_KEEPINTVL")
+_S(6, "TCP_KEEPCNT")
+_S(7, "TCP_SYNCNT")
+_S(8, "TCP_LINGER2")
+_S(9, "TCP_DEFER_ACCEPT")
+_S(10, "TCP_WINDOW_CLAMP")
+_S(11, "TCP_INFO")
+_S(12, "TCP_QUICKACK")
+_S(13, "TCP_CONGESTION")
+_S(14, "TCP_MD5SIG")
+_S(15, "TCP_COOKIE_TRANSACTIONS")
+_S(16, "TCP_THIN_LINEAR_TIMEOUTS")
+_S(17, "TCP_THIN_DUPACK")
+_S(18, "TCP_USER_TIMEOUT")
+_S(19, "TCP_REPAIR")
+_S(20, "TCP_REPAIR_QUEUE")
+_S(21, "TCP_QUEUE_SEQ")
+_S(22, "TCP_REPAIR_OPTIONS")
+_S(23, "TCP_FASTOPEN")
+_S(24, "TCP_TIMESTAMP")
 

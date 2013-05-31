@@ -1,6 +1,6 @@
 /*
-* ausearch-lookup.h - Header file for ausearch-lookup.c
-* Copyright (c) 2005-06 Red Hat Inc., Durham, North Carolina.
+* idata.h - Header file for ausearch-lookup.c
+* Copyright (c) 2013 Red Hat Inc., Durham, North Carolina.
 * All Rights Reserved.
 *
 * This software may be freely redistributed and/or modified under the
@@ -21,26 +21,26 @@
 *   Steve Grubb <sgrubb@redhat.com>
 */
 
-#ifndef AULOOKUP_HEADER
-#define AULOOKUP_HEADER
+#ifndef IDATA_HEADER
+#define IDATA_HEADER
 
 #include "config.h"
-#include <pwd.h>
-#include <grp.h>
-#include "libaudit.h"
-#include "ausearch-llist.h"
+#include "dso.h"
 
+typedef struct _idata {
+	unsigned int machine;	// The machine type for the event
+	int syscall;		// The syscall for the event
+	unsigned long long a0;	// arg 0 to the syscall
+	unsigned long long a1;	// arg 1 to the syscall
+	const char *name;	// name of field being interpretted
+	const char *val;	// value of field being interpretted
+} idata;
 
-const char *aulookup_result(avc_t result);
-const char *aulookup_success(int s);
-const char *aulookup_syscall(llist *l, char *buf, size_t size);
-const char *aulookup_uid(uid_t uid, char *buf, size_t size);
-void aulookup_destroy_uid_list(void);
-const char *aulookup_gid(gid_t gid, char *buf, size_t size);
-void aulookup_destroy_gid_list(void);
-char *unescape(const char *buf);
-int is_hex_string(const char *str);
-void print_tty_data(const char *val);
+int auparse_interp_adjust_type(int rtype, const char *name, const char *val);
+const char *auparse_do_interpretation(int type, const idata *id);
+
+hidden_proto(auparse_interp_adjust_type)
+hidden_proto(auparse_do_interpretation)
 
 #endif
 
