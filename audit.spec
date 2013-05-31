@@ -9,7 +9,7 @@
 
 Summary: User space tools for 2.6 kernel auditing
 Name: audit
-Version: 2.3
+Version: 2.3.1
 Release: 1
 License: GPLv2+
 Group: System Environment/Daemons
@@ -151,6 +151,10 @@ rm -rf $RPM_BUILD_ROOT
 %post libs -p /sbin/ldconfig
 
 %post
+# Copy default rules into place on new installation
+if [ ! -e /etc/audit/audit.rules ] ; then
+	cp /etc/audit/rules.d/audit.rules /etc/audit/audit.rules
+fi
 %if %{WITH_SYSTEMD}
 %systemd_post auditd.service
 %else
@@ -240,6 +244,7 @@ fi
 %attr(750,root,root) %dir %{_libexecdir}/initscripts/legacy-actions/auditd
 %attr(750,root,root) %{_libexecdir}/initscripts/legacy-actions/auditd/resume
 %attr(750,root,root) %{_libexecdir}/initscripts/legacy-actions/auditd/rotate
+%attr(750,root,root) %{_libexecdir}/initscripts/legacy-actions/auditd/stop
 %else
 %attr(755,root,root) /etc/rc.d/init.d/auditd
 %config(noreplace) %attr(640,root,root) /etc/sysconfig/auditd
@@ -276,6 +281,6 @@ fi
 
 
 %changelog
-* Tue Apr 30 2013 Steve Grubb <sgrubb@redhat.com> 2.3-1
+* Thu May 30 2013 Steve Grubb <sgrubb@redhat.com> 2.3.1-1
 - New upstream release
 

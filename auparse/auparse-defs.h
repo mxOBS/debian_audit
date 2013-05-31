@@ -70,7 +70,8 @@ typedef struct
 /* This indicates why the user supplied callback was invoked */
 typedef enum {AUPARSE_CB_EVENT_READY} auparse_cb_event_t;
 
-/* This determines the type of field at current cursor location */
+/* This determines the type of field at current cursor location
+ * ONLY APPEND - DO NOT DELETE or it will break ABI */
 enum {  AUPARSE_TYPE_UNCLASSIFIED,  AUPARSE_TYPE_UID, AUPARSE_TYPE_GID,
 	AUPARSE_TYPE_SYSCALL, AUPARSE_TYPE_ARCH, AUPARSE_TYPE_EXIT,
 	AUPARSE_TYPE_ESCAPED, AUPARSE_TYPE_PERM, AUPARSE_TYPE_MODE,
@@ -81,7 +82,8 @@ enum {  AUPARSE_TYPE_UNCLASSIFIED,  AUPARSE_TYPE_UID, AUPARSE_TYPE_GID,
 	AUPARSE_TYPE_SESSION, AUPARSE_TYPE_CAP_BITMAP, AUPARSE_TYPE_NFPROTO,
 	AUPARSE_TYPE_ICMPTYPE, AUPARSE_TYPE_PROTOCOL,
 	AUPARSE_TYPE_ADDR, AUPARSE_TYPE_PERSONALITY,
-	AUPARSE_TYPE_SECCOMP, AUPARSE_TYPE_OFLAG } auparse_type_t;
+	AUPARSE_TYPE_SECCOMP, AUPARSE_TYPE_OFLAG,
+	AUPARSE_TYPE_MMAP } auparse_type_t;
 
 #ifdef __cplusplus
 }

@@ -30,7 +30,7 @@ lib_LTLIBRARIES = libauparse.la
 include_HEADERS = auparse.h auparse-defs.h
 libauparse_la_SOURCES = nvpair.c interpret.c nvlist.c ellist.c		\
 	auparse.c auditd-config.c message.c data_buf.c auparse-defs.h	\
-	data_buf.h nvlist.h auparse.h ellist.h				\
+	auparse-idata.h data_buf.h nvlist.h auparse.h ellist.h		\
 	internal.h nvpair.h rnode.h interpret.h				\
 	private.h expression.c expression.h tty_named_keys.h
 nodist_libauparse_la_SOURCES = $(BUILT_SOURCES)
@@ -45,19 +45,28 @@ message.c:
 BUILT_SOURCES = accesstabs.h captabs.h clocktabs.h clone-flagtabs.h \
 	epoll_ctls.h famtabs.h fcntl-cmdtabs.h \
 	flagtabs.h icmptypetabs.h ipctabs.h \
+	ipoptnametabs.h ip6optnametabs.h \
 	mmaptabs.h mounttabs.h nfprototabs.h open-flagtabs.h \
-	persontabs.h prottabs.h ptracetabs.h rlimittabs.h recvtabs.h \
-	seccomptabs.h signaltabs.h socktabs.h socktypetabs.h typetabs.h
+	persontabs.h prctl_opttabs.h pktoptnametabs.h \
+	prottabs.h ptracetabs.h \
+	rlimittabs.h recvtabs.h schedtabs.h \
+	seccomptabs.h signaltabs.h sockoptnametabs.h \
+	socktabs.h sockleveltabs.h socktypetabs.h \
+	tcpoptnametabs.h typetabs.h
 noinst_PROGRAMS = gen_accesstabs_h gen_captabs_h gen_clock_h \
 	gen_clone-flagtabs_h \
 	gen_epoll_ctls_h gen_famtabs_h \
 	gen_fcntl-cmdtabs_h gen_flagtabs_h \
-	gen_icmptypetabs_h gen_ipctabs_h gen_nfprototabs_h \
+	gen_icmptypetabs_h gen_ipctabs_h \
+	gen_ipoptnametabs_h gen_ip6optnametabs_h gen_nfprototabs_h \
 	gen_mmaptabs_h gen_mounttabs_h \
-	gen_open-flagtabs_h gen_persontabs_h gen_prottabs_h \
+	gen_open-flagtabs_h gen_persontabs_h \
+	gen_prctl_opttabs_h gen_pktoptnametabs_h gen_prottabs_h \
 	gen_recvtabs_h gen_rlimit_h gen_ptracetabs_h \
-	gen_seccomptabs_h gen_signals_h gen_socktabs_h \
-	gen_socktypetabs_h gen_typetabs_h
+	gen_schedtabs_h \
+	gen_seccomptabs_h gen_signals_h \
+	gen_sockoptnametabs_h gen_socktabs_h gen_sockleveltabs_h \
+	gen_socktypetabs_h gen_tcpoptnametabs_h gen_typetabs_h
 
 gen_accesstabs_h_SOURCES = ../lib/gen_tables.c ../lib/gen_tables.h accesstab.h
 gen_accesstabs_h_CFLAGS = $(AM_CFLAGS) '-DTABLE_H="accesstab.h"'
@@ -112,6 +121,16 @@ gen_ipctabs_h_CFLAGS = $(AM_CFLAGS) '-DTABLE_H="ipctab.h"'
 ipctabs.h: gen_ipctabs_h Makefile
 	./gen_ipctabs_h --i2s ipc > $@
 
+gen_ipoptnametabs_h_SOURCES = ../lib/gen_tables.c ../lib/gen_tables.h ipoptnametab.h
+gen_ipoptnametabs_h_CFLAGS = $(AM_CFLAGS) '-DTABLE_H="ipoptnametab.h"'
+ipoptnametabs.h: gen_ipoptnametabs_h Makefile
+	./gen_ipoptnametabs_h --i2s ipoptname > $@
+
+gen_ip6optnametabs_h_SOURCES = ../lib/gen_tables.c ../lib/gen_tables.h ip6optnametab.h
+gen_ip6optnametabs_h_CFLAGS = $(AM_CFLAGS) '-DTABLE_H="ip6optnametab.h"'
+ip6optnametabs.h: gen_ip6optnametabs_h Makefile
+	./gen_ip6optnametabs_h --i2s ip6optname > $@
+
 gen_mmaptabs_h_SOURCES = ../lib/gen_tables.c ../lib/gen_tables.h mmaptab.h
 gen_mmaptabs_h_CFLAGS = $(AM_CFLAGS) '-DTABLE_H="mmaptab.h"'
 mmaptabs.h: gen_mmaptabs_h Makefile
@@ -143,6 +162,16 @@ gen_ptracetabs_h_CFLAGS = $(AM_CFLAGS) '-DTABLE_H="ptracetab.h"'
 ptracetabs.h: gen_ptracetabs_h Makefile
 	./gen_ptracetabs_h --i2s ptrace > $@
 
+gen_prctl_opttabs_h_SOURCES = ../lib/gen_tables.c ../lib/gen_tables.h prctl-opt-tab.h
+gen_prctl_opttabs_h_CFLAGS = $(AM_CFLAGS) '-DTABLE_H="prctl-opt-tab.h"'
+prctl_opttabs.h: gen_prctl_opttabs_h Makefile
+	./gen_prctl_opttabs_h --i2s prctl_opt > $@
+
+gen_pktoptnametabs_h_SOURCES = ../lib/gen_tables.c ../lib/gen_tables.h pktoptnametab.h
+gen_pktoptnametabs_h_CFLAGS = $(AM_CFLAGS) '-DTABLE_H="pktoptnametab.h"'
+pktoptnametabs.h: gen_pktoptnametabs_h Makefile
+	./gen_pktoptnametabs_h --i2s pktoptname > $@
+
 gen_prottabs_h_SOURCES = ../lib/gen_tables.c ../lib/gen_tables.h prottab.h
 gen_prottabs_h_CFLAGS = $(AM_CFLAGS) '-DTABLE_H="prottab.h"'
 prottabs.h: gen_prottabs_h Makefile
@@ -158,6 +187,11 @@ gen_rlimit_h_CFLAGS = $(AM_CFLAGS) '-DTABLE_H="rlimittab.h"'
 rlimittabs.h: gen_rlimit_h Makefile
 	./gen_rlimit_h --i2s rlimit > $@
 
+gen_schedtabs_h_SOURCES = ../lib/gen_tables.c ../lib/gen_tables.h schedtab.h
+gen_schedtabs_h_CFLAGS = $(AM_CFLAGS) '-DTABLE_H="schedtab.h"'
+schedtabs.h: gen_schedtabs_h Makefile
+	./gen_schedtabs_h --i2s sched > $@
+
 gen_seccomptabs_h_SOURCES = ../lib/gen_tables.c ../lib/gen_tables.h seccomptab.h
 gen_seccomptabs_h_CFLAGS = $(AM_CFLAGS) '-DTABLE_H="seccomptab.h"'
 seccomptabs.h: gen_seccomptabs_h Makefile
@@ -168,6 +202,16 @@ gen_signals_h_CFLAGS = $(AM_CFLAGS) '-DTABLE_H="signaltab.h"'
 signaltabs.h: gen_signals_h Makefile
 	./gen_signals_h --i2s signal > $@
 
+gen_sockleveltabs_h_SOURCES = ../lib/gen_tables.c ../lib/gen_tables.h sockleveltab.h
+gen_sockleveltabs_h_CFLAGS = $(AM_CFLAGS) '-DTABLE_H="sockleveltab.h"'
+sockleveltabs.h: gen_sockleveltabs_h Makefile
+	./gen_sockleveltabs_h --i2s socklevel > $@
+
+gen_sockoptnametabs_h_SOURCES = ../lib/gen_tables.c ../lib/gen_tables.h sockoptnametab.h
+gen_sockoptnametabs_h_CFLAGS = $(AM_CFLAGS) '-DTABLE_H="sockoptnametab.h"'
+sockoptnametabs.h: gen_sockoptnametabs_h Makefile
+	./gen_sockoptnametabs_h --i2s sockoptname > $@
+
 gen_socktabs_h_SOURCES = ../lib/gen_tables.c ../lib/gen_tables.h socktab.h
 gen_socktabs_h_CFLAGS = $(AM_CFLAGS) '-DTABLE_H="socktab.h"'
 socktabs.h: gen_socktabs_h Makefile
@@ -177,6 +221,11 @@ gen_socktypetabs_h_SOURCES = ../lib/gen_tables.c ../lib/gen_tables.h socktypetab
 gen_socktypetabs_h_CFLAGS = $(AM_CFLAGS) '-DTABLE_H="socktypetab.h"'
 socktypetabs.h: gen_socktypetabs_h Makefile
 	./gen_socktypetabs_h --i2s sock_type > $@
+
+gen_tcpoptnametabs_h_SOURCES = ../lib/gen_tables.c ../lib/gen_tables.h tcpoptnametab.h
+gen_tcpoptnametabs_h_CFLAGS = $(AM_CFLAGS) '-DTABLE_H="tcpoptnametab.h"'
+tcpoptnametabs.h: gen_tcpoptnametabs_h Makefile
+	./gen_tcpoptnametabs_h --i2s tcpoptname > $@
 
 gen_typetabs_h_SOURCES = ../lib/gen_tables.c ../lib/gen_tables.h typetab.h
 gen_typetabs_h_CFLAGS = $(AM_CFLAGS) '-DTABLE_H="typetab.h"'

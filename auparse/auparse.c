@@ -1,5 +1,5 @@
 /* auparse.c --
- * Copyright 2006-08,2012 Red Hat Inc., Durham, North Carolina.
+ * Copyright 2006-08,2012-13 Red Hat Inc., Durham, North Carolina.
  * All Rights Reserved.
  *
  * This library is free software; you can redistribute it and/or
@@ -515,10 +515,14 @@ void ausearch_clear(auparse_state_t *au)
 	}
 	au->search_where = AUSEARCH_STOP_EVENT;
 }
-hidden_def(ausearch_clear)
 
 void auparse_destroy(auparse_state_t *au)
 {
+	aulookup_destroy_uid_list();
+	aulookup_destroy_gid_list();
+	if (au == NULL)
+		return;
+
 	if (au->source_list) {
 		int n = 0;
 		while (au->source_list[n]) 
@@ -540,8 +544,6 @@ void auparse_destroy(auparse_state_t *au)
 		(*au->callback_user_data_destroy)(au->callback_user_data);
 		au->callback_user_data = NULL;
 	}
-	aulookup_destroy_uid_list();
-	aulookup_destroy_gid_list();
 	if (au->in) {
 		fclose(au->in);
 		au->in = NULL;
@@ -803,7 +805,8 @@ static int retrieve_next_line(auparse_state_t *au)
 		case AUSOURCE_FILE:
 		case AUSOURCE_FILE_ARRAY:
 			// if the first time through, open file
-			if (au->list_idx == 0 && au->in == NULL) {
+			if (au->list_idx == 0 && au->in == NULL &&
+						au->source_list != NULL) {
 				if (au->source_list[au->list_idx] == NULL) {
 					errno = 0;
 					return -2;
@@ -1028,7 +1031,6 @@ int auparse_next_event(auparse_state_t *au)
 		}
 	}	
 }
-hidden_def(auparse_next_event)
 
 /* Accessors to event data */
 const au_event_t *auparse_get_timestamp(auparse_state_t *au)
@@ -1134,7 +1136,6 @@ int auparse_first_record(auparse_state_t *au)
 	
 	return 1;
 }
-hidden_def(auparse_first_record)
 
 
 int auparse_next_record(auparse_state_t *au)
@@ -1149,7 +1150,6 @@ int auparse_next_record(auparse_state_t *au)
 	else
 		return 0;
 }
-hidden_def(auparse_next_record)
 
 
 int auparse_goto_record_num(auparse_state_t *au, unsigned int num)
@@ -1293,7 +1293,6 @@ const char *auparse_find_field_next(auparse_state_t *au)
 	}
 	return NULL;
 }
-hidden_def(auparse_find_field_next)
 
 
 /* Accessors to field data */
@@ -1317,7 +1316,6 @@ const char *auparse_get_field_str(auparse_state_t *au)
 	}
 	return NULL;
 }
-hidden_def(auparse_get_field_str)
 
 int auparse_get_field_type(auparse_state_t *au)
 {

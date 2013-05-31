@@ -27,6 +27,7 @@
 #include "libaudit.h"
 #include "internal.h"
 #include "interpret.h"
+#include "auparse-idata.h"
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -89,6 +90,14 @@
 #include "icmptypetabs.h"
 #include "seccomptabs.h"
 #include "accesstabs.h"
+#include "prctl_opttabs.h"
+#include "schedtabs.h"
+#include "sockoptnametabs.h"
+#include "sockleveltabs.h"
+#include "ipoptnametabs.h"
+#include "ip6optnametabs.h"
+#include "tcpoptnametabs.h"
+#include "pktoptnametabs.h"
 
 typedef enum { AVC_UNSET, AVC_DENIED, AVC_GRANTED } avc_t;
 typedef enum { S_UNSET=-1, S_FAILED, S_SUCCESS } success_t;
@@ -318,12 +327,23 @@ static const char *print_gid(const char *val, unsigned int base)
         return strdup(aulookup_gid(gid, name, sizeof(name)));
 }
 
-static const char *print_arch(const char *val, int machine)
+static const char *print_arch(const char *val, unsigned int machine)
 {
         const char *ptr;
 	char *out;
 
-        if (machine < 0) {
+	if (machine > MACH_ARMEB) {
+		unsigned int ival;
+
+		errno = 0;
+		ival = strtoul(val, NULL, 16);
+		if (errno) {
+			asprintf(&out, "conversion error(%s) ", val);
+			return out;
+		}
+		machine = audit_elf_to_machine(ival);
+	}
+        if ((int)machine < 0) {
 		if (asprintf(&out, "unknown elf type(%s)", val) < 0)
 			out = NULL;
                 return out;
@@ -338,12 +358,12 @@ static const char *print_arch(const char *val, int machine)
 	}
 }
 
-static const char *print_syscall(const char *val, const rnode *r)
+static const char *print_syscall(const char *val, const idata *id)
 {
         const char *sys;
 	char *out;
-	int machine = r->machine, syscall = r->syscall;
-	unsigned long long a0 = r->a0;
+	int machine = id->machine, syscall = id->syscall;
+	unsigned long long a0 = id->a0;
 
         if (machine < 0)
                 machine = audit_detect_machine();
@@ -564,7 +584,7 @@ static const char *print_socket_domain(const char *val)
 	}
         str = fam_i2s(i);
         if (str == NULL) {
-		if (asprintf(&out, "unknown family(%s)", val) < 0)
+		if (asprintf(&out, "unknown family(0x%s)", val) < 0)
 			out = NULL;
 		return out;
 	} else
@@ -775,6 +795,8 @@ static const char *print_flags(const char *val)
 			}
                 }
         }
+	if (buf[0] == 0)
+		snprintf(buf, sizeof(buf), "0x%s", val);
 	return strdup(buf);
 }
 
@@ -908,6 +930,8 @@ static const char *print_open_flags(const char *val)
 			}
                 }
         }
+	if (buf[0] == 0)
+		snprintf(buf, sizeof(buf), "0x%s", val);
 	return strdup(buf);
 }
 
@@ -950,7 +974,7 @@ static const char *print_clone_flags(const char *val)
 	}
 
 	if (buf[0] == 0)
-		snprintf(buf, sizeof(buf), "%d", flags);
+		snprintf(buf, sizeof(buf), "0x%x", flags);
 	return strdup(buf);
 }
 
@@ -1015,7 +1039,7 @@ static const char *print_clock_id(const char *val)
 		if (s != NULL)
 			return strdup(s);
 	}
-	if (asprintf(&out, "unknown clk_id (%s)", val) < 0)
+	if (asprintf(&out, "unknown clk_id (0x%s)", val) < 0)
 		out = NULL;
 	return out;
 }
@@ -1057,6 +1081,8 @@ static const char *print_prot(const char *val, unsigned int is_mmap)
 			}
                 }
         }
+	if (buf[0] == 0)
+		snprintf(buf, sizeof(buf), "0x%s", val);
 	return strdup(buf);
 }
 
@@ -1093,6 +1119,8 @@ static const char *print_mmap(const char *val)
 			}
                 }
         }
+	if (buf[0] == 0)
+		snprintf(buf, sizeof(buf), "0x%s", val);
 	return strdup(buf);
 }
 
@@ -1120,7 +1148,7 @@ static const char *print_personality(const char *val)
 		} else
 			return strdup(s);
 	}
-	if (asprintf(&out, "unknown personality (%s)", val) < 0)
+	if (asprintf(&out, "unknown personality (0x%s)", val) < 0)
 		out = NULL;
 	return out;
 }
@@ -1142,7 +1170,29 @@ static const char *print_ptrace(const char *val)
 	s = ptrace_i2s(trace);
 	if (s != NULL)
 		return strdup(s);
-	if (asprintf(&out, "unknown ptrace (%s)", val) < 0)
+	if (asprintf(&out, "unknown ptrace (0x%s)", val) < 0)
+		out = NULL;
+	return out;
+}
+
+static const char *print_prctl_opt(const char *val)
+{
+        int opt;
+	char *out;
+	const char *s;
+
+        errno = 0;
+        opt = strtoul(val, NULL, 16);
+        if (errno) {
+		if (asprintf(&out, "conversion error(%s)", val) < 0)
+			out = NULL;
+                return out;
+        }
+
+	s = prctl_opt_i2s(opt);
+	if (s != NULL)
+		return strdup(s);
+	if (asprintf(&out, "unknown prctl option (0x%s)", val) < 0)
 		out = NULL;
 	return out;
 }
@@ -1175,6 +1225,8 @@ static const char *print_mount(const char *val)
 			}
                 }
         }
+	if (buf[0] == 0)
+		snprintf(buf, sizeof(buf), "0x%s", val);
 	return strdup(buf);
 }
 
@@ -1195,7 +1247,7 @@ static const char *print_rlimit(const char *val)
 		if (s != NULL)
 			return strdup(s);
 	}
-	if (asprintf(&out, "unknown rlimit (%s)", val) < 0)
+	if (asprintf(&out, "unknown rlimit (0x%s)", val) < 0)
 		out = NULL;
 	return out;
 }
@@ -1228,6 +1280,8 @@ static const char *print_recv(const char *val)
 			}
                 }
         }
+	if (buf[0] == 0)
+		snprintf(buf, sizeof(buf), "0x%s", val);
 	return strdup(buf);
 }
 
@@ -1263,7 +1317,7 @@ static const char *print_access(const char *val)
 		}
 	}
         if (buf[0] == 0)
-                snprintf(buf, sizeof(buf), "%d", (int)mode);
+                snprintf(buf, sizeof(buf), "0x%s", val);
         return strdup(buf);
 }
 
@@ -1272,18 +1326,206 @@ static char *print_dirfd(const char *val)
 	char *out;
 
 	if (strcmp(val, "-100") == 0) {
-		if (asprintf(&out, "AT_FDCWD ") < 0)
+		if (asprintf(&out, "AT_FDCWD") < 0)
 			out = NULL;
 	} else {
-		if (asprintf(&out, "%s ", val) < 0)
+		if (asprintf(&out, "0x%s", val) < 0)
 			out = NULL;
 	}
 	return out;
 }
 
-static const char *print_a0(const char *val, const rnode *r)
+static const char *print_sched(const char *val)
 {
-	int machine = r->machine, syscall = r->syscall;
+        int pol;
+        char *out;
+        const char *s;
+
+        errno = 0;
+        pol = strtoul(val, NULL, 16);
+        if (errno) {
+		if (asprintf(&out, "conversion error(%s)", val) < 0)
+			out = NULL;
+                return out;
+        }
+
+	s = sched_i2s(pol);
+	if (s != NULL)
+		return strdup(s);
+	if (asprintf(&out, "unknown scheduler policy (0x%s)", val) < 0)
+		out = NULL;
+	return out;
+}
+
+static const char *print_sock_opt_level(const char *val)
+{
+        int lvl;
+	char *out;
+
+	errno = 0;
+	lvl = strtoul(val, NULL, 16);
+	if (errno) {
+		if (asprintf(&out, "conversion error(%s)", val) < 0)
+			out = NULL;
+		return out;
+	}
+	if (lvl == SOL_SOCKET)
+		return strdup("SOL_SOCKET");
+	else {
+		struct protoent *p = getprotobynumber(lvl);
+		if (p == NULL) {
+			const char *s = socklevel_i2s(lvl);
+			if (s != NULL)
+				return strdup(s);
+			if (asprintf(&out, "unknown sockopt level (0x%s)", val) < 0)
+				out = NULL;
+		} else
+			return strdup(p->p_name);
+	}
+
+	return out;
+}
+
+static const char *print_sock_opt_name(const char *val, int machine)
+{
+        int opt;
+	char *out;
+	const char *s;
+
+        errno = 0;
+        opt = strtoul(val, NULL, 16);
+        if (errno) {
+		if (asprintf(&out, "conversion error(%s)", val) < 0)
+			out = NULL;
+                return out;
+        }
+	// PPC's tables are different
+	if ((machine == MACH_PPC64 || machine == MACH_PPC) &&
+			opt >= 16 && opt <= 21)
+		opt+=100;
+
+	s = sockoptname_i2s(opt);
+	if (s != NULL)
+		return strdup(s);
+	if (asprintf(&out, "unknown sockopt name (0x%s)", val) < 0)
+		out = NULL;
+	return out;
+}
+
+static const char *print_ip_opt_name(const char *val)
+{
+	int opt;
+	char *out;
+	const char *s;
+
+	errno = 0;
+	opt = strtoul(val, NULL, 16);
+	if (errno) {
+		if (asprintf(&out, "conversion error(%s)", val) < 0)
+			out = NULL;
+                return out;
+	}
+
+	s = ipoptname_i2s(opt);
+	if (s != NULL)
+		return strdup(s);
+	if (asprintf(&out, "unknown ipopt name (0x%s)", val) < 0)
+		out = NULL;
+	return out;
+}
+
+static const char *print_ip6_opt_name(const char *val)
+{
+	int opt;
+	char *out;
+	const char *s;
+
+	errno = 0;
+	opt = strtoul(val, NULL, 16);
+	if (errno) {
+		if (asprintf(&out, "conversion error(%s)", val) < 0)
+			out = NULL;
+                return out;
+	}
+
+	s = ip6optname_i2s(opt);
+	if (s != NULL)
+		return strdup(s);
+	if (asprintf(&out, "unknown ip6opt name (0x%s)", val) < 0)
+		out = NULL;
+	return out;
+}
+
+static const char *print_tcp_opt_name(const char *val)
+{
+	int opt;
+	char *out;
+	const char *s;
+
+	errno = 0;
+	opt = strtoul(val, NULL, 16);
+	if (errno) {
+		if (asprintf(&out, "conversion error(%s)", val) < 0)
+			out = NULL;
+                return out;
+	}
+
+	s = tcpoptname_i2s(opt);
+	if (s != NULL)
+		return strdup(s);
+	if (asprintf(&out, "unknown tcpopt name (0x%s)", val) < 0)
+		out = NULL;
+	return out;
+}
+
+static const char *print_udp_opt_name(const char *val)
+{
+	int opt;
+	char *out;
+
+	errno = 0;
+	opt = strtoul(val, NULL, 16);
+	if (errno) {
+		if (asprintf(&out, "conversion error(%s)", val) < 0)
+			out = NULL;
+                return out;
+	}
+
+	if (opt == 1)
+		out = strdup("UDP_CORK");
+	else if (opt == 100)
+		out = strdup("UDP_ENCAP");
+	else if (asprintf(&out, "unknown udpopt name (0x%s)", val) < 0)
+		out = NULL;
+	return out;
+}
+
+static const char *print_pkt_opt_name(const char *val)
+{
+	int opt;
+	char *out;
+	const char *s;
+
+	errno = 0;
+	opt = strtoul(val, NULL, 16);
+	if (errno) {
+		if (asprintf(&out, "conversion error(%s)", val) < 0)
+			out = NULL;
+                return out;
+	}
+
+	s = pktoptname_i2s(opt);
+	if (s != NULL)
+		return strdup(s);
+	if (asprintf(&out, "unknown pktopt name (0x%s)", val) < 0)
+		out = NULL;
+	return out;
+}
+
+static const char *print_a0(const char *val, const idata *id)
+{
+	char *out;
+	int machine = id->machine, syscall = id->syscall;
 	const char *sys = audit_syscall_to_name(syscall, machine);
 	if (sys) {
 		if (strcmp(sys, "rt_sigaction") == 0)
@@ -1324,6 +1566,8 @@ static const char *print_a0(const char *val, const rnode *r)
 			return print_dirfd(val);
 		else if (strcmp(sys, "futimesat") == 0)
 			return print_dirfd(val);
+		else if (strcmp(sys, "utimensat") == 0)
+			return print_dirfd(val);
 		else if (strcmp(sys, "newfstatat") == 0)
 			return print_dirfd(val);
 		else if (strcmp(sys, "unlinkat") == 0)
@@ -1344,13 +1588,18 @@ static const char *print_a0(const char *val, const rnode *r)
 			return print_clone_flags(val);
 		else if (strcmp(sys, "unshare") == 0)
 			return print_clone_flags(val);
+		else if (strcmp(sys, "prctl") == 0)
+			return print_prctl_opt(val);
 	}
-	return strdup(val);
+	if (asprintf(&out, "0x%s", val) < 0)
+			out = NULL;
+	return out;
 }
 
-static const char *print_a1(const char *val, const rnode *r)
+static const char *print_a1(const char *val, const idata *id)
 {
-	int machine = r->machine, syscall = r->syscall;
+	char *out;
+	int machine = id->machine, syscall = id->syscall;
 	const char *sys = audit_syscall_to_name(syscall, machine);
 	if (sys) {
 		if (strcmp(sys, "open") == 0)
@@ -1379,6 +1628,8 @@ static const char *print_a1(const char *val, const rnode *r)
 			return print_mode_short(val);
 		else if (strcmp(sys, "creat") == 0)
 			return print_mode_short(val);
+		else if (strcmp(sys, "access") == 0)
+			return print_access(val);
 		else if (strncmp(sys, "fcntl", 5) == 0)
 			return print_fcntl_cmd(val);
 		else if (strcmp(sys, "mknod") == 0)
@@ -1389,14 +1640,20 @@ static const char *print_a1(const char *val, const rnode *r)
 			return print_clone_flags(val);
 		else if (strcmp(sys, "mq_open") == 0)
 			return print_open_flags(val);
+		else if (strcmp(sys, "sched_setscheduler") == 0)
+			return print_sched(val);
+		else if (strcmp(sys+1, "etsockopt") == 0)
+			return print_sock_opt_level(val);
 	}
-	return strdup(val);
+	if (asprintf(&out, "0x%s", val) < 0)
+			out = NULL;
+	return out;
 }
 
-static const char *print_a2(const char *val, const rnode *r)
+static const char *print_a2(const char *val, const idata *id)
 {
-	int machine = r->machine, syscall = r->syscall;
 	char *out;
+	int machine = id->machine, syscall = id->syscall;
 	const char *sys = audit_syscall_to_name(syscall, machine);
 	if (sys) {
 		if (strncmp(sys, "fcntl", 5) == 0) {
@@ -1410,7 +1667,7 @@ static const char *print_a2(const char *val, const rnode *r)
 					out = NULL;
 	                	return out;
 	        	}
-			switch (r->a1)
+			switch (id->a1)
 			{
 				case F_SETOWN:
 					return print_uid(val, 16);
@@ -1424,6 +1681,21 @@ static const char *print_a2(const char *val, const rnode *r)
 				case F_NOTIFY:
 					break;
 			}
+		} else if (strcmp(sys+1, "etsockopt") == 0) {
+			if (id->a1 == IPPROTO_IP)
+				return print_ip_opt_name(val);
+			else if (id->a1 == SOL_SOCKET)
+				return print_sock_opt_name(val, machine);
+			else if (id->a1 == IPPROTO_TCP)
+				return print_tcp_opt_name(val);
+			else if (id->a1 == IPPROTO_UDP)
+				return print_udp_opt_name(val);
+			else if (id->a1 == IPPROTO_IPV6)
+				return print_ip6_opt_name(val);
+			else if (id->a1 == SOL_PACKET)
+				return print_pkt_opt_name(val);
+			else
+				goto normal;
 		} else if (strcmp(sys, "openat") == 0)
 			return print_open_flags(val);
 		else if (strcmp(sys, "fchmodat") == 0)
@@ -1448,6 +1720,8 @@ static const char *print_a2(const char *val, const rnode *r)
 			return print_socket_proto(val);
                 else if (strcmp(sys, "recvmsg") == 0)
 			return print_recv(val);
+                else if (strcmp(sys, "sendmsg") == 0)
+			return print_recv(val);
 		else if (strcmp(sys, "linkat") == 0)
 			return print_dirfd(val);
 		else if (strcmp(sys, "readlinkat") == 0)
@@ -1457,12 +1731,16 @@ static const char *print_a2(const char *val, const rnode *r)
 		else if (strcmp(sys, "mq_open") == 0)
 			return print_mode_short(val);
 	}
-	return strdup(val);
+normal:
+	if (asprintf(&out, "0x%s", val) < 0)
+			out = NULL;
+	return out;
 }
 
-static const char *print_a3(const char *val, const rnode *r)
+static const char *print_a3(const char *val, const idata *id)
 {
-	int machine = r->machine, syscall = r->syscall;
+	char *out;
+	int machine = id->machine, syscall = id->syscall;
 	const char *sys = audit_syscall_to_name(syscall, machine);
 	if (sys) {
 		if (strcmp(sys, "mmap") == 0)
@@ -1475,8 +1753,16 @@ static const char *print_a3(const char *val, const rnode *r)
 			return print_recv(val);
                 else if (strcmp(sys, "recvmmsg") == 0)
 			return print_recv(val);
+                else if (strcmp(sys, "send") == 0)
+			return print_recv(val);
+                else if (strcmp(sys, "sendto") == 0)
+			return print_recv(val);
+                else if (strcmp(sys, "sendmmsg") == 0)
+			return print_recv(val);
 	}
-	return strdup(val);
+	if (asprintf(&out, "0x%s", val) < 0)
+			out = NULL;
+	return out;
 }
 
 static const char *print_signals(const char *val, unsigned int base)
@@ -1759,20 +2045,45 @@ const char *interpret(const rnode *r)
 {
 	const nvlist *nv = &r->nv;
 	int type;
+	idata id;
 	nvnode *n;
 	const char *out;
-	const char *name = nvlist_get_cur_name(nv);
-	const char *val = nvlist_get_cur_val(nv);
 
-	/* Do some fixups */
-	if (r->type == AUDIT_EXECVE && name[0] == 'a' && strcmp(name, "argc") &&
+	id.machine = r->machine;
+	id.syscall = r->syscall;
+	id.a0 = r->a0;
+	id.a1 = r->a1;
+	id.name = nvlist_get_cur_name(nv);
+	id.val = nvlist_get_cur_val(nv);
+	type = auparse_interp_adjust_type(r->type, id.name, id.val);
+
+	out = auparse_do_interpretation(type, &id);
+	n = nvlist_get_cur(nv);
+	n->interp_val = (char *)out;
+
+	return out;
+}
+
+/* 
+ * rtype:   the record type
+ * name:    the current field name
+ * value:   the current field value
+ * Returns: field's internal type is returned
+ */
+int auparse_interp_adjust_type(int rtype, const char *name, const char *val)
+{
+	int type;
+
+	/* This set of statements overrides or corrects the detection.
+	 * In almost all cases its a double use of a field. */
+	if (rtype == AUDIT_EXECVE && *name == 'a' && strcmp(name, "argc") &&
 			!strstr(name, "_len"))
 		type = AUPARSE_TYPE_ESCAPED;
-	else if (r->type == AUDIT_AVC && strcmp(name, "saddr") == 0)
-		type = -1;
-	else if (r->type == AUDIT_USER_TTY && strcmp(name, "msg") == 0)
+	else if (rtype == AUDIT_AVC && strcmp(name, "saddr") == 0)
+		type = AUPARSE_TYPE_UNCLASSIFIED;
+	else if (rtype == AUDIT_USER_TTY && strcmp(name, "msg") == 0)
 		type = AUPARSE_TYPE_ESCAPED;
-	else if (r->type == AUDIT_NETFILTER_PKT && strcmp(name, "saddr") == 0)
+	else if (rtype == AUDIT_NETFILTER_PKT && strcmp(name, "saddr") == 0)
 		type = AUPARSE_TYPE_ADDR;
 	else if (strcmp(name, "acct") == 0) {
 		if (val[0] == '"')
@@ -1780,106 +2091,118 @@ const char *interpret(const rnode *r)
 		else if (is_hex_string(val))
 			type = AUPARSE_TYPE_ESCAPED;
 		else
-			type = -1;
-	} else
+			type = AUPARSE_TYPE_UNCLASSIFIED;
+	} else if (rtype == AUDIT_PATH && *name =='f' &&
+			strcmp(name, "flags") == 0)
+		type = AUPARSE_TYPE_FLAGS;
+	 else
 		type = lookup_type(name);
 
+	return type;
+}
+hidden_def(auparse_interp_adjust_type)
+
+const char *auparse_do_interpretation(int type, const idata *id)
+{
+	const char *out;
 	switch(type) {
 		case AUPARSE_TYPE_UID:
-			out = print_uid(val, 10);
+			out = print_uid(id->val, 10);
 			break;
 		case AUPARSE_TYPE_GID:
-			out = print_gid(val, 10);
+			out = print_gid(id->val, 10);
 			break;
 		case AUPARSE_TYPE_SYSCALL:
-			out = print_syscall(val, r);
+			out = print_syscall(id->val, id);
 			break;
 		case AUPARSE_TYPE_ARCH:
-			out = print_arch(val, r->machine);
+			out = print_arch(id->val, id->machine);
 			break;
 		case AUPARSE_TYPE_EXIT:
-			out = print_exit(val);
+			out = print_exit(id->val);
 			break;
 		case AUPARSE_TYPE_ESCAPED:
-			out = print_escaped(val);
+			out = print_escaped(id->val);
                         break;
 		case AUPARSE_TYPE_PERM:
-			out = print_perm(val);
+			out = print_perm(id->val);
 			break;
 		case AUPARSE_TYPE_MODE:
-			out = print_mode(val,8);
+			out = print_mode(id->val,8);
 			break;
 		case AUPARSE_TYPE_SOCKADDR:
-			out = print_sockaddr(val);
+			out = print_sockaddr(id->val);
 			break;
 		case AUPARSE_TYPE_FLAGS:
-			out = print_flags(val);
+			out = print_flags(id->val);
 			break;
 		case AUPARSE_TYPE_PROMISC:
-			out = print_promiscuous(val);
+			out = print_promiscuous(id->val);
 			break;
 		case AUPARSE_TYPE_CAPABILITY:
-			out = print_capabilities(val);
+			out = print_capabilities(id->val);
 			break;
 		case AUPARSE_TYPE_SUCCESS:
-			out = print_success(val);
+			out = print_success(id->val);
 			break;
 		case AUPARSE_TYPE_A0:
-			out = print_a0(val, r);
+			out = print_a0(id->val, id);
 			break;
 		case AUPARSE_TYPE_A1:
-			out = print_a1(val, r);
+			out = print_a1(id->val, id);
 			break;
 		case AUPARSE_TYPE_A2:
-			out = print_a2(val, r);
+			out = print_a2(id->val, id);
 			break; 
 		case AUPARSE_TYPE_A3:
-			out = print_a3(val, r);
+			out = print_a3(id->val, id);
 			break; 
 		case AUPARSE_TYPE_SIGNAL:
-			out = print_signals(val, 10);
+			out = print_signals(id->val, 10);
 			break; 
 		case AUPARSE_TYPE_LIST:
-			out = print_list(val);
+			out = print_list(id->val);
 			break;
 		case AUPARSE_TYPE_TTY_DATA:
-			out = print_tty_data(val);
+			out = print_tty_data(id->val);
 			break;
 		case AUPARSE_TYPE_SESSION:
-			out = print_session(val);
+			out = print_session(id->val);
 			break;
 		case AUPARSE_TYPE_CAP_BITMAP:
-			out = print_cap_bitmap(val);
+			out = print_cap_bitmap(id->val);
 			break;
 		case AUPARSE_TYPE_NFPROTO:
-			out = print_nfproto(val);
+			out = print_nfproto(id->val);
 			break; 
 		case AUPARSE_TYPE_ICMPTYPE:
-			out = print_icmptype(val);
+			out = print_icmptype(id->val);
 			break; 
 		case AUPARSE_TYPE_PROTOCOL:
-			out = print_protocol(val);
+			out = print_protocol(id->val);
 			break; 
 		case AUPARSE_TYPE_ADDR:
-			out = print_addr(val);
+			out = print_addr(id->val);
 			break;
 		case AUPARSE_TYPE_PERSONALITY:
-			out = print_personality(val);
+			out = print_personality(id->val);
 			break;
 		case AUPARSE_TYPE_SECCOMP:
-			out = print_seccomp_code(val);
+			out = print_seccomp_code(id->val);
 			break;
 		case AUPARSE_TYPE_OFLAG:
-			out = print_open_flags(val);
+			out = print_open_flags(id->val);
+			break;
+		case AUPARSE_TYPE_MMAP:
+			out = print_mmap(id->val);
 			break;
 		case AUPARSE_TYPE_UNCLASSIFIED:
 		default:
-			out = strdup(val);
+			out = strdup(id->val);
 			break;
         }
 
-	n = nvlist_get_cur(nv);
-	n->interp_val = (char *)out;
-
 	return out;
 }
+hidden_def(auparse_do_interpretation)
+
