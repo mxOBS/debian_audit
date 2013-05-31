@@ -2,6 +2,7 @@ audit (1:2.3.1-1) UNRELEASED; urgency=low
 
   * New upstream release
   * debian/control: Bump Standards-Version to 3.9.4 (no further changes)
+  * debian/control: Use canonical URL for VCS field
 
  -- Laurent Bigonville <bigon@debian.org>  Fri, 31 May 2013 16:43:04 +0200
 
