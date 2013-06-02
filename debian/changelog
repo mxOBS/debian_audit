@@ -1,5 +1,6 @@
-audit (1:2.3.1-1) UNRELEASED; urgency=low
+audit (1:2.3.1-1) experimental; urgency=low
 
+  * QA upload.
   * New upstream release
     - debian/libauparse0.symbols: Adjust .symbols file
   * debian/control: Bump Standards-Version to 3.9.4 (no further changes)
@@ -7,7 +8,7 @@ audit (1:2.3.1-1) UNRELEASED; urgency=low
   * debian/auditd.init: Remove the usage of the VERBOSE variable
     (see lintian error: init.d-script-call-internal-API)
 
- -- Laurent Bigonville <bigon@debian.org>  Fri, 31 May 2013 16:43:04 +0200
+ -- Laurent Bigonville <bigon@debian.org>  Sun, 02 Jun 2013 15:06:23 +0200
 
 audit (1:2.3-1) experimental; urgency=low
 
