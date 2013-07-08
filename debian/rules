@@ -18,7 +18,7 @@ ifeq ($(DEB_HOST_ARCH),alpha)
 endif
 
 %:
-	dh $@ --builddirectory=debian/build --buildsystem=autoconf --with autoreconf --with python2
+	dh $@ --builddirectory=debian/build --buildsystem=autoconf --with autoreconf --with python2 --with systemd
 
 override_dh_auto_configure: debian/config-python-stamp $(PYVERS:%=debian/config-python%-stamp)
 debian/config-python-stamp:
