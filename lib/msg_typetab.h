@@ -24,7 +24,8 @@
  * This table is arranged from lowest number to highest number. The
  * items that are commented out are for completeness. The audit 
  * daemon filters these and they never show up in the logs, therefore
- * they are not needed for reporting.
+ * they are not needed for reporting. Or they have been deprecated for
+ * a long time.
  */
 //_S(AUDIT_GET,                      "GET"                           )
 //_S(AUDIT_SET,                      "SET"                           )

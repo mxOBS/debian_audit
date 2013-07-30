@@ -1153,7 +1153,10 @@ int audit_rule_fieldpair_data(struct audit_rule_data **rulep, const char *pair,
 				rule->values[rule->field_count] =
 					strtol(v, NULL, 0);
 			else {
-				if (audit_name_to_uid(v, 
+				if (strcmp(v, "unset") == 0)
+					rule->values[rule->field_count] =
+								4294967295;
+				else if (audit_name_to_uid(v, 
 					&rule->values[rule->field_count])) {
 					audit_msg(LOG_ERR, "Unknown user: %s",
 						v);
@@ -1325,6 +1328,18 @@ int audit_rule_fieldpair_data(struct audit_rule_data **rulep, const char *pair,
 						if (bits == __AUDIT_ARCH_64BIT)
 							return -6;
 						break;
+#ifdef WITH_ARMEB
+					case MACH_ARMEB:
+						if (bits == __AUDIT_ARCH_64BIT)
+							return -6;
+						break;
+#endif
+#ifdef WITH_AARCH64
+					case MACH_AARCH64:
+						if (bits != __AUDIT_ARCH_64BIT)
+							return -6;
+						break;
+#endif
 					case MACH_86_64: /* fallthrough */
 					case MACH_PPC64: /* fallthrough */
 					case MACH_S390X: /* fallthrough */

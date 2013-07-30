@@ -537,8 +537,21 @@ int main(int argc, char *argv[])
 						quiet = 0;
 					}
 					/* Strip out EOE records */
-					if (strstr(event,"type=EOE msg=audit("))
-						continue;
+					if (*event == 't') {
+						if (strncmp(event,
+							"type=EOE", 8) == 0)
+							continue;
+					} else {
+						char *ptr = strchr(event, ' ');
+						if (ptr) {
+							ptr++;
+							if (strncmp(ptr,
+								"type=EOE",
+									8) == 0)
+								continue;
+						} else
+							continue; //malformed
+					}
 					if (q_append(queue, event) != 0) {
 						if (errno == ENOSPC)
 							do_overflow_action();
@@ -970,13 +983,16 @@ static int init_sock(void)
 	hints.ai_flags = AI_ADDRCONFIG|AI_NUMERICSERV;
 	hints.ai_socktype = SOCK_STREAM;
 	snprintf(remote, BUF_SIZE, "%u", config.port);
-	rc=getaddrinfo(config.remote_server, remote, &hints, &ai);
+	rc = getaddrinfo(config.remote_server, remote, &hints, &ai);
 	if (rc) {
 		if (!quiet)
 			syslog(LOG_ERR,
 				"Error looking up remote host: %s - exiting",
 				gai_strerror(rc));
-		return ET_PERMANENT;
+		if (rc == EAI_NONAME || rc == EAI_NODATA)
+			return ET_PERMANENT;
+		else
+			return ET_TEMPORARY;
 	}
 	sock = socket(ai->ai_family, ai->ai_socktype, ai->ai_protocol);
 	if (sock < 0) {

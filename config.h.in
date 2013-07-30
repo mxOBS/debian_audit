@@ -152,6 +152,9 @@
 /* Version number of package */
 #undef VERSION
 
+/* Define if you want to enable Aarch64 processor support. */
+#undef WITH_AARCH64
+
 /* Define if you want to enable Alpha processor support. */
 #undef WITH_ALPHA
 

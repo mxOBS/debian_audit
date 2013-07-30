@@ -98,7 +98,6 @@ int extract_search_items(llist *l)
 			case AUDIT_PATH:
 				ret = parse_path(n, s);
 				break;
-			case AUDIT_USER:
 			case AUDIT_FIRST_USER_MSG...AUDIT_LAST_USER_MSG:
 			case AUDIT_FIRST_USER_MSG2...AUDIT_LAST_USER_MSG2:
 				ret = parse_user(n, s);
@@ -109,6 +108,7 @@ int extract_search_items(llist *l)
 			case AUDIT_LOGIN:
 				ret = parse_login(n, s);
 				break;
+			case AUDIT_IPC:
 			case AUDIT_OBJ_PID:
 				ret = parse_obj(n, s);
 				break;
@@ -144,10 +144,17 @@ int extract_search_items(llist *l)
 				ret = parse_integrity(n, s);
 				break;
 			case AUDIT_KERNEL:
-			case AUDIT_IPC:
 			case AUDIT_SELINUX_ERR:
 			case AUDIT_EXECVE:
+			case AUDIT_IPC_SET_PERM:
+			case AUDIT_MQ_OPEN:
+			case AUDIT_MQ_SENDRECV:
+			case AUDIT_MQ_NOTIFY:
+			case AUDIT_MQ_GETSETATTR:
+			case AUDIT_FD_PAIR:
 			case AUDIT_BPRM_FCAPS:
+			case AUDIT_CAPSET:
+			case AUDIT_MMAP:
 			case AUDIT_NETFILTER_CFG:
 				// Nothing to parse
 				break;
@@ -1192,18 +1199,18 @@ static int parse_daemon1(const lnode *n, search_items *s)
 		if (str != NULL) {
 			str += 5;
 			term = strchr(str, ' ');
-			if (term == NULL)
-				return 7;
-			*term = 0;
+			if (term)
+				*term = 0;
 			if (audit_avc_init(s) == 0) {
 				anode an;
 
 				anode_init(&an);
 				an.scontext = strdup(str);
 				alist_append(s->avc, &an);
-				*term = ' ';
 			} else
-				return 8;
+				return 7;
+			if (term)
+				*term = ' ';
 		}
 	}
 
