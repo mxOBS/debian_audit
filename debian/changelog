@@ -3,8 +3,10 @@ audit (1:2.3.2-1) UNRELEASED; urgency=low
   * QA upload.
   * New upstream release
   * debian/control, debian/rules: Add support for dh-systemd
+  * debian/rules: Call dh_installinit with --restart-after-upgrade to minimize
+    downtime
 
- -- Laurent Bigonville <bigon@debian.org>  Tue, 30 Jul 2013 20:32:35 +0200
+ -- Laurent Bigonville <bigon@debian.org>  Tue, 30 Jul 2013 21:43:20 +0200
 
 audit (1:2.3.1-1) experimental; urgency=low
 
