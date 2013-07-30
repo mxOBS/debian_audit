@@ -9,7 +9,7 @@
 
 Summary: User space tools for 2.6 kernel auditing
 Name: audit
-Version: 2.3.1
+Version: 2.3.2
 Release: 1
 License: GPLv2+
 Group: System Environment/Daemons
@@ -80,7 +80,6 @@ Summary: Plugins for the audit event dispatcher
 License: GPLv2+
 Group: System Environment/Daemons
 BuildRequires: openldap-devel
-BuildRequires: libprelude-devel >= 0.9.16
 Requires: %{name} = %{version}-%{release}
 Requires: %{name}-libs = %{version}-%{release}
 Requires: openldap
@@ -95,7 +94,7 @@ behavior.
 %setup -q
 
 %build
-%configure --sbindir=/sbin --libdir=/%{_lib} --with-python=yes --with-prelude --with-libwrap --enable-gssapi-krb5=yes --with-libcap-ng=yes \
+%configure --sbindir=/sbin --libdir=/%{_lib} --with-python=yes --with-libwrap --enable-gssapi-krb5=yes --with-libcap-ng=yes \
 %if %{WITH_SYSTEMD}
 	--enable-systemd
 %endif
@@ -163,6 +162,7 @@ fi
 
 %preun
 %if %{WITH_SYSTEMD}
+/sbin/service auditd stop > /dev/null 2>&1
 %systemd_preun auditd.service
 %else
 if [ $1 -eq 0 ]; then
@@ -174,13 +174,9 @@ fi
 %postun libs -p /sbin/ldconfig
 
 %postun
-%if %{WITH_SYSTEMD}
-%systemd_postun_with_restart auditd.service
-%else
 if [ $1 -ge 1 ]; then
    /sbin/service auditd condrestart > /dev/null 2>&1 || :
 fi
-%endif
 
 %files libs
 %defattr(-,root,root,-)
@@ -245,6 +241,8 @@ fi
 %attr(750,root,root) %{_libexecdir}/initscripts/legacy-actions/auditd/resume
 %attr(750,root,root) %{_libexecdir}/initscripts/legacy-actions/auditd/rotate
 %attr(750,root,root) %{_libexecdir}/initscripts/legacy-actions/auditd/stop
+%attr(750,root,root) %{_libexecdir}/initscripts/legacy-actions/auditd/restart
+%attr(750,root,root) %{_libexecdir}/initscripts/legacy-actions/auditd/condrestart
 %else
 %attr(755,root,root) /etc/rc.d/init.d/auditd
 %config(noreplace) %attr(640,root,root) /etc/sysconfig/auditd
@@ -267,11 +265,6 @@ fi
 %config(noreplace) %attr(640,root,root) /etc/audisp/plugins.d/audispd-zos-remote.conf
 %config(noreplace) %attr(640,root,root) /etc/audisp/zos-remote.conf
 %attr(750,root,root) /sbin/audispd-zos-remote
-%config(noreplace) %attr(640,root,root) /etc/audisp/plugins.d/au-prelude.conf
-%config(noreplace) %attr(640,root,root) /etc/audisp/audisp-prelude.conf
-%attr(750,root,root) /sbin/audisp-prelude
-%attr(644,root,root) %{_mandir}/man5/audisp-prelude.conf.5.gz
-%attr(644,root,root) %{_mandir}/man8/audisp-prelude.8.gz
 %config(noreplace) %attr(640,root,root) /etc/audisp/audisp-remote.conf
 %config(noreplace) %attr(640,root,root) /etc/audisp/plugins.d/au-remote.conf
 %attr(750,root,root) /sbin/audisp-remote
@@ -281,6 +274,6 @@ fi
 
 
 %changelog
-* Thu May 30 2013 Steve Grubb <sgrubb@redhat.com> 2.3.1-1
+* Mon Jul 29 2013 Steve Grubb <sgrubb@redhat.com> 2.3.2-1
 - New upstream release
 

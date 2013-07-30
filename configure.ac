@@ -29,7 +29,7 @@ define([AC_INIT_NOTICE],
 ])
 
 AC_REVISION($Revision: 1.3 $)dnl
-AC_INIT(audit,2.3.1)
+AC_INIT(audit,2.3.2)
 AC_PREREQ(2.12)dnl
 AM_CONFIG_HEADER(config.h)
 
@@ -198,6 +198,17 @@ if test x$use_armeb != xno ; then
 fi
 AM_CONDITIONAL(USE_ARMEB, test x$use_armeb = xyes)
 AC_MSG_RESULT($use_armeb)
+
+AC_MSG_CHECKING(whether to include aarch64 processor support)
+AC_ARG_WITH(aarch64,
+AS_HELP_STRING([--with-aarch64],[enable Aarch64 processor support]),
+use_aarch64=$withval,
+use_aarch64=no)
+if test x$use_aarch64 != xno ; then
+      AC_DEFINE(WITH_AARCH64,1,[Define if you want to enable Aarch64 processor support.])
+fi
+AM_CONDITIONAL(USE_AARCH64, test x$use_aarch64 = xyes)
+AC_MSG_RESULT($use_aarch64)
 
 AC_MSG_CHECKING(whether to use apparmor)
 AC_ARG_WITH(apparmor,

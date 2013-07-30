@@ -1,3 +1,25 @@
+2.3.2
+- Put RefuseManualStop in the right systemd section (#969345)
+- Add legacy restart scripts for systemd support
+- Add more syscall argument interpretations
+- Add 'unset' keyword for uid & gid values in auditctl
+- In ausearch, parse obj in IPC records
+- In ausearch, parse subj in DAEMON_ROTATE records
+- Fix interpretation of MQ_OPEN and MQ_NOTIFY events
+- In auditd, restart dispatcher on SIGHUP if it had previously exited
+- In audispd, exit when no active plugins are detected on reconfigure
+- In audispd, clear signal mask set by libev so that SIGHUP works again
+- In audispd, track binary plugins and restart if binary was updated
+- In audispd, make sure we send signals to the correct process
+- In auditd, clear signal mask when spawning any child process
+- In audispd, make builtin plugins respond to SIGHUP
+- In auparse, interpret mode flags of open syscall if O_CREAT is passed
+- In audisp-remote, don't make address lookup always a permanent failure
+- In audisp-remote, remove EOE events more efficiently
+- In auditd, log the reason when email account is not valid
+- In audisp-remote, change default remote_ending action to reconnect
+- Add support for Aarch64 processors
+
 2.3.1
 - Rearrange auditd setting enabled and pid to avoid a race (#910568)
 - Interpret the ocomm field from OBJ_PID records 

@@ -48,6 +48,7 @@
 #include <linux/ipx.h>
 #include <linux/capability.h>
 #include <sys/personality.h>
+#include <sys/prctl.h>
 #include "auparse-defs.h"
 #include "gen_tables.h"
 
@@ -73,6 +74,7 @@
 #include "fcntl-cmdtabs.h"
 #include "flagtabs.h"
 #include "ipctabs.h"
+#include "ipccmdtabs.h"
 #include "mmaptabs.h"
 #include "mounttabs.h"
 #include "open-flagtabs.h"
@@ -81,6 +83,7 @@
 #include "ptracetabs.h"
 #include "recvtabs.h"
 #include "rlimittabs.h"
+#include "seektabs.h"
 #include "socktabs.h"
 #include "socktypetabs.h"
 #include "signaltabs.h"
@@ -92,12 +95,14 @@
 #include "accesstabs.h"
 #include "prctl_opttabs.h"
 #include "schedtabs.h"
+#include "shm_modetabs.h"
 #include "sockoptnametabs.h"
 #include "sockleveltabs.h"
 #include "ipoptnametabs.h"
 #include "ip6optnametabs.h"
 #include "tcpoptnametabs.h"
 #include "pktoptnametabs.h"
+#include "umounttabs.h"
 
 typedef enum { AVC_UNSET, AVC_DENIED, AVC_GRANTED } avc_t;
 typedef enum { S_UNSET=-1, S_FAILED, S_SUCCESS } success_t;
@@ -332,13 +337,14 @@ static const char *print_arch(const char *val, unsigned int machine)
         const char *ptr;
 	char *out;
 
-	if (machine > MACH_ARMEB) {
+	if (machine > MACH_AARCH64) {
 		unsigned int ival;
 
 		errno = 0;
 		ival = strtoul(val, NULL, 16);
 		if (errno) {
-			asprintf(&out, "conversion error(%s) ", val);
+			if (asprintf(&out, "conversion error(%s) ", val) < 0)
+				out = NULL;
 			return out;
 		}
 		machine = audit_elf_to_machine(ival);
@@ -535,18 +541,9 @@ static const char *print_mode(const char *val, unsigned int base)
 	return out;
 }
 
-static const char *print_mode_short(const char *val)
+static const char *print_mode_short_int(unsigned int ival)
 {
-        unsigned int ival;
 	char *out, buf[48];
-
-        errno = 0;
-        ival = strtoul(val, NULL, 16);
-        if (errno) {
-		if (asprintf(&out, "conversion error(%s)", val) < 0)
-			out = NULL;
-                return out;
-        }
 
         // check on special bits
         buf[0] = 0;
@@ -563,10 +560,25 @@ static const char *print_mode_short(const char *val)
 			     (S_IRWXU|S_IRWXG|S_IRWXO) & ival) < 0)
 			out = NULL;
 	} else
-		if (asprintf(&out, "%s,%03o", buf,
+		if (asprintf(&out, "%s,0%03o", buf,
 			     (S_IRWXU|S_IRWXG|S_IRWXO) & ival) < 0)
 			out = NULL;
 	return out;
+}
+
+static const char *print_mode_short(const char *val, int base)
+{
+        unsigned int ival;
+	char *out;
+
+        errno = 0;
+        ival = strtoul(val, NULL, base);
+        if (errno) {
+		if (asprintf(&out, "conversion error(%s)", val) < 0)
+			out = NULL;
+                return out;
+        }
+	return print_mode_short_int(ival);
 }
 
 static const char *print_socket_domain(const char *val)
@@ -819,14 +831,14 @@ static const char *print_promiscuous(const char *val)
                 return strdup("yes");
 }
 
-static const char *print_capabilities(const char *val)
+static const char *print_capabilities(const char *val, int base)
 {
         int cap;
 	char *out;
 	const char *s;
 
         errno = 0;
-        cap = strtoul(val, NULL, 10);
+        cap = strtoul(val, NULL, base);
         if (errno) {
 		if (asprintf(&out, "conversion error(%s)", val) < 0)
 			out = NULL;
@@ -836,7 +848,8 @@ static const char *print_capabilities(const char *val)
 	s = cap_i2s(cap);
 	if (s != NULL)
 		return strdup(s);
-	if (asprintf(&out, "unknown capability(%s)", val) < 0)
+	if (asprintf(&out, "unknown capability(%s%s)",
+				base == 16 ? "0x" : "", val) < 0)
 		out = NULL;
 	return out;
 }
@@ -1522,74 +1535,196 @@ static const char *print_pkt_opt_name(const char *val)
 	return out;
 }
 
+static const char *print_shmflags(const char *val)
+{
+	unsigned int flags, partial, i;
+	int cnt = 0;
+	char *out, buf[32];
+
+	errno = 0;
+	flags = strtoul(val, NULL, 16);
+        if (errno) {
+		if (asprintf(&out, "conversion error(%s)", val) < 0)
+			out = NULL;
+               	return out;
+       	}
+
+	partial = flags & 00003000;
+	buf[0] = 0;
+        for (i=0; i<IPCCMD_NUM_ENTRIES; i++) {
+                if (ipccmd_table[i].value & partial) {
+                        if (!cnt) {
+                                strcat(buf,
+			ipccmd_strings + ipccmd_table[i].offset);
+                                cnt++;
+                        } else {
+                                strcat(buf, "|");
+                                strcat(buf,
+			ipccmd_strings + ipccmd_table[i].offset);
+			}
+                }
+        }
+
+	partial = flags & 00014000;
+        for (i=0; i<SHM_MODE_NUM_ENTRIES; i++) {
+                if (shm_mode_table[i].value & partial) {
+                        if (!cnt) {
+                                strcat(buf,
+			shm_mode_strings + shm_mode_table[i].offset);
+                                cnt++;
+                        } else {
+                                strcat(buf, "|");
+                                strcat(buf,
+			shm_mode_strings + shm_mode_table[i].offset);
+			}
+                }
+        }
+
+	partial = flags & 000777;
+	const char *tmode = print_mode_short_int(partial);
+	if (tmode) {
+		if (buf[0] != 0)
+			strcat(buf, "|");
+		strcat(buf, tmode);
+		free((void *)tmode);
+	}
+
+	if (buf[0] == 0)
+		snprintf(buf, sizeof(buf), "0x%x", flags);
+	return strdup(buf);
+}
+
+static const char *print_seek(const char *val)
+{
+	unsigned int whence;
+	char *out;
+	const char *str;
+
+	errno = 0;
+	whence = 0xFF & strtoul(val, NULL, 16);
+	if (errno) {
+		if (asprintf(&out, "conversion error(%s)", val) < 0)
+			out = NULL;
+		return out;
+	}
+	str = seek_i2s(whence);
+	if (str == NULL) {
+		if (asprintf(&out, "unknown whence(%s)", val) < 0)
+			out = NULL;
+		return out;
+	} else
+		return strdup(str);
+}
+
+static const char *print_umount(const char *val)
+{
+	unsigned int flags, i;
+	int cnt = 0;
+	char buf[64];
+	char *out;
+
+	errno = 0;
+	flags = strtoul(val, NULL, 16);
+	if (errno) {
+		if (asprintf(&out, "conversion error(%s)", val) < 0)
+			out = NULL;
+		return out;
+	}
+	buf[0] = 0;
+	for (i=0; i<UMOUNT_NUM_ENTRIES; i++) {
+                if (umount_table[i].value & flags) {
+                        if (!cnt) {
+				strcat(buf,
+				umount_strings + umount_table[i].offset);
+				cnt++;
+                        } else {
+				strcat(buf, "|");
+				strcat(buf,
+				umount_strings + umount_table[i].offset);
+			}
+                }
+	}
+	if (buf[0] == 0)
+		snprintf(buf, sizeof(buf), "0x%s", val);
+	return strdup(buf);
+}
+
 static const char *print_a0(const char *val, const idata *id)
 {
 	char *out;
 	int machine = id->machine, syscall = id->syscall;
 	const char *sys = audit_syscall_to_name(syscall, machine);
 	if (sys) {
-		if (strcmp(sys, "rt_sigaction") == 0)
-                        return print_signals(val, 16);
-                else if (strcmp(sys, "setuid") == 0)
-			return print_uid(val, 16);
-                else if (strcmp(sys, "setreuid") == 0)
-			return print_uid(val, 16);
-                else if (strcmp(sys, "setresuid") == 0)
-			return print_uid(val, 16);
-                else if (strcmp(sys, "setfsuid") == 0)
-			return print_uid(val, 16);
-                else if (strcmp(sys, "setgid") == 0)
-			return print_gid(val, 16);
-                else if (strcmp(sys, "setregid") == 0)
-			return print_gid(val, 16);
-                else if (strcmp(sys, "setresgid") == 0)
-			return print_gid(val, 16);
-                else if (strcmp(sys, "setfsgid") == 0)
-			return print_gid(val, 16);
-                else if (strcmp(sys, "clock_settime") == 0)
-			return print_clock_id(val);
-                else if (strcmp(sys, "personality") == 0)
-			return print_personality(val);
-                else if (strcmp(sys, "ptrace") == 0)
-			return print_ptrace(val);
-                else if (strstr(sys, "etrlimit"))
+		if (*sys == 'r') {
+			if (strcmp(sys, "rt_sigaction") == 0)
+        	                return print_signals(val, 16);
+			else if (strcmp(sys, "renameat") == 0)
+				return print_dirfd(val);
+			else if (strcmp(sys, "readlinkat") == 0)
+				return print_dirfd(val);
+		} else if (*sys == 'c') {
+			if (strcmp(sys, "clone") == 0)
+				return print_clone_flags(val);
+	                else if (strcmp(sys, "clock_settime") == 0)
+				return print_clock_id(val);
+		} else if (*sys == 'p') {
+	                if (strcmp(sys, "personality") == 0)
+				return print_personality(val);
+                	else if (strcmp(sys, "ptrace") == 0)
+				return print_ptrace(val);
+			else if (strcmp(sys, "prctl") == 0)
+				return print_prctl_opt(val);
+		} else if (*sys == 'm') {
+			if (strcmp(sys, "mkdirat") == 0)
+				return print_dirfd(val);
+			else if (strcmp(sys, "mknodat") == 0)
+				return print_dirfd(val);
+		} else if (*sys == 'f') {
+			if (strcmp(sys, "fchownat") == 0)
+				return print_dirfd(val);
+			else if (strcmp(sys, "futimesat") == 0)
+				return print_dirfd(val);
+			else if (strcmp(sys, "fchmodat") == 0)
+				return print_dirfd(val);
+			else if (strcmp(sys, "faccessat") == 0)
+				return print_dirfd(val);
+			else if (strcmp(sys, "futimensat") == 0)
+				return print_dirfd(val);
+		} else if (*sys == 'u') {
+			if (strcmp(sys, "unshare") == 0)
+				return print_clone_flags(val);
+			else if (strcmp(sys, "unlinkat") == 0)
+				return print_dirfd(val);
+			else if (strcmp(sys, "utimensat") == 0)
+				return print_dirfd(val);
+		} else if (strcmp(sys+1, "etrlimit") == 0)
 			return print_rlimit(val);
-                else if (strcmp(sys, "socket") == 0)
-			return print_socket_domain(val);
-		else if (strcmp(sys, "openat") == 0)
-			return print_dirfd(val);
-		else if (strcmp(sys, "mkdirat") == 0)
-			return print_dirfd(val);
-		else if (strcmp(sys, "mknodat") == 0)
-			return print_dirfd(val);
-		else if (strcmp(sys, "fchownat") == 0)
-			return print_dirfd(val);
-		else if (strcmp(sys, "futimesat") == 0)
-			return print_dirfd(val);
-		else if (strcmp(sys, "utimensat") == 0)
+		else if (*sys == 's') {
+                	if (strcmp(sys, "setuid") == 0)
+				return print_uid(val, 16);
+        	        else if (strcmp(sys, "setreuid") == 0)
+				return print_uid(val, 16);
+	                else if (strcmp(sys, "setresuid") == 0)
+				return print_uid(val, 16);
+                	else if (strcmp(sys, "setfsuid") == 0)
+				return print_uid(val, 16);
+	                else if (strcmp(sys, "setgid") == 0)
+				return print_gid(val, 16);
+                	else if (strcmp(sys, "setregid") == 0)
+				return print_gid(val, 16);
+	                else if (strcmp(sys, "setresgid") == 0)
+				return print_gid(val, 16);
+                	else if (strcmp(sys, "socket") == 0)
+				return print_socket_domain(val);
+                	else if (strcmp(sys, "setfsgid") == 0)
+				return print_gid(val, 16);
+		}
+		else if (strcmp(sys, "linkat") == 0)
 			return print_dirfd(val);
 		else if (strcmp(sys, "newfstatat") == 0)
 			return print_dirfd(val);
-		else if (strcmp(sys, "unlinkat") == 0)
+		else if (strcmp(sys, "openat") == 0)
 			return print_dirfd(val);
-		else if (strcmp(sys, "renameat") == 0)
-			return print_dirfd(val);
-		else if (strcmp(sys, "linkat") == 0)
-			return print_dirfd(val);
-		else if (strcmp(sys, "readlinkat") == 0)
-			return print_dirfd(val);
-		else if (strcmp(sys, "fchmodat") == 0)
-			return print_dirfd(val);
-		else if (strcmp(sys, "faccessat") == 0)
-			return print_dirfd(val);
-		else if (strcmp(sys, "futimensat") == 0)
-			return print_dirfd(val);
-		else if (strcmp(sys, "clone") == 0)
-			return print_clone_flags(val);
-		else if (strcmp(sys, "unshare") == 0)
-			return print_clone_flags(val);
-		else if (strcmp(sys, "prctl") == 0)
-			return print_prctl_opt(val);
 	}
 	if (asprintf(&out, "0x%s", val) < 0)
 			out = NULL;
@@ -1602,48 +1737,63 @@ static const char *print_a1(const char *val, const idata *id)
 	int machine = id->machine, syscall = id->syscall;
 	const char *sys = audit_syscall_to_name(syscall, machine);
 	if (sys) {
-		if (strcmp(sys, "open") == 0)
+		if (*sys == 'f') {
+			if (strcmp(sys, "fchmod") == 0)
+				return print_mode_short(val, 16);
+			else if (strncmp(sys, "fcntl", 5) == 0)
+				return print_fcntl_cmd(val);
+		} else if (*sys == 'c') {
+			if (strcmp(sys, "chmod") == 0)
+				return print_mode_short(val, 16);
+			else if (strstr(sys, "chown"))
+				return print_uid(val, 16);
+			else if (strcmp(sys, "creat") == 0)
+				return print_mode_short(val, 16);
+		}
+		if (strcmp(sys+1, "etsockopt") == 0)
+			return print_sock_opt_level(val);
+		else if (*sys == 's') {
+	                if (strcmp(sys, "setreuid") == 0)
+				return print_uid(val, 16);
+                	else if (strcmp(sys, "setresuid") == 0)
+				return print_uid(val, 16);
+	                else if (strcmp(sys, "setregid") == 0)
+				return print_gid(val, 16);
+                	else if (strcmp(sys, "setresgid") == 0)
+				return print_gid(val, 16);
+	                else if (strcmp(sys, "socket") == 0)
+				return print_socket_type(val);
+			else if (strcmp(sys, "setns") == 0)
+				return print_clone_flags(val);
+			else if (strcmp(sys, "sched_setscheduler") == 0)
+				return print_sched(val);
+		} else if (*sys == 'm') {
+			if (strcmp(sys, "mkdir") == 0)
+				return print_mode_short(val, 16);
+			else if (strcmp(sys, "mknod") == 0)
+				return print_mode(val, 16);
+			else if (strcmp(sys, "mq_open") == 0)
+				return print_open_flags(val);
+		}
+		else if (strcmp(sys, "open") == 0)
 			return print_open_flags(val);
-		else if (strcmp(sys, "epoll_ctl") == 0)
-			return print_epoll_ctl(val);
-		else if (strcmp(sys, "chmod") == 0)
-			return print_mode_short(val);
-		else if (strcmp(sys, "fchmod") == 0)
-			return print_mode_short(val);
-		else if (strstr(sys, "chown"))
-			return print_uid(val, 16);
-                else if (strcmp(sys, "setreuid") == 0)
-			return print_uid(val, 16);
-                else if (strcmp(sys, "setresuid") == 0)
-			return print_uid(val, 16);
-                else if (strcmp(sys, "setregid") == 0)
-			return print_gid(val, 16);
-                else if (strcmp(sys, "setresgid") == 0)
-			return print_gid(val, 16);
-		else if (strcmp(sys, "kill") == 0)
-			return print_signals(val, 16);
-		else if (strcmp(sys, "tkill") == 0)
-			return print_signals(val, 16);
-		else if (strcmp(sys, "mkdir") == 0)
-			return print_mode_short(val);
-		else if (strcmp(sys, "creat") == 0)
-			return print_mode_short(val);
 		else if (strcmp(sys, "access") == 0)
 			return print_access(val);
-		else if (strncmp(sys, "fcntl", 5) == 0)
-			return print_fcntl_cmd(val);
-		else if (strcmp(sys, "mknod") == 0)
-			return print_mode(val, 16);
-                else if (strcmp(sys, "socket") == 0)
-			return print_socket_type(val);
-		else if (strcmp(sys, "setns") == 0)
-			return print_clone_flags(val);
-		else if (strcmp(sys, "mq_open") == 0)
-			return print_open_flags(val);
-		else if (strcmp(sys, "sched_setscheduler") == 0)
-			return print_sched(val);
-		else if (strcmp(sys+1, "etsockopt") == 0)
-			return print_sock_opt_level(val);
+		else if (strcmp(sys, "epoll_ctl") == 0)
+			return print_epoll_ctl(val);
+		else if (strcmp(sys, "kill") == 0)
+			return print_signals(val, 16);
+		else if (strcmp(sys, "prctl") == 0) {
+			if (id->a0 == PR_CAPBSET_READ ||
+				id->a0 == PR_CAPBSET_DROP)
+				return print_capabilities(val, 16);
+			else if (id->a0 == PR_SET_PDEATHSIG)
+				return print_signals(val, 16);
+		}
+		else if (strcmp(sys, "tkill") == 0)
+			return print_signals(val, 16);
+		else if (strcmp(sys, "umount2") == 0)
+			return print_umount(val);
 	}
 	if (asprintf(&out, "0x%s", val) < 0)
 			out = NULL;
@@ -1696,40 +1846,54 @@ static const char *print_a2(const char *val, const idata *id)
 				return print_pkt_opt_name(val);
 			else
 				goto normal;
-		} else if (strcmp(sys, "openat") == 0)
-			return print_open_flags(val);
-		else if (strcmp(sys, "fchmodat") == 0)
-			return print_mode_short(val);
+		} else if (*sys == 'o') {
+			if (strcmp(sys, "openat") == 0)
+				return print_open_flags(val);
+			if ((strcmp(sys, "open") == 0) && (id->a1 & O_CREAT))
+				return print_mode_short(val, 16);
+		} else if (*sys == 'f') {
+			if (strcmp(sys, "fchmodat") == 0)
+				return print_mode_short(val, 16);
+			else if (strcmp(sys, "faccessat") == 0)
+				return print_access(val);
+		} else if (*sys == 's') {
+                	if (strcmp(sys, "setresuid") == 0)
+				return print_uid(val, 16);
+	                else if (strcmp(sys, "setresgid") == 0)
+				return print_gid(val, 16);
+                	else if (strcmp(sys, "socket") == 0)
+				return print_socket_proto(val);
+	                else if (strcmp(sys, "sendmsg") == 0)
+				return print_recv(val);
+			else if (strcmp(sys, "shmget") == 0)
+				return print_shmflags(val);
+		} else if (*sys == 'm') {
+			if (strcmp(sys, "mmap") == 0)
+				return print_prot(val, 1);
+			else if (strcmp(sys, "mkdirat") == 0)
+				return print_mode_short(val, 16);
+			else if (strcmp(sys, "mknodat") == 0)
+				return print_mode_short(val, 16);
+			else if (strcmp(sys, "mprotect") == 0)
+				return print_prot(val, 0);
+			else if ((strcmp(sys, "mq_open") == 0) &&
+						(id->a1 & O_CREAT))
+				return print_mode_short(val, 16);
+		} else if (*sys == 'r') {
+                	if (strcmp(sys, "recvmsg") == 0)
+				return print_recv(val);
+			else if (strcmp(sys, "readlinkat") == 0)
+				return print_dirfd(val);
+		} else if (*sys == 'l') {
+			if (strcmp(sys, "linkat") == 0)
+				return print_dirfd(val);
+			else if (strcmp(sys, "lseek") == 0)
+				return print_seek(val);
+		}
 		else if (strstr(sys, "chown"))
-			return print_gid(val, 16);
-                else if (strcmp(sys, "setresuid") == 0)
-			return print_uid(val, 16);
-                else if (strcmp(sys, "setresgid") == 0)
 			return print_gid(val, 16);
 		else if (strcmp(sys, "tgkill") == 0)
 			return print_signals(val, 16);
-		else if (strcmp(sys, "mkdirat") == 0)
-			return print_mode_short(val);
-		else if (strcmp(sys, "mknodat") == 0)
-			return print_mode_short(val);
-		else if (strcmp(sys, "mmap") == 0)
-			return print_prot(val, 1);
-		else if (strcmp(sys, "mprotect") == 0)
-			return print_prot(val, 0);
-                else if (strcmp(sys, "socket") == 0)
-			return print_socket_proto(val);
-                else if (strcmp(sys, "recvmsg") == 0)
-			return print_recv(val);
-                else if (strcmp(sys, "sendmsg") == 0)
-			return print_recv(val);
-		else if (strcmp(sys, "linkat") == 0)
-			return print_dirfd(val);
-		else if (strcmp(sys, "readlinkat") == 0)
-			return print_dirfd(val);
-		else if (strcmp(sys, "faccessat") == 0)
-			return print_access(val);
-		else if (strcmp(sys, "mq_open") == 0)
-			return print_mode_short(val);
 	}
 normal:
 	if (asprintf(&out, "0x%s", val) < 0)
@@ -1743,22 +1907,26 @@ static const char *print_a3(const char *val, const idata *id)
 	int machine = id->machine, syscall = id->syscall;
 	const char *sys = audit_syscall_to_name(syscall, machine);
 	if (sys) {
-		if (strcmp(sys, "mmap") == 0)
-			return print_mmap(val);
-		else if (strcmp(sys, "mount") == 0)
-			return print_mount(val);
-                else if (strcmp(sys, "recv") == 0)
-			return print_recv(val);
-                else if (strcmp(sys, "recvfrom") == 0)
-			return print_recv(val);
-                else if (strcmp(sys, "recvmmsg") == 0)
-			return print_recv(val);
-                else if (strcmp(sys, "send") == 0)
-			return print_recv(val);
-                else if (strcmp(sys, "sendto") == 0)
-			return print_recv(val);
-                else if (strcmp(sys, "sendmmsg") == 0)
-			return print_recv(val);
+		if (*sys == 'm') {
+			if (strcmp(sys, "mmap") == 0)
+				return print_mmap(val);
+			else if (strcmp(sys, "mount") == 0)
+				return print_mount(val);
+		} else if (*sys == 'r') {
+			if (strcmp(sys, "recv") == 0)
+				return print_recv(val);
+			else if (strcmp(sys, "recvfrom") == 0)
+				return print_recv(val);
+			else if (strcmp(sys, "recvmmsg") == 0)
+				return print_recv(val);
+		} else if (*sys == 's') {
+			if (strcmp(sys, "send") == 0)
+				return print_recv(val);
+			else if (strcmp(sys, "sendto") == 0)
+				return print_recv(val);
+			else if (strcmp(sys, "sendmmsg") == 0)
+				return print_recv(val);
+		}
 	}
 	if (asprintf(&out, "0x%s", val) < 0)
 			out = NULL;
@@ -1782,7 +1950,8 @@ static const char *print_signals(const char *val, unsigned int base)
 		if (s != NULL)
 			return strdup(s);
 	}
-	if (asprintf(&out, "unknown signal (%s)", val) < 0)
+	if (asprintf(&out, "unknown signal (%s%s)",
+					base == 16 ? "0x" : "", val) < 0)
 		out = NULL;
 	return out;
 }
@@ -2095,7 +2264,9 @@ int auparse_interp_adjust_type(int rtype, const char *name, const char *val)
 	} else if (rtype == AUDIT_PATH && *name =='f' &&
 			strcmp(name, "flags") == 0)
 		type = AUPARSE_TYPE_FLAGS;
-	 else
+	else if (rtype == AUDIT_MQ_OPEN && strcmp(name, "mode") == 0)
+		type = AUPARSE_TYPE_MODE_SHORT;
+	else
 		type = lookup_type(name);
 
 	return type;
@@ -2130,6 +2301,9 @@ const char *auparse_do_interpretation(int type, const idata *id)
 		case AUPARSE_TYPE_MODE:
 			out = print_mode(id->val,8);
 			break;
+		case AUPARSE_TYPE_MODE_SHORT:
+			out = print_mode_short(id->val,8);
+			break;
 		case AUPARSE_TYPE_SOCKADDR:
 			out = print_sockaddr(id->val);
 			break;
@@ -2140,7 +2314,7 @@ const char *auparse_do_interpretation(int type, const idata *id)
 			out = print_promiscuous(id->val);
 			break;
 		case AUPARSE_TYPE_CAPABILITY:
-			out = print_capabilities(id->val);
+			out = print_capabilities(id->val, 10);
 			break;
 		case AUPARSE_TYPE_SUCCESS:
 			out = print_success(id->val);
