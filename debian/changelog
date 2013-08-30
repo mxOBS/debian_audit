@@ -13,7 +13,7 @@ audit (1:2.3.2-1) experimental; urgency=low
   * debian/rules: Call dh_installinit with --restart-after-upgrade to minimize
     downtime
   * debian/patches/01-no-refusemanualstop.patch: Remove RefuseManualStop=yes
-    option, this is preventing the auditd daemoin to be restarted on upgrade
+    option, this is preventing the auditd daemon to be restarted on upgrade
 
  -- Laurent Bigonville <bigon@debian.org>  Wed, 07 Aug 2013 19:14:09 +0200
 
