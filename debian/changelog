@@ -1,3 +1,10 @@
+audit (1:2.3.2-3) UNRELEASED; urgency=low
+
+  * debian/control: Relax the libaudit1 dependency against libaudit-common in
+    case the soname gets bumped again (Closes: #721361)
+
+ -- Laurent Bigonville <bigon@debian.org>  Mon, 02 Sep 2013 15:16:15 +0200
+
 audit (1:2.3.2-2) unstable; urgency=low
 
   * QA upload.

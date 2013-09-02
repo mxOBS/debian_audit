@@ -64,7 +64,7 @@ Package: libaudit1
 Architecture: linux-any
 Priority: optional
 Pre-Depends: ${misc:Pre-Depends}
-Depends: libaudit-common (= ${source:Version}),
+Depends: libaudit-common (>= ${source:Version}),
          ${misc:Depends},
          ${shlibs:Depends}
 Multi-Arch: same
