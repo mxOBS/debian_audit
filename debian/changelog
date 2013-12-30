@@ -6,8 +6,9 @@ audit (1:2.3.2-3) UNRELEASED; urgency=low
     on systemd systems without copying the complete unit file.
   * debian/control: Mark -dev packages as Multi-arch: same (Closes: #731291)
   * debian/control: Add dependency against "mawk | gawk" for augenrules
+  * debian/control: Bump Standards-Version to 3.9.5 (no further changes)
 
- -- Laurent Bigonville <bigon@debian.org>  Mon, 30 Dec 2013 14:02:44 +0100
+ -- Laurent Bigonville <bigon@debian.org>  Mon, 30 Dec 2013 14:11:49 +0100
 
 audit (1:2.3.2-2) unstable; urgency=low
 
