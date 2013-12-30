@@ -1,5 +1,6 @@
-audit (1:2.3.2-3) UNRELEASED; urgency=low
+audit (1:2.3.2-3) unstable; urgency=medium
 
+  * QA upload.
   * debian/control: Relax the libaudit1 dependency against libaudit-common in
     case the soname gets bumped again (Closes: #721361)
   * debian/auditd.README.Debian: Rewrite the part on how enabling augenrules
@@ -8,7 +9,7 @@ audit (1:2.3.2-3) UNRELEASED; urgency=low
   * debian/control: Add dependency against "mawk | gawk" for augenrules
   * debian/control: Bump Standards-Version to 3.9.5 (no further changes)
 
- -- Laurent Bigonville <bigon@debian.org>  Mon, 30 Dec 2013 14:11:49 +0100
+ -- Laurent Bigonville <bigon@debian.org>  Mon, 30 Dec 2013 14:12:17 +0100
 
 audit (1:2.3.2-2) unstable; urgency=low
 
