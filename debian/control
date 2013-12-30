@@ -25,7 +25,7 @@ X-Python-Version: >= 2.5
 Package: auditd
 Section: admin
 Architecture: linux-any
-Depends: lsb-base (>= 3.0-6), ${misc:Depends}, ${shlibs:Depends}
+Depends: lsb-base (>= 3.0-6), mawk | gawk, ${misc:Depends}, ${shlibs:Depends}
 Suggests: audispd-plugins
 Description: User space tools for security auditing
  The audit package contains the user space utilities for
