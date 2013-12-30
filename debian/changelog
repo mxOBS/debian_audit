@@ -4,8 +4,9 @@ audit (1:2.3.2-3) UNRELEASED; urgency=low
     case the soname gets bumped again (Closes: #721361)
   * debian/auditd.README.Debian: Rewrite the part on how enabling augenrules
     on systemd systems without copying the complete unit file.
+  * debian/control: Mark -dev packages as Multi-arch: same (Closes: #731291)
 
- -- Laurent Bigonville <bigon@debian.org>  Mon, 30 Dec 2013 13:12:05 +0100
+ -- Laurent Bigonville <bigon@debian.org>  Mon, 30 Dec 2013 13:22:38 +0100
 
 audit (1:2.3.2-2) unstable; urgency=low
 
