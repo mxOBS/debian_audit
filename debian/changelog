@@ -2,8 +2,10 @@ audit (1:2.3.2-3) UNRELEASED; urgency=low
 
   * debian/control: Relax the libaudit1 dependency against libaudit-common in
     case the soname gets bumped again (Closes: #721361)
+  * debian/auditd.README.Debian: Rewrite the part on how enabling augenrules
+    on systemd systems without copying the complete unit file.
 
- -- Laurent Bigonville <bigon@debian.org>  Mon, 02 Sep 2013 15:16:15 +0200
+ -- Laurent Bigonville <bigon@debian.org>  Mon, 30 Dec 2013 13:12:05 +0100
 
 audit (1:2.3.2-2) unstable; urgency=low
 

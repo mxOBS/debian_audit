@@ -9,9 +9,13 @@ To enable it on a SysVinit system, go into /etc/default/auditd and look for the
 USE_AUGENRULES variable and set it to "yes". Then copy existing rules into
 /etc/audit/rules.d and restart the audit daemon.
 
-For systemd based systems, copy /lib/systemd/system/auditd.service to
-/etc/systemd/system/auditd.service. Then look for a commented out ExecStartPost
-variable and uncomment it. Then delete/comment out the auditctl line.
-The --load option to augenrules will call auditctl for you. Also copy any
-existing rules into /etc/audit/rules.d so they don't get lost. Then restart
-auditd.
+On systemd based systems, you should create the following file with the
+specified content and then call "systemctl daemon-reload":
+
+  /lib/systemd/system/auditd.service.d/augenrules.conf:
+    [Service]
+    ExecStartPost=
+    ExecStartPost=-/sbin/augenrules --load
+
+You should also copy any existing rules into /etc/audit/rules.d before
+restarting auditd so they don't get lost.
