@@ -98,6 +98,7 @@ int extract_search_items(llist *l)
 			case AUDIT_PATH:
 				ret = parse_path(n, s);
 				break;
+			case AUDIT_USER:
 			case AUDIT_FIRST_USER_MSG...AUDIT_LAST_USER_MSG:
 			case AUDIT_FIRST_USER_MSG2...AUDIT_LAST_USER_MSG2:
 				ret = parse_user(n, s);
@@ -133,6 +134,7 @@ int extract_search_items(llist *l)
 			case AUDIT_NETFILTER_PKT:
 				ret = parse_pkt(n, s);
 				break;
+			case AUDIT_SECCOMP:
 			case
 			   AUDIT_FIRST_KERN_ANOM_MSG...AUDIT_LAST_KERN_ANOM_MSG:
 				ret = parse_kernel_anom(n, s);
@@ -587,22 +589,28 @@ static int common_path_parser(search_items *s, char *path)
 			snode sn;
 			sn.key = NULL;
 			sn.hits = 1;
-			if (strcmp(path, "(null)")) {
-				sn.str = strdup(path);
+			if (strncmp(path, "(null)", 6) == 0) {
+				sn.str = strdup("(null)");
 				goto append;
 			}
 			if (!isxdigit(path[0]))
 				return 4;
 			if (path[0] == '0' && path[1] == '0')
 				sn.str = unescape(&path[2]); // Abstract name
-			else
+			else {
+				term = strchr(path, ' ');
+				if (term == NULL)
+					return 5;
+				*term = 0;
 				sn.str = unescape(path);
+				*term = ' ';
+			}
 			// Attempt to rebuild path if relative
 			if ((sn.str[0] == '.') && ((sn.str[1] == '.') ||
 				(sn.str[1] == '/')) && s->cwd) {
 				char *tmp = malloc(PATH_MAX);
 				if (tmp == NULL)
-					return 5;
+					return 6;
 				snprintf(tmp, PATH_MAX, "%s/%s", 
 					s->cwd, sn.str);
 				free(sn.str);
@@ -1601,6 +1609,15 @@ static int parse_avc(const lnode *n, search_items *s)
 			if (rc)
 				goto err;
 			term += 7;
+		} else {
+			str = strstr(term, " name=");
+			if (str) {
+				str += 6;
+				rc = common_path_parser(s, str);
+				if (rc)
+					goto err;
+				term += 7;
+			}
 		}
 	}
 	if (event_subject) {
