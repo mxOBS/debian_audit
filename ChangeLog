@@ -1,3 +1,14 @@
+2.3.3
+- Documentation updates
+- Add AUDIT_USER_MAC_CONFIG_CHANGE event for MAC policy changes
+- Update interpreting scheduler policy names
+- Update automake files to automake-1.13.4
+- Remove CAP_COMPROMISE_KERNEL interpretation
+- Parse name field in AVC's (#1049916)
+- Add missing typedef for auparse_type_t enumeration (#1053424)
+- Fix parsing encoded filenames in records
+- Parse SECCOMP events
+
 2.3.2
 - Put RefuseManualStop in the right systemd section (#969345)
 - Add legacy restart scripts for systemd support
