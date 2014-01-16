@@ -34,7 +34,6 @@ libauparse.so.0 libauparse0 #MINVER#
  auparse_node_compare@Base 1:2.2.1
  auparse_reset@Base 1:2.2.1
  auparse_timestamp_compare@Base 1:2.2.1
- auparse_type_t@Base 1:2.2.1
  ausearch_add_expression@Base 1:2.2.1
  ausearch_add_interpreted_item@Base 1:2.2.1
  ausearch_add_item@Base 1:2.2.1
