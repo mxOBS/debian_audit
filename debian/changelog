@@ -1,9 +1,10 @@
-audit (1:2.3.3-1) UNRELEASED; urgency=medium
+audit (1:2.3.3-1) unstable; urgency=medium
 
+  * QA upload.
   * New upstream release
     - Adjust debian/libauparse0.symbols
 
- -- Laurent Bigonville <bigon@debian.org>  Thu, 16 Jan 2014 18:18:44 +0100
+ -- Laurent Bigonville <bigon@debian.org>  Fri, 17 Jan 2014 18:23:26 +0100
 
 audit (1:2.3.2-3) unstable; urgency=medium
 
