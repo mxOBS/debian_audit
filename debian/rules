@@ -16,6 +16,9 @@ PYVERS := $(filter-out $(PYDEFAULTVER), $(PYVERS)) # $(PYDEFAULTVER)
 ifeq ($(DEB_HOST_ARCH),alpha)
   EXTRA_ARCH_TABLE := --with-alpha
 endif
+ifeq ($(DEB_HOST_ARCH),hppa)
+  EXTRA_ARCH_TABLE := --with-hppa
+endif
 
 %:
 	dh $@ --builddirectory=debian/build --buildsystem=autoconf --with autoreconf --with python2 --with systemd

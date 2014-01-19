@@ -1,3 +1,12 @@
+audit (1:2.3.3-2) unstable; urgency=low
+
+  * QA upload
+  * Enable compilation on hppa (closes: 735944). Thanks to Helge Deller!  
+    - patch build-on-hppa
+    - debian/rules: configure --with-hppa on hppa architecture
+
+ -- Ralf Treinen <treinen@debian.org>  Sun, 19 Jan 2014 13:25:25 +0100
+
 audit (1:2.3.3-1) unstable; urgency=medium
 
   * QA upload.
