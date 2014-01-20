@@ -1,3 +1,10 @@
+audit (1:2.3.3-3) unstable; urgency=low
+
+  * QA upload
+  * fix pathnames of patches files in debian/patches/build-on-hppa
+
+ -- Ralf Treinen <treinen@debian.org>  Mon, 20 Jan 2014 21:21:32 +0100
+
 audit (1:2.3.3-2) unstable; urgency=low
 
   * QA upload

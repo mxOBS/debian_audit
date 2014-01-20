@@ -253,8 +253,8 @@ Index: tools/ausyscall/ausyscall.c
  		} else {
  			if (name != NULL) {
  				fputs("Two syscall names not allowed\n",stderr);
---- /dev/null
-+++ lib/parisc_table.h
+--- a/dev/null
++++ b/lib/parisc_table.h
 @@ -0,0 +1,333 @@
 +_S(0, "restart_syscall")
 +_S(1, "exit")
