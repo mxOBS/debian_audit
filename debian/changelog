@@ -1,3 +1,11 @@
+audit (1:2.3.3-4) unstable; urgency=low
+
+  * QA upload
+  * desactivated patch "build-on-hppa" since the package still doesn't
+    build on hppa, and since upstream is reluctant to integrate the patch.
+
+ -- Ralf Treinen <treinen@debian.org>  Mon, 27 Jan 2014 09:15:07 +0100
+
 audit (1:2.3.3-3) unstable; urgency=low
 
   * QA upload
