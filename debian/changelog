@@ -1,8 +1,9 @@
 audit (1:2.3.4-1) UNRELEASED; urgency=medium
 
   * New upstream release
+  * Adopt the audit package (Closes: #692492)
 
- -- Laurent Bigonville <bigon@debian.org>  Sat, 01 Mar 2014 18:19:30 +0100
+ -- Laurent Bigonville <bigon@debian.org>  Sat, 01 Mar 2014 18:20:18 +0100
 
 audit (1:2.3.3-4) unstable; urgency=low
 
