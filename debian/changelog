@@ -1,10 +1,10 @@
-audit (1:2.3.4-1) UNRELEASED; urgency=medium
+audit (1:2.3.4-1) unstable; urgency=medium
 
   * New upstream release
     - Adjust debian/libauparse0.symbols: Add a new symbol
   * Adopt the audit package (Closes: #692492)
 
- -- Laurent Bigonville <bigon@debian.org>  Sat, 01 Mar 2014 18:30:23 +0100
+ -- Laurent Bigonville <bigon@debian.org>  Sat, 01 Mar 2014 18:52:55 +0100
 
 audit (1:2.3.3-4) unstable; urgency=low
 
