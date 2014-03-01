@@ -1,6 +1,6 @@
 /*
 * ausearch-parse.c - Extract interesting fields and check for match
-* Copyright (c) 2005-08,2011,2013 Red Hat Inc., Durham, North Carolina.
+* Copyright (c) 2005-08,2011,2013-14 Red Hat Inc., Durham, North Carolina.
 * Copyright (c) 2011 IBM Corp. 
 * All Rights Reserved. 
 *
@@ -127,6 +127,10 @@ int extract_search_items(llist *l)
 				break;
 			case AUDIT_CONFIG_CHANGE:
 				ret = parse_simple_message(n, s);
+				// We use AVC parser because it just looks for
+				// the one field. We don't care about return
+				// code since older events don't have path=
+				avc_parse_path(n, s);
 				break;
 			case AUDIT_AVC:
 				ret = parse_avc(n, s);
@@ -828,6 +832,44 @@ static int parse_user(const lnode *n, search_items *s)
 			*term = 0;
 			s->uuid = strdup(str);
 			*term = saved;
+		}
+	}
+	if (event_subject) {
+		str = strstr(term, "vm-ctx=");
+		if (str != NULL) {
+			str += 7;
+			term = strchr(str, ' ');
+			if (term == NULL)
+				return 27;
+			*term = 0;
+			if (audit_avc_init(s) == 0) {
+				anode an;
+
+				anode_init(&an);
+				an.scontext = strdup(str);
+				alist_append(s->avc, &an);
+				*term = ' ';
+			} else
+				return 28;
+		}
+	}
+	if (event_object) {
+		str = strstr(term, "img-ctx=");
+		if (str != NULL) {
+			str += 8;
+			term = strchr(str, ' ');
+			if (term == NULL)
+				return 29;
+			*term = 0;
+			if (audit_avc_init(s) == 0) {
+				anode an;
+
+				anode_init(&an);
+				an.tcontext = strdup(str);
+				alist_append(s->avc, &an);
+				*term = ' ';
+			} else
+				return 30;
 		}
 	}
 	// get uid - some records the second uid is what we want.

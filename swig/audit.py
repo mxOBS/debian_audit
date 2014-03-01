@@ -87,6 +87,9 @@ AUDIT_TRIM = _audit.AUDIT_TRIM
 AUDIT_MAKE_EQUIV = _audit.AUDIT_MAKE_EQUIV
 AUDIT_TTY_GET = _audit.AUDIT_TTY_GET
 AUDIT_TTY_SET = _audit.AUDIT_TTY_SET
+AUDIT_SET_FEATURE = _audit.AUDIT_SET_FEATURE
+AUDIT_GET_FEATURE = _audit.AUDIT_GET_FEATURE
+AUDIT_FEATURE_CHANGE = _audit.AUDIT_FEATURE_CHANGE
 AUDIT_FIRST_USER_MSG = _audit.AUDIT_FIRST_USER_MSG
 AUDIT_USER_AVC = _audit.AUDIT_USER_AVC
 AUDIT_USER_TTY = _audit.AUDIT_USER_TTY
@@ -278,6 +281,7 @@ AUDIT_PERM_EXEC = _audit.AUDIT_PERM_EXEC
 AUDIT_PERM_WRITE = _audit.AUDIT_PERM_WRITE
 AUDIT_PERM_READ = _audit.AUDIT_PERM_READ
 AUDIT_PERM_ATTR = _audit.AUDIT_PERM_ATTR
+AUDIT_MESSAGE_TEXT_MAX = _audit.AUDIT_MESSAGE_TEXT_MAX
 class audit_status(_object):
     __swig_setmethods__ = {}
     __setattr__ = lambda self, name, value: _swig_setattr(self, audit_status, name, value)
@@ -317,6 +321,37 @@ class audit_status(_object):
 audit_status_swigregister = _audit.audit_status_swigregister
 audit_status_swigregister(audit_status)
 
+class audit_features(_object):
+    __swig_setmethods__ = {}
+    __setattr__ = lambda self, name, value: _swig_setattr(self, audit_features, name, value)
+    __swig_getmethods__ = {}
+    __getattr__ = lambda self, name: _swig_getattr(self, audit_features, name)
+    __repr__ = _swig_repr
+    __swig_setmethods__["vers"] = _audit.audit_features_vers_set
+    __swig_getmethods__["vers"] = _audit.audit_features_vers_get
+    if _newclass:vers = _swig_property(_audit.audit_features_vers_get, _audit.audit_features_vers_set)
+    __swig_setmethods__["mask"] = _audit.audit_features_mask_set
+    __swig_getmethods__["mask"] = _audit.audit_features_mask_get
+    if _newclass:mask = _swig_property(_audit.audit_features_mask_get, _audit.audit_features_mask_set)
+    __swig_setmethods__["features"] = _audit.audit_features_features_set
+    __swig_getmethods__["features"] = _audit.audit_features_features_get
+    if _newclass:features = _swig_property(_audit.audit_features_features_get, _audit.audit_features_features_set)
+    __swig_setmethods__["lock"] = _audit.audit_features_lock_set
+    __swig_getmethods__["lock"] = _audit.audit_features_lock_get
+    if _newclass:lock = _swig_property(_audit.audit_features_lock_get, _audit.audit_features_lock_set)
+    def __init__(self): 
+        this = _audit.new_audit_features()
+        try: self.this.append(this)
+        except: self.this = this
+    __swig_destroy__ = _audit.delete_audit_features
+    __del__ = lambda self : None;
+audit_features_swigregister = _audit.audit_features_swigregister
+audit_features_swigregister(audit_features)
+AUDIT_FEATURE_VERSION = _audit.AUDIT_FEATURE_VERSION
+
+AUDIT_FEATURE_ONLY_UNSET_LOGINUID = _audit.AUDIT_FEATURE_ONLY_UNSET_LOGINUID
+AUDIT_FEATURE_LOGINUID_IMMUTABLE = _audit.AUDIT_FEATURE_LOGINUID_IMMUTABLE
+AUDIT_LAST_FEATURE = _audit.AUDIT_LAST_FEATURE
 class audit_tty_status(_object):
     __swig_setmethods__ = {}
     __setattr__ = lambda self, name, value: _swig_setattr(self, audit_tty_status, name, value)
