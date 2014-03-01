@@ -9,7 +9,7 @@
 
 Summary: User space tools for 2.6 kernel auditing
 Name: audit
-Version: 2.3.3
+Version: 2.3.4
 Release: 1
 License: GPLv2+
 Group: System Environment/Daemons
@@ -162,7 +162,6 @@ fi
 
 %preun
 %if %{WITH_SYSTEMD}
-/sbin/service auditd stop > /dev/null 2>&1
 %systemd_preun auditd.service
 %else
 if [ $1 -eq 0 ]; then
@@ -274,6 +273,6 @@ fi
 
 
 %changelog
-* Thu Jan 29 2014 Steve Grubb <sgrubb@redhat.com> 2.3.3-1
+* Thu Feb 27 2014 Steve Grubb <sgrubb@redhat.com> 2.3.4-1
 - New upstream release
 

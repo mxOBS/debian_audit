@@ -1,3 +1,13 @@
+2.3.4
+- Parse path in CONFIG_CHANGE events
+- In audisp-remote, fix retry logic for temporary network failures
+- In auparse, add get_type_name function
+- Add --no-config command option to aureport
+- Fix interpretting MCS seliunx contexts in ausearch (#970675)
+- In auparse, classify selinux contexts as MAC_LABEL field type
+- In ausearch/report parse vm-ctx and img-ctx as selinux labels
+- Update translation tables for the 3.14 kernel
+
 2.3.3
 - Documentation updates
 - Add AUDIT_USER_MAC_CONFIG_CHANGE event for MAC policy changes
