@@ -24,6 +24,7 @@ libauparse.so.0 libauparse0 #MINVER#
  auparse_get_time@Base 1:2.2.1
  auparse_get_timestamp@Base 1:2.2.1
  auparse_get_type@Base 1:2.2.1
+ auparse_get_type_name@Base 1:2.3.4
  auparse_goto_record_num@Base 1:2.2.1
  auparse_init@Base 1:2.2.1
  auparse_interp_adjust_type@Base 1:2.3.1
