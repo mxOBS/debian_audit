@@ -15,7 +15,7 @@
 @SET_MAKE@
 
 # Makefile.am-- 
-# Copyright 2004-2006, 2008,2011-13 Red Hat Inc., Durham, North Carolina.
+# Copyright 2004-2006, 2008,2011-14 Red Hat Inc., Durham, North Carolina.
 # All Rights Reserved.
 #
 # This program is free software; you can redistribute it and/or modify
@@ -123,7 +123,8 @@ am__installdirs = "$(DESTDIR)$(sbindir)"
 PROGRAMS = $(sbin_PROGRAMS)
 am_auditctl_OBJECTS = auditctl-auditctl.$(OBJEXT) \
 	auditctl-auditctl-llist.$(OBJEXT) \
-	auditctl-delete_all.$(OBJEXT)
+	auditctl-delete_all.$(OBJEXT) \
+	auditctl-auditctl-listing.$(OBJEXT)
 auditctl_OBJECTS = $(am_auditctl_OBJECTS)
 auditctl_DEPENDENCIES =
 AM_V_lt = $(am__v_lt_@AM_V@)
@@ -413,7 +414,7 @@ AUTOMAKE_OPTIONS = no-dependencies
 SUBDIRS = test
 INCLUDES = -I${top_srcdir} -I${top_srcdir}/lib -I${top_srcdir}/src/libev -I${top_srcdir}/auparse
 AM_CFLAGS = -D_GNU_SOURCE
-noinst_HEADERS = auditd-config.h auditd-event.h auditd-listen.h ausearch-llist.h ausearch-options.h auditctl-llist.h aureport-options.h ausearch-parse.h aureport-scan.h ausearch-lookup.h ausearch-int.h auditd-dispatch.h ausearch-string.h ausearch-nvpair.h ausearch-common.h ausearch-avc.h ausearch-time.h ausearch-lol.h 
+noinst_HEADERS = auditd-config.h auditd-event.h auditd-listen.h ausearch-llist.h ausearch-options.h auditctl-llist.h aureport-options.h ausearch-parse.h aureport-scan.h ausearch-lookup.h ausearch-int.h auditd-dispatch.h ausearch-string.h ausearch-nvpair.h ausearch-common.h ausearch-avc.h ausearch-time.h ausearch-lol.h auditctl-listing.h
 auditd_SOURCES = auditd.c auditd-event.c auditd-config.c \
 	auditd-reconfig.c auditd-sendmail.c auditd-dispatch.c \
 	$(am__append_1)
@@ -421,7 +422,7 @@ auditd_CFLAGS = -fPIE -DPIE -g -D_REENTRANT -D_GNU_SOURCE -fno-strict-aliasing -
 auditd_LDFLAGS = -pie -Wl,-z,relro -Wl,-z,now
 auditd_DEPENDENCIES = mt/libauditmt.a libev/libev.a
 auditd_LDADD = @LIBWRAP_LIBS@ -Llibev -lev -Lmt -lauditmt -lpthread -lrt -lm $(gss_libs)
-auditctl_SOURCES = auditctl.c auditctl-llist.c delete_all.c
+auditctl_SOURCES = auditctl.c auditctl-llist.c delete_all.c auditctl-listing.c
 auditctl_CFLAGS = -fPIE -DPIE -g -D_GNU_SOURCE
 auditctl_LDFLAGS = -pie -Wl,-z,relro -Wl,-z,now
 auditctl_LDADD = -L${top_builddir}/lib -laudit
@@ -567,6 +568,12 @@ auditctl-delete_all.o: delete_all.c
 
 auditctl-delete_all.obj: delete_all.c
 	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(auditctl_CFLAGS) $(CFLAGS) -c -o auditctl-delete_all.obj `if test -f 'delete_all.c'; then $(CYGPATH_W) 'delete_all.c'; else $(CYGPATH_W) '$(srcdir)/delete_all.c'; fi`
+
+auditctl-auditctl-listing.o: auditctl-listing.c
+	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(auditctl_CFLAGS) $(CFLAGS) -c -o auditctl-auditctl-listing.o `test -f 'auditctl-listing.c' || echo '$(srcdir)/'`auditctl-listing.c
+
+auditctl-auditctl-listing.obj: auditctl-listing.c
+	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(auditctl_CFLAGS) $(CFLAGS) -c -o auditctl-auditctl-listing.obj `if test -f 'auditctl-listing.c'; then $(CYGPATH_W) 'auditctl-listing.c'; else $(CYGPATH_W) '$(srcdir)/auditctl-listing.c'; fi`
 
 auditd-auditd.o: auditd.c
 	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(auditd_CFLAGS) $(CFLAGS) -c -o auditd-auditd.o `test -f 'auditd.c' || echo '$(srcdir)/'`auditd.c

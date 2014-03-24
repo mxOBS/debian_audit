@@ -168,11 +168,17 @@ int extract_search_items(llist *l)
 				ret = parse_tty(n, s);
 				break;
 			default:
-				// printf("unparsed type:%d\n", n->type);
+				if (event_debug)
+					fprintf(stderr,
+						"Unparsed type:%d\n - skipped",
+						n->type);
 				break;
 			}
-			// if (ret) printf("type:%d ret:%d\n", n->type, ret);
-		} while ((n=list_next(l)) && ret==0);
+			if (event_debug && ret)
+				fprintf(stderr,
+					"Malformed event skipped, rc=%d. %s\n",
+					 ret, n->message);
+		} while ((n=list_next(l)) && ret == 0);
 	}
 	return ret;
 }
@@ -1142,14 +1148,41 @@ static int parse_login(const lnode *n, search_items *s)
 	s->uid = strtoul(ptr, NULL, 10);
 	if (errno)
 		return 6;
-	// get loginuid
 	*term = ' ';
+	// optionally get subj
+	if (event_subject) {
+		str = strstr(term, "subj=");
+		if (str) {
+			ptr = str + 5;
+			term = strchr(ptr, ' ');
+			if (term == NULL)
+				return 12;
+			*term = 0;
+			if (audit_avc_init(s) == 0) {
+				anode an;
+
+				anode_init(&an);
+				an.scontext = strdup(str);
+				alist_append(s->avc, &an);
+				*term = ' ';
+			} else
+				return 13;
+			*term = ' ';
+		}
+	}
+	// get loginuid
 	str = strstr(term, "new auid=");
 	if (str == NULL) {
-		str = strstr(term, "new loginuid=");
-		if (str == NULL)
-			return 7;
-		ptr = str + 13;
+		// 3.14 kernel changed it to the next line
+		str = strstr(term, " auid=");
+		if (str == NULL) {
+			str = strstr(term, "new loginuid=");
+			if (str == NULL)
+				return 7;
+			ptr = str + 13;
+		}
+		else
+			ptr = str + 6;
 	} else
 		ptr = str + 9;
 	term = strchr(ptr, ' ');
@@ -1184,18 +1217,24 @@ static int parse_login(const lnode *n, search_items *s)
 		if (term == NULL)
 			term = n->message;
 		str = strstr(term, "new ses=");
-		if (str) {
-			ptr = str + 8;
-			term = strchr(ptr, ' ');
-			if (term)
-				*term = 0;
-			errno = 0;
-			s->session_id = strtoul(ptr, NULL, 10);
-			if (errno)
-				return 11;
-			if (term)
-				*term = ' ';
+		if (str == NULL) {
+			// The 3.14 kernel changed it to the next line
+			str = strstr(term, " ses=");
+			if (str == NULL)
+				return 14;
+			ptr = str + 5;
 		}
+		else
+			ptr = str + 8;
+		term = strchr(ptr, ' ');
+		if (term)
+			*term = 0;
+		errno = 0;
+		s->session_id = strtoul(ptr, NULL, 10);
+		if (errno)
+			return 11;
+		if (term)
+			*term = ' ';
 	}
 	return 0;
 }
@@ -1842,6 +1881,37 @@ static int parse_kernel_anom(const lnode *n, search_items *s)
 			} else 
 				s->comm = unescape(str);
 		} 
+	}
+
+	if (n->type == AUDIT_SECCOMP) {
+		// get arch
+		str = strstr(term, "arch=");
+		if (str == NULL) 
+			return 0;	// A few kernel versions don't have it
+		ptr = str + 5;
+		term = strchr(ptr, ' ');
+		if (term == NULL) 
+			return 12;
+		*term = 0;
+		errno = 0;
+		s->arch = (int)strtoul(ptr, NULL, 16);
+		if (errno) 
+			return 13;
+		*term = ' ';
+		// get syscall
+		str = strstr(term, "syscall=");
+		if (str == NULL)
+			return 14;
+		ptr = str + 8;
+		term = strchr(ptr, ' ');
+		if (term == NULL)
+			return 15;
+		*term = 0;
+		errno = 0;
+		s->syscall = (int)strtoul(ptr, NULL, 10);
+		if (errno)
+			return 16;
+		*term = ' ';
 	}
 
 	return 0;
