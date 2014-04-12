@@ -733,7 +733,7 @@ MACH_PPC = _audit.MACH_PPC
 MACH_S390X = _audit.MACH_S390X
 MACH_S390 = _audit.MACH_S390
 MACH_ALPHA = _audit.MACH_ALPHA
-MACH_ARMEB = _audit.MACH_ARMEB
+MACH_ARM = _audit.MACH_ARM
 MACH_AARCH64 = _audit.MACH_AARCH64
 FAIL_IGNORE = _audit.FAIL_IGNORE
 FAIL_LOG = _audit.FAIL_LOG
@@ -773,6 +773,10 @@ audit_setloginuid = _audit.audit_setloginuid
 def audit_detect_machine():
   return _audit.audit_detect_machine()
 audit_detect_machine = _audit.audit_detect_machine
+
+def audit_determine_machine(*args):
+  return _audit.audit_determine_machine(*args)
+audit_determine_machine = _audit.audit_determine_machine
 
 def audit_name_to_field(*args):
   return _audit.audit_name_to_field(*args)

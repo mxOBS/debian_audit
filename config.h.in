@@ -162,7 +162,7 @@
 #undef WITH_APPARMOR
 
 /* Define if you want to enable Arm eabi processor support. */
-#undef WITH_ARMEB
+#undef WITH_ARM
 
 /* Define to empty if `const' does not conform to ANSI C. */
 #undef const

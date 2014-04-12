@@ -18,11 +18,37 @@ Also be aware that not all record types have the requested information. For exam
 .BR \-a ,\  \-\-event \ \fIaudit-event-id\fP
 Search for an event based on the given \fIevent ID\fP. Messages always start with something like msg=audit(1116360555.329:2401771). The event ID is the number after the ':'. All audit events that are recorded from one application's syscall have the same audit event ID. A second syscall made by the same application will have a different event ID. This way they are unique.
 .TP
+.BR \-\-arch \ \fICPU\fP
+Search for events based on a specific CPU architecture.  If you do not know the arch of your machine but you want to use the 32 bit syscall table and your machine supports 32 bits, you can also use
+.B b32
+for the arch. The same applies to the 64 bit syscall table, you can use
+.B b64.
+The arch of your machine can be found by doing 'uname -m'.
+.TP
 .BR \-c ,\  \-\-comm \ \fIcomm-name\fP
 Search for an event based on the given \fIcomm name\fP. The comm name is the executable's name from the task structure.
 .TP
 .BR \-\-debug
 Write malformed events that are skipped to stderr.
+.TP
+.BR \-\-checkpoint \ \fIcheckpoint-file\fP
+Checkpoint the output between successive invocations of ausearch such that only events not
+previously output will print in subsequent invocations.
+
+An auditd event is made up of one or more records. When processing events, ausearch defines
+events as either complete or in-complete.  A complete event is either a single record event or
+one whose event time occurred 2 seconds in the past compared to the event being currently
+processed.
+
+A checkpoint is achieved by recording the last completed event output along with the device
+number and inode of the file the last completed event appeared in \fIcheckpoint-file\fP. On a subsequent invocation,
+ausearch will load this checkpoint data and as it processes the log files, it will discard all
+complete events until it matches the checkpointed one. At this point, it will start
+outputting complete events.
+
+Should the file or checkpointed completed event not be found, an error will result and ausearch
+will terminate.
+
 .TP
 .BR \-e,\  \-\-exit \ \fIexit-code-or-errno\fP
 Search for an event based on the given syscall \fIexit code or errno\fP.
@@ -147,6 +173,16 @@ String based matches must match the whole word. This category of matches include
 .BR \-x ,\  \-\-executable \ \fIexecutable\fP
 Search for an event matching the given \fIexecutable\fP name.
 
+.SS "Exit status:"
+.TP
+0
+if OK,
+1
+if nothing found, or argument errors or minor file acces/read errors,
+10
+bad checkpoint data,
+11
+checkpoint processing error
 .SH "SEE ALSO"
 .BR auditd (8),
 .BR pam_loginuid (8).
