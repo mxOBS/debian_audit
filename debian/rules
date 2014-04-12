@@ -35,7 +35,7 @@ debian/config-python-stamp:
 		--with-prelude \
 		--with-libwrap \
 		--with-libcap-ng \
-		--with-armeb ${EXTRA_ARCH_TABLE}
+		--with-arm ${EXTRA_ARCH_TABLE}
 	touch $@
 debian/config-python%-stamp: debian/config-python-stamp
 	cp -lpr debian/build/swig            debian/build/swig.$*
