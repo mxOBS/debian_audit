@@ -417,7 +417,7 @@ typedef enum {
 	MACH_S390X,
 	MACH_S390,
 	MACH_ALPHA,
-	MACH_ARMEB,
+	MACH_ARM,
 	MACH_AARCH64
 } machine_t;
 
@@ -442,6 +442,7 @@ extern int  audit_get_reply(int fd, struct audit_reply *rep, reply_t block,
 extern uid_t audit_getloginuid(void);
 extern int  audit_setloginuid(uid_t uid);
 extern int  audit_detect_machine(void);
+extern int audit_determine_machine(const char *arch);
 
 /* Translation functions */
 extern int        audit_name_to_field(const char *field);

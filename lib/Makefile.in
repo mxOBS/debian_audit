@@ -104,7 +104,7 @@ build_triplet = @build@
 host_triplet = @host@
 target_triplet = @target@
 @USE_ALPHA_TRUE@am__append_1 = alpha_tables.h
-@USE_ARMEB_TRUE@am__append_2 = armeb_tables.h
+@USE_ARM_TRUE@am__append_2 = arm_tables.h
 @USE_AARCH64_TRUE@am__append_3 = aarch64_tables.h
 noinst_PROGRAMS = gen_actiontabs_h$(EXEEXT) gen_errtabs_h$(EXEEXT) \
 	gen_fieldtabs_h$(EXEEXT) gen_flagtabs_h$(EXEEXT) \
@@ -115,7 +115,7 @@ noinst_PROGRAMS = gen_actiontabs_h$(EXEEXT) gen_errtabs_h$(EXEEXT) \
 	gen_s390x_tables_h$(EXEEXT) gen_x86_64_tables_h$(EXEEXT) \
 	$(am__EXEEXT_1) $(am__EXEEXT_2) $(am__EXEEXT_3)
 @USE_ALPHA_TRUE@am__append_4 = gen_alpha_tables_h
-@USE_ARMEB_TRUE@am__append_5 = gen_armeb_tables_h
+@USE_ARM_TRUE@am__append_5 = gen_arm_tables_h
 @USE_AARCH64_TRUE@am__append_6 = gen_aarch64_tables_h
 subdir = lib
 DIST_COMMON = $(srcdir)/Makefile.in $(srcdir)/Makefile.am \
@@ -175,7 +175,7 @@ libaudit_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
 	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
 	$(libaudit_la_LDFLAGS) $(LDFLAGS) -o $@
 @USE_ALPHA_TRUE@am__EXEEXT_1 = gen_alpha_tables_h$(EXEEXT)
-@USE_ARMEB_TRUE@am__EXEEXT_2 = gen_armeb_tables_h$(EXEEXT)
+@USE_ARM_TRUE@am__EXEEXT_2 = gen_arm_tables_h$(EXEEXT)
 @USE_AARCH64_TRUE@am__EXEEXT_3 = gen_aarch64_tables_h$(EXEEXT)
 PROGRAMS = $(noinst_PROGRAMS)
 am__gen_aarch64_tables_h_SOURCES_DIST = gen_tables.c gen_tables.h \
@@ -205,16 +205,16 @@ gen_alpha_tables_h_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC \
 	$(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(CCLD) \
 	$(gen_alpha_tables_h_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) \
 	$(LDFLAGS) -o $@
-am__gen_armeb_tables_h_SOURCES_DIST = gen_tables.c gen_tables.h \
-	armeb_table.h
-@USE_ARMEB_TRUE@am_gen_armeb_tables_h_OBJECTS =  \
-@USE_ARMEB_TRUE@	gen_armeb_tables_h-gen_tables.$(OBJEXT)
-gen_armeb_tables_h_OBJECTS = $(am_gen_armeb_tables_h_OBJECTS)
-gen_armeb_tables_h_LDADD = $(LDADD)
-gen_armeb_tables_h_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC \
+am__gen_arm_tables_h_SOURCES_DIST = gen_tables.c gen_tables.h \
+	arm_table.h
+@USE_ARM_TRUE@am_gen_arm_tables_h_OBJECTS =  \
+@USE_ARM_TRUE@	gen_arm_tables_h-gen_tables.$(OBJEXT)
+gen_arm_tables_h_OBJECTS = $(am_gen_arm_tables_h_OBJECTS)
+gen_arm_tables_h_LDADD = $(LDADD)
+gen_arm_tables_h_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC \
 	$(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(CCLD) \
-	$(gen_armeb_tables_h_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) \
-	$(LDFLAGS) -o $@
+	$(gen_arm_tables_h_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) $(LDFLAGS) \
+	-o $@
 am_gen_errtabs_h_OBJECTS = gen_errtabs_h-gen_tables.$(OBJEXT)
 gen_errtabs_h_OBJECTS = $(am_gen_errtabs_h_OBJECTS)
 gen_errtabs_h_LDADD = $(LDADD)
@@ -343,7 +343,7 @@ am__v_CCLD_0 = @echo "  CCLD    " $@;
 am__v_CCLD_1 = 
 SOURCES = $(libaudit_la_SOURCES) $(nodist_libaudit_la_SOURCES) \
 	$(gen_aarch64_tables_h_SOURCES) $(gen_actiontabs_h_SOURCES) \
-	$(gen_alpha_tables_h_SOURCES) $(gen_armeb_tables_h_SOURCES) \
+	$(gen_alpha_tables_h_SOURCES) $(gen_arm_tables_h_SOURCES) \
 	$(gen_errtabs_h_SOURCES) $(gen_fieldtabs_h_SOURCES) \
 	$(gen_flagtabs_h_SOURCES) $(gen_ftypetabs_h_SOURCES) \
 	$(gen_i386_tables_h_SOURCES) $(gen_ia64_tables_h_SOURCES) \
@@ -355,14 +355,13 @@ DIST_SOURCES = $(libaudit_la_SOURCES) \
 	$(am__gen_aarch64_tables_h_SOURCES_DIST) \
 	$(gen_actiontabs_h_SOURCES) \
 	$(am__gen_alpha_tables_h_SOURCES_DIST) \
-	$(am__gen_armeb_tables_h_SOURCES_DIST) \
-	$(gen_errtabs_h_SOURCES) $(gen_fieldtabs_h_SOURCES) \
-	$(gen_flagtabs_h_SOURCES) $(gen_ftypetabs_h_SOURCES) \
-	$(gen_i386_tables_h_SOURCES) $(gen_ia64_tables_h_SOURCES) \
-	$(gen_machinetabs_h_SOURCES) $(gen_msg_typetabs_h_SOURCES) \
-	$(gen_optabs_h_SOURCES) $(gen_ppc_tables_h_SOURCES) \
-	$(gen_s390_tables_h_SOURCES) $(gen_s390x_tables_h_SOURCES) \
-	$(gen_x86_64_tables_h_SOURCES)
+	$(am__gen_arm_tables_h_SOURCES_DIST) $(gen_errtabs_h_SOURCES) \
+	$(gen_fieldtabs_h_SOURCES) $(gen_flagtabs_h_SOURCES) \
+	$(gen_ftypetabs_h_SOURCES) $(gen_i386_tables_h_SOURCES) \
+	$(gen_ia64_tables_h_SOURCES) $(gen_machinetabs_h_SOURCES) \
+	$(gen_msg_typetabs_h_SOURCES) $(gen_optabs_h_SOURCES) \
+	$(gen_ppc_tables_h_SOURCES) $(gen_s390_tables_h_SOURCES) \
+	$(gen_s390x_tables_h_SOURCES) $(gen_x86_64_tables_h_SOURCES)
 RECURSIVE_TARGETS = all-recursive check-recursive cscopelist-recursive \
 	ctags-recursive dvi-recursive html-recursive info-recursive \
 	install-data-recursive install-dvi-recursive \
@@ -591,8 +590,8 @@ gen_actiontabs_h_SOURCES = gen_tables.c gen_tables.h actiontab.h
 gen_actiontabs_h_CFLAGS = $(AM_CFLAGS) '-DTABLE_H="actiontab.h"'
 @USE_ALPHA_TRUE@gen_alpha_tables_h_SOURCES = gen_tables.c gen_tables.h alpha_table.h
 @USE_ALPHA_TRUE@gen_alpha_tables_h_CFLAGS = $(AM_CFLAGS) '-DTABLE_H="alpha_table.h"'
-@USE_ARMEB_TRUE@gen_armeb_tables_h_SOURCES = gen_tables.c gen_tables.h armeb_table.h
-@USE_ARMEB_TRUE@gen_armeb_tables_h_CFLAGS = $(AM_CFLAGS) '-DTABLE_H="armeb_table.h"'
+@USE_ARM_TRUE@gen_arm_tables_h_SOURCES = gen_tables.c gen_tables.h arm_table.h
+@USE_ARM_TRUE@gen_arm_tables_h_CFLAGS = $(AM_CFLAGS) '-DTABLE_H="arm_table.h"'
 @USE_AARCH64_TRUE@gen_aarch64_tables_h_SOURCES = gen_tables.c gen_tables.h aarch64_table.h
 @USE_AARCH64_TRUE@gen_aarch64_tables_h_CFLAGS = $(AM_CFLAGS) '-DTABLE_H="aarch64_table.h"'
 gen_errtabs_h_SOURCES = gen_tables.c gen_tables.h errtab.h
@@ -716,9 +715,9 @@ gen_alpha_tables_h$(EXEEXT): $(gen_alpha_tables_h_OBJECTS) $(gen_alpha_tables_h_
 	@rm -f gen_alpha_tables_h$(EXEEXT)
 	$(AM_V_CCLD)$(gen_alpha_tables_h_LINK) $(gen_alpha_tables_h_OBJECTS) $(gen_alpha_tables_h_LDADD) $(LIBS)
 
-gen_armeb_tables_h$(EXEEXT): $(gen_armeb_tables_h_OBJECTS) $(gen_armeb_tables_h_DEPENDENCIES) $(EXTRA_gen_armeb_tables_h_DEPENDENCIES) 
-	@rm -f gen_armeb_tables_h$(EXEEXT)
-	$(AM_V_CCLD)$(gen_armeb_tables_h_LINK) $(gen_armeb_tables_h_OBJECTS) $(gen_armeb_tables_h_LDADD) $(LIBS)
+gen_arm_tables_h$(EXEEXT): $(gen_arm_tables_h_OBJECTS) $(gen_arm_tables_h_DEPENDENCIES) $(EXTRA_gen_arm_tables_h_DEPENDENCIES) 
+	@rm -f gen_arm_tables_h$(EXEEXT)
+	$(AM_V_CCLD)$(gen_arm_tables_h_LINK) $(gen_arm_tables_h_OBJECTS) $(gen_arm_tables_h_LDADD) $(LIBS)
 
 gen_errtabs_h$(EXEEXT): $(gen_errtabs_h_OBJECTS) $(gen_errtabs_h_DEPENDENCIES) $(EXTRA_gen_errtabs_h_DEPENDENCIES) 
 	@rm -f gen_errtabs_h$(EXEEXT)
@@ -783,7 +782,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/gen_aarch64_tables_h-gen_tables.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/gen_actiontabs_h-gen_tables.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/gen_alpha_tables_h-gen_tables.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/gen_armeb_tables_h-gen_tables.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/gen_arm_tables_h-gen_tables.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/gen_errtabs_h-gen_tables.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/gen_fieldtabs_h-gen_tables.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/gen_flagtabs_h-gen_tables.Po@am__quote@
@@ -865,19 +864,19 @@ gen_alpha_tables_h-gen_tables.obj: gen_tables.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(gen_alpha_tables_h_CFLAGS) $(CFLAGS) -c -o gen_alpha_tables_h-gen_tables.obj `if test -f 'gen_tables.c'; then $(CYGPATH_W) 'gen_tables.c'; else $(CYGPATH_W) '$(srcdir)/gen_tables.c'; fi`
 
-gen_armeb_tables_h-gen_tables.o: gen_tables.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(gen_armeb_tables_h_CFLAGS) $(CFLAGS) -MT gen_armeb_tables_h-gen_tables.o -MD -MP -MF $(DEPDIR)/gen_armeb_tables_h-gen_tables.Tpo -c -o gen_armeb_tables_h-gen_tables.o `test -f 'gen_tables.c' || echo '$(srcdir)/'`gen_tables.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/gen_armeb_tables_h-gen_tables.Tpo $(DEPDIR)/gen_armeb_tables_h-gen_tables.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='gen_tables.c' object='gen_armeb_tables_h-gen_tables.o' libtool=no @AMDEPBACKSLASH@
+gen_arm_tables_h-gen_tables.o: gen_tables.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(gen_arm_tables_h_CFLAGS) $(CFLAGS) -MT gen_arm_tables_h-gen_tables.o -MD -MP -MF $(DEPDIR)/gen_arm_tables_h-gen_tables.Tpo -c -o gen_arm_tables_h-gen_tables.o `test -f 'gen_tables.c' || echo '$(srcdir)/'`gen_tables.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/gen_arm_tables_h-gen_tables.Tpo $(DEPDIR)/gen_arm_tables_h-gen_tables.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='gen_tables.c' object='gen_arm_tables_h-gen_tables.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(gen_armeb_tables_h_CFLAGS) $(CFLAGS) -c -o gen_armeb_tables_h-gen_tables.o `test -f 'gen_tables.c' || echo '$(srcdir)/'`gen_tables.c
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(gen_arm_tables_h_CFLAGS) $(CFLAGS) -c -o gen_arm_tables_h-gen_tables.o `test -f 'gen_tables.c' || echo '$(srcdir)/'`gen_tables.c
 
-gen_armeb_tables_h-gen_tables.obj: gen_tables.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(gen_armeb_tables_h_CFLAGS) $(CFLAGS) -MT gen_armeb_tables_h-gen_tables.obj -MD -MP -MF $(DEPDIR)/gen_armeb_tables_h-gen_tables.Tpo -c -o gen_armeb_tables_h-gen_tables.obj `if test -f 'gen_tables.c'; then $(CYGPATH_W) 'gen_tables.c'; else $(CYGPATH_W) '$(srcdir)/gen_tables.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/gen_armeb_tables_h-gen_tables.Tpo $(DEPDIR)/gen_armeb_tables_h-gen_tables.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='gen_tables.c' object='gen_armeb_tables_h-gen_tables.obj' libtool=no @AMDEPBACKSLASH@
+gen_arm_tables_h-gen_tables.obj: gen_tables.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(gen_arm_tables_h_CFLAGS) $(CFLAGS) -MT gen_arm_tables_h-gen_tables.obj -MD -MP -MF $(DEPDIR)/gen_arm_tables_h-gen_tables.Tpo -c -o gen_arm_tables_h-gen_tables.obj `if test -f 'gen_tables.c'; then $(CYGPATH_W) 'gen_tables.c'; else $(CYGPATH_W) '$(srcdir)/gen_tables.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/gen_arm_tables_h-gen_tables.Tpo $(DEPDIR)/gen_arm_tables_h-gen_tables.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='gen_tables.c' object='gen_arm_tables_h-gen_tables.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(gen_armeb_tables_h_CFLAGS) $(CFLAGS) -c -o gen_armeb_tables_h-gen_tables.obj `if test -f 'gen_tables.c'; then $(CYGPATH_W) 'gen_tables.c'; else $(CYGPATH_W) '$(srcdir)/gen_tables.c'; fi`
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(gen_arm_tables_h_CFLAGS) $(CFLAGS) -c -o gen_arm_tables_h-gen_tables.obj `if test -f 'gen_tables.c'; then $(CYGPATH_W) 'gen_tables.c'; else $(CYGPATH_W) '$(srcdir)/gen_tables.c'; fi`
 
 gen_errtabs_h-gen_tables.o: gen_tables.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(gen_errtabs_h_CFLAGS) $(CFLAGS) -MT gen_errtabs_h-gen_tables.o -MD -MP -MF $(DEPDIR)/gen_errtabs_h-gen_tables.Tpo -c -o gen_errtabs_h-gen_tables.o `test -f 'gen_tables.c' || echo '$(srcdir)/'`gen_tables.c
@@ -1379,8 +1378,8 @@ actiontabs.h: gen_actiontabs_h Makefile
 	./gen_actiontabs_h --lowercase --i2s --s2i action > $@
 @USE_ALPHA_TRUE@alpha_tables.h: gen_alpha_tables_h Makefile
 @USE_ALPHA_TRUE@	./gen_alpha_tables_h --lowercase --i2s --s2i alpha_syscall > $@
-@USE_ARMEB_TRUE@armeb_tables.h: gen_armeb_tables_h Makefile
-@USE_ARMEB_TRUE@	./gen_armeb_tables_h --lowercase --i2s --s2i armeb_syscall > $@
+@USE_ARM_TRUE@arm_tables.h: gen_arm_tables_h Makefile
+@USE_ARM_TRUE@	./gen_arm_tables_h --lowercase --i2s --s2i arm_syscall > $@
 @USE_AARCH64_TRUE@aarch64_tables.h: gen_aarch64_tables_h Makefile
 @USE_AARCH64_TRUE@	./gen_aarch64_tables_h --lowercase --i2s --s2i aarch64_syscall > $@
 errtabs.h: gen_errtabs_h Makefile
