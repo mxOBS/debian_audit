@@ -3,8 +3,10 @@ audit (1:2.3.6-1) UNRELEASED; urgency=medium
   * New upstream release
     - debian/rules: Rename --with-armeb flag to --with-arm, changed upstream
     - Adjust debian/libaudit1.symbols file: Add audit_determine_machine()
+  * debian/rules: Include aarch64 support on arm64 architecture, we will build
+    with it on all architectures when it will be an official port
 
- -- Laurent Bigonville <bigon@debian.org>  Sat, 12 Apr 2014 15:00:38 +0200
+ -- Laurent Bigonville <bigon@debian.org>  Sat, 12 Apr 2014 15:09:19 +0200
 
 audit (1:2.3.4-1) unstable; urgency=medium
 
