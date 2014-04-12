@@ -2,8 +2,9 @@ audit (1:2.3.6-1) UNRELEASED; urgency=medium
 
   * New upstream release
     - debian/rules: Rename --with-armeb flag to --with-arm, changed upstream
+    - Adjust debian/libaudit1.symbols file: Add audit_determine_machine()
 
- -- Laurent Bigonville <bigon@debian.org>  Sat, 12 Apr 2014 14:59:11 +0200
+ -- Laurent Bigonville <bigon@debian.org>  Sat, 12 Apr 2014 15:00:38 +0200
 
 audit (1:2.3.4-1) unstable; urgency=medium
 
