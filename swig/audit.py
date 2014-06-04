@@ -272,6 +272,10 @@ AUDIT_STATUS_FAILURE = _audit.AUDIT_STATUS_FAILURE
 AUDIT_STATUS_PID = _audit.AUDIT_STATUS_PID
 AUDIT_STATUS_RATE_LIMIT = _audit.AUDIT_STATUS_RATE_LIMIT
 AUDIT_STATUS_BACKLOG_LIMIT = _audit.AUDIT_STATUS_BACKLOG_LIMIT
+AUDIT_STATUS_BACKLOG_WAIT_TIME = _audit.AUDIT_STATUS_BACKLOG_WAIT_TIME
+AUDIT_VERSION_BACKLOG_LIMIT = _audit.AUDIT_VERSION_BACKLOG_LIMIT
+AUDIT_VERSION_BACKLOG_WAIT_TIME = _audit.AUDIT_VERSION_BACKLOG_WAIT_TIME
+AUDIT_VERSION_LATEST = _audit.AUDIT_VERSION_LATEST
 AUDIT_FAIL_SILENT = _audit.AUDIT_FAIL_SILENT
 AUDIT_FAIL_PRINTK = _audit.AUDIT_FAIL_PRINTK
 AUDIT_FAIL_PANIC = _audit.AUDIT_FAIL_PANIC
@@ -312,6 +316,12 @@ class audit_status(_object):
     __swig_setmethods__["backlog"] = _audit.audit_status_backlog_set
     __swig_getmethods__["backlog"] = _audit.audit_status_backlog_get
     if _newclass:backlog = _swig_property(_audit.audit_status_backlog_get, _audit.audit_status_backlog_set)
+    __swig_setmethods__["version"] = _audit.audit_status_version_set
+    __swig_getmethods__["version"] = _audit.audit_status_version_get
+    if _newclass:version = _swig_property(_audit.audit_status_version_get, _audit.audit_status_version_set)
+    __swig_setmethods__["backlog_wait_time"] = _audit.audit_status_backlog_wait_time_set
+    __swig_getmethods__["backlog_wait_time"] = _audit.audit_status_backlog_wait_time_get
+    if _newclass:backlog_wait_time = _swig_property(_audit.audit_status_backlog_wait_time_get, _audit.audit_status_backlog_wait_time_set)
     def __init__(self): 
         this = _audit.new_audit_status()
         try: self.this.append(this)
@@ -617,6 +627,7 @@ AUDIT_VIRT_CONTROL = _audit.AUDIT_VIRT_CONTROL
 AUDIT_VIRT_RESOURCE = _audit.AUDIT_VIRT_RESOURCE
 AUDIT_VIRT_MACHINE_ID = _audit.AUDIT_VIRT_MACHINE_ID
 AUDIT_LAST_VIRT_MSG = _audit.AUDIT_LAST_VIRT_MSG
+AUDIT_PROCTITLE = _audit.AUDIT_PROCTITLE
 AUDIT_KEY_SEPARATOR = _audit.AUDIT_KEY_SEPARATOR
 AUDIT_FILTER_EXCLUDE = _audit.AUDIT_FILTER_EXCLUDE
 AUDIT_FILTER_MASK = _audit.AUDIT_FILTER_MASK
