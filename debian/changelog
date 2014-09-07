@@ -1,3 +1,9 @@
+audit (1:2.4-1) UNRELEASED; urgency=medium
+
+  * New upstream release
+
+ -- Laurent Bigonville <bigon@debian.org>  Sun, 07 Sep 2014 10:21:15 +0200
+
 audit (1:2.3.7-1) unstable; urgency=medium
 
   * New upstream release
