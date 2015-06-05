@@ -1,6 +1,6 @@
 /*
 * aureport-output.c - Print the report
-* Copyright (c) 2005-06, 2008 Red Hat Inc., Durham, North Carolina.
+* Copyright (c) 2005-06,2008,2014 Red Hat Inc., Durham, North Carolina.
 * All Rights Reserved. 
 *
 * This software may be freely redistributed and/or modified under the
@@ -80,12 +80,27 @@ static void print_title_summary(void)
 			break;
 		case RPT_MAC:
 			printf("MAC Summary Report\n");
-			printf("======================\n");
+			printf("==================\n");
 			printf("total  type\n");
-			printf("======================\n");
+			printf("==================\n");
+			break;
+		case RPT_INTEG:
+			printf("Integrity Summary Report\n");
+			printf("========================\n");
+			printf("total  type\n");
+			printf("========================\n");
+			break;
+		case RPT_VIRT:
+			printf("Virtualization Summary Report\n");
+			printf("=============================\n");
+			printf("total  type\n");
+			printf("=============================\n");
 			break;
 		case RPT_CONFIG:
-			UNIMPLEMENTED;
+			printf("Config Change Summary Report\n");
+			printf("============================\n");
+			printf("total  type\n");
+			printf("============================\n");
 			break;
 		case RPT_AUTH:
 			printf("Authentication Summary Report\n");
@@ -100,7 +115,10 @@ static void print_title_summary(void)
 			printf("============================\n");
 			break;
 		case RPT_ACCT_MOD:
-			UNIMPLEMENTED;
+			printf("Acct Modification Summary Report\n");
+			printf("================================\n");
+			printf("total  type\n");
+			printf("================================\n");
 			break;
 		case RPT_TIME:
 			UNIMPLEMENTED;
@@ -153,6 +171,12 @@ static void print_title_summary(void)
 			printf("total  file\n");
 			printf("=================================\n");
 			break;
+		case RPT_COMM:
+			printf("Command Summary Report\n");
+			printf("=================================\n");
+			printf("total  command\n");
+			printf("=================================\n");
+			break;
 		case RPT_ANOMALY:
 			printf("Anomaly Summary Report\n");
 			printf("======================\n");
@@ -167,9 +191,9 @@ static void print_title_summary(void)
 			break;
 		case RPT_CRYPTO:
 			printf("Crypto Summary Report\n");
-			printf("======================\n");
+			printf("=====================\n");
 			printf("total  type\n");
-			printf("======================\n");
+			printf("=====================\n");
 			break;
 		case RPT_KEY:
 			printf("Key Summary Report\n");
@@ -341,6 +365,20 @@ static void print_title_detailed(void)
 				printf("==========================\n");
 			}
 			break;
+		case RPT_COMM:
+			if (report_detail == D_DETAILED) {
+				printf("Command Report\n");
+				printf(
+				  "====================================\n");
+				printf(
+				  "# date time comm term host auid event\n");
+				printf(
+				  "=====================================\n");
+			} else {
+				printf("Specific command Report\n");
+				printf("=======================\n");
+			}
+			break;
 		case RPT_ANOMALY:
 			if (report_detail == D_DETAILED) {
 				printf("Anomaly Report\n");
@@ -375,6 +413,28 @@ static void print_title_detailed(void)
 			} else {
 				printf("Specific Mandatory Access Control (MAC) Report\n");
 				printf("===================================\n");
+			}
+			break;
+		case RPT_INTEG:
+			if (report_detail == D_DETAILED) {
+				printf("Integrity Report\n");
+				printf("==============================\n");
+				printf("# date time type success event\n");
+				printf("==============================\n");
+			} else {
+				printf("Specific Integrity Report\n");
+				printf("==============================\n");
+			}
+			break;
+		case RPT_VIRT:
+			if (report_detail == D_DETAILED) {
+				printf("Virtualization Report\n");
+				printf("==============================\n");
+				printf("# date time type success event\n");
+				printf("==============================\n");
+			} else {
+				printf("Specific Virtualization Report\n");
+				printf("==============================\n");
 			}
 			break;
 		case RPT_CRYPTO:
@@ -571,6 +631,15 @@ void print_per_event_item(llist *l)
 				aulookup_uid(l->s.loginuid, name, sizeof(name)),
 				l->e.serial);
 			break;
+		case RPT_COMM:	// report_detail == D_DETAILED
+			// comm, terminal, host, who, event
+			printf("%s %s %s %s %lu\n",
+				l->s.comm ? l->s.comm : "?", 
+				l->s.terminal ? l->s.terminal : "?",
+				l->s.hostname ? l->s.hostname : "?",
+				aulookup_uid(l->s.loginuid, name, sizeof(name)),
+				l->e.serial);
+			break;
 		case RPT_ANOMALY:	// report_detail == D_DETAILED
 			// type exe term host auid event
 			printf("%s %s %s %s %s %lu\n",
@@ -592,6 +661,20 @@ void print_per_event_item(llist *l)
 			// auid type success event
 			printf("%s %s %s %lu\n",
 				aulookup_uid(l->s.loginuid, name, sizeof(name)),
+				audit_msg_type_to_name(l->head->type),
+				aulookup_success(l->s.success),
+				l->e.serial);
+			break;
+		case RPT_INTEG:
+			// type success event
+			printf("%s %s %lu\n",
+				audit_msg_type_to_name(l->head->type),
+				aulookup_success(l->s.success),
+				l->e.serial);
+			break;
+		case RPT_VIRT:
+			// type success event
+			printf("%s %s %lu\n",
 				audit_msg_type_to_name(l->head->type),
 				aulookup_success(l->s.success),
 				l->e.serial);
@@ -652,7 +735,9 @@ void print_wrap_up(void)
 			slist_sort_by_hits(&sd.avc_objs);
 			do_string_summary_output(&sd.avc_objs);
 			break;
-		case RPT_CONFIG:
+		case RPT_CONFIG: /* We will borrow the pid list */
+			ilist_sort_by_hits(&sd.pids);
+			do_type_summary_output(&sd.pids);
 			break;
 		case RPT_AUTH:
 			slist_sort_by_hits(&sd.users);
@@ -662,7 +747,9 @@ void print_wrap_up(void)
 			slist_sort_by_hits(&sd.users);
 			do_user_summary_output(&sd.users);
 			break;
-		case RPT_ACCT_MOD:
+		case RPT_ACCT_MOD: /* We will borrow the pid list */
+			ilist_sort_by_hits(&sd.pids);
+			do_type_summary_output(&sd.pids);
 			break;
 		case RPT_EVENT: /* We will borrow the pid list */
 			ilist_sort_by_hits(&sd.pids);
@@ -696,6 +783,10 @@ void print_wrap_up(void)
 			slist_sort_by_hits(&sd.exes);
 			do_file_summary_output(&sd.exes);
 			break;
+		case RPT_COMM:
+			slist_sort_by_hits(&sd.comms);
+			do_file_summary_output(&sd.comms);
+			break;
 		case RPT_ANOMALY:
 			ilist_sort_by_hits(&sd.anom_list);
 			do_type_summary_output(&sd.anom_list);
@@ -707,6 +798,14 @@ void print_wrap_up(void)
 		case RPT_MAC:
 			ilist_sort_by_hits(&sd.mac_list);
 			do_type_summary_output(&sd.mac_list);
+			break;
+		case RPT_INTEG:
+			ilist_sort_by_hits(&sd.integ_list);
+			do_type_summary_output(&sd.integ_list);
+			break;
+		case RPT_VIRT:
+			ilist_sort_by_hits(&sd.virt_list);
+			do_type_summary_output(&sd.virt_list);
 			break;
 		case RPT_CRYPTO:
 			ilist_sort_by_hits(&sd.crypto_list);
@@ -770,6 +869,7 @@ static void do_summary_output(void)
 	printf("Number of terminals: %u\n", sd.terms.cnt);
 	printf("Number of host names: %u\n", sd.hosts.cnt);
 	printf("Number of executables: %u\n", sd.exes.cnt);
+	printf("Number of commands: %u\n", sd.comms.cnt);
 	printf("Number of files: %u\n", sd.files.cnt);
 	printf("Number of AVC's: %lu\n", sd.avcs);
 	printf("Number of MAC events: %lu\n", sd.mac);
@@ -777,6 +877,8 @@ static void do_summary_output(void)
 	printf("Number of anomaly events: %lu\n", sd.anomalies);
 	printf("Number of responses to anomaly events: %lu\n", sd.responses);
 	printf("Number of crypto events: %lu\n", sd.crypto);
+	printf("Number of integrity events: %lu\n", sd.integ);
+	printf("Number of virt events: %lu\n", sd.virt);
 	printf("Number of keys: %u\n", sd.keys.cnt);
 	printf("Number of process IDs: %u\n", sd.pids.cnt);
 	printf("Number of events: %lu\n", sd.events);

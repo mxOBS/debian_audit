@@ -1,5 +1,5 @@
 /* i386_table.h --
- * Copyright 2005-14 Red Hat Inc., Durham, North Carolina.
+ * Copyright 2005-15 Red Hat Inc., Durham, North Carolina.
  * All Rights Reserved.
  *
  * This library is free software; you can redistribute it and/or
@@ -372,3 +372,8 @@ _S(350, "finit_module")
 _S(351, "sched_setattr")
 _S(352, "sched_getattr")
 _S(353, "renameat2")
+_S(354, "seccomp")
+_S(355, "getrandom")
+_S(356, "memfd_create")
+_S(357, "bpf")
+_S(358, "execveat")

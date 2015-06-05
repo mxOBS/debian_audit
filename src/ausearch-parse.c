@@ -827,6 +827,28 @@ static int parse_user(const lnode *n, search_items *s)
 				return 13;
 		}
 	}
+	// optionally get gid
+	if (event_gid != -1) {
+		if (n->type == AUDIT_ADD_GROUP || n->type == AUDIT_DEL_GROUP ||
+			n->type == AUDIT_GRP_MGMT) {
+			str = strstr(term, " id=");
+			// Take second shot in the case of MGMT events
+			if (str == NULL && n->type == AUDIT_GRP_MGMT)
+				str = strstr(term, "gid=");
+			if (str) {
+				ptr = str + 4;
+				term = strchr(ptr, ' ');
+				if (term == NULL)
+					return 31;
+				*term = 0;
+				errno = 0;
+				s->gid = strtoul(ptr, NULL, 10);
+				if (errno)
+					return 32;
+				*term = ' ';
+			}
+		}
+	}
 	if (event_vmname) {
 		str = strstr(term, "vm=");
 		if (str) {
@@ -1221,6 +1243,8 @@ static int parse_login(const lnode *n, search_items *s)
 
 	// success
 	if (event_success != S_UNSET) {
+		if (term == NULL)
+			term = n->message;
 		str = strstr(term, "res=");
 		if (str != NULL) {
 			ptr = str + 4;
@@ -1929,6 +1953,25 @@ static int parse_kernel_anom(const lnode *n, search_items *s)
 	}
 
 	if (n->type == AUDIT_SECCOMP) {
+		if (event_exe) {
+			// dont do this search unless needed
+			str = strstr(n->message, "exe=");
+			if (str) {
+				str += 4;
+			if (*str == '"') {
+					str++;
+					term = strchr(str, '"');
+					if (term == NULL)
+						return 13;
+					*term = 0;
+					s->exe = strdup(str);
+					*term = '"';
+				} else 
+					s->exe = unescape(str);
+			} else
+				return 14;
+		}
+
 		// get arch
 		str = strstr(term, "arch=");
 		if (str == NULL) 
@@ -1936,26 +1979,26 @@ static int parse_kernel_anom(const lnode *n, search_items *s)
 		ptr = str + 5;
 		term = strchr(ptr, ' ');
 		if (term == NULL) 
-			return 12;
+			return 15;
 		*term = 0;
 		errno = 0;
 		s->arch = (int)strtoul(ptr, NULL, 16);
 		if (errno) 
-			return 13;
+			return 16;
 		*term = ' ';
 		// get syscall
 		str = strstr(term, "syscall=");
 		if (str == NULL)
-			return 14;
+			return 17;
 		ptr = str + 8;
 		term = strchr(ptr, ' ');
 		if (term == NULL)
-			return 15;
+			return 18;
 		*term = 0;
 		errno = 0;
 		s->syscall = (int)strtoul(ptr, NULL, 10);
 		if (errno)
-			return 16;
+			return 19;
 		*term = ' ';
 	}
 

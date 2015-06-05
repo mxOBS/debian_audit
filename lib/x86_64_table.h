@@ -1,5 +1,5 @@
 /* x86_64_table.h --
- * Copyright 2005-14 Red Hat Inc., Durham, North Carolina.
+ * Copyright 2005-15 Red Hat Inc., Durham, North Carolina.
  * All Rights Reserved.
  *
  * This library is free software; you can redistribute it and/or
@@ -337,3 +337,9 @@ _S(313, "finit_module")
 _S(314, "sched_setattr")
 _S(315, "sched_getattr")
 _S(316, "renameat2")
+_S(317, "seccomp")
+_S(318, "getrandom")
+_S(319, "memfd_create")
+_S(320, "kexec_file_load")
+_S(321, "bpf")
+_S(322, "execveat")

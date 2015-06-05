@@ -10,6 +10,10 @@
    0 if you don't. */
 #undef HAVE_DECL_AUDIT_FEATURE_VERSION
 
+/* Define to 1 if you have the declaration of
+   `AUDIT_VERSION_BACKLOG_WAIT_TIME', and to 0 if you don't. */
+#undef HAVE_DECL_AUDIT_VERSION_BACKLOG_WAIT_TIME
+
 /* Define to 1 if you have the declaration of `MS_DIRSYNC', and to 0 if you
    don't. */
 #undef HAVE_DECL_MS_DIRSYNC
@@ -110,9 +114,6 @@
 /* Define to the sub-directory in which libtool stores uninstalled libraries.
    */
 #undef LT_OBJDIR
-
-/* Define to 1 if your C compiler doesn't accept -c and -o together. */
-#undef NO_MINUS_C_MINUS_O
 
 /* Name of package */
 #undef PACKAGE
