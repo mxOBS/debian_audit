@@ -3,19 +3,19 @@
 * Copyright (c) 2007-09,2011-14 Red Hat Inc., Durham, North Carolina.
 * All Rights Reserved. 
 *
-* This software may be freely redistributed and/or modified under the
-* terms of the GNU General Public License as published by the Free
-* Software Foundation; either version 2, or (at your option) any
-* later version.
+* This library is free software; you can redistribute it and/or
+* modify it under the terms of the GNU Lesser General Public
+* License as published by the Free Software Foundation; either
+* version 2.1 of the License, or (at your option) any later version.
 *
-* This program is distributed in the hope that it will be useful,
+* This library is distributed in the hope that it will be useful,
 * but WITHOUT ANY WARRANTY; without even the implied warranty of
-* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-* GNU General Public License for more details.
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+* Lesser General Public License for more details.
 *
-* You should have received a copy of the GNU General Public License
-* along with this program; see the file COPYING. If not, write to the
-* Free Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+* You should have received a copy of the GNU Lesser General Public
+* License along with this library; if not, write to the Free Software
+* Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 *
 * Authors:
 *   Steve Grubb <sgrubb@redhat.com>
@@ -67,6 +67,7 @@
 #define SHMDT           22
 #define SHMGET          23
 #define SHMCTL          24
+#define DIPC            25
 
 #include "captabs.h"
 #include "clone-flagtabs.h"
@@ -104,6 +105,7 @@
 #include "tcpoptnametabs.h"
 #include "pktoptnametabs.h"
 #include "umounttabs.h"
+#include "ioctlreqtabs.h"
 
 typedef enum { AVC_UNSET, AVC_DENIED, AVC_GRANTED } avc_t;
 typedef enum { S_UNSET=-1, S_FAILED, S_SUCCESS } success_t;
@@ -383,7 +385,7 @@ static const char *print_ipccall(const char *val, unsigned int base)
 	if (func)
 		return strdup(func);
 	else {
-		if (asprintf(&out, "unknown ipccall(%d)", val) < 0)
+		if (asprintf(&out, "unknown ipccall(%s)", val) < 0)
 			out = NULL;
                 return out;
 	}
@@ -407,15 +409,15 @@ static const char *print_socketcall(const char *val, unsigned int base)
 	if (func)
 		return strdup(func);
 	else {
-		if (asprintf(&out, "unknown socketcall(%d)", val) < 0)
+		if (asprintf(&out, "unknown socketcall(%s)", val) < 0)
 			out = NULL;
                 return out;
 	}
 }
 
-static const char *print_syscall(const char *val, const idata *id)
+static const char *print_syscall(const idata *id)
 {
-        const char *sys;
+	const char *sys;
 	char *out;
 	int machine = id->machine, syscall = id->syscall;
 	unsigned long long a0 = id->a0;
@@ -423,7 +425,7 @@ static const char *print_syscall(const char *val, const idata *id)
         if (machine < 0)
                 machine = audit_detect_machine();
         if (machine < 0) {
-                out = strdup(val);
+                out = strdup(id->val);
                 return out;
         }
         sys = audit_syscall_to_name(syscall, machine);
@@ -494,12 +496,29 @@ static const char *print_escaped(const char *val)
                 *term = 0;
                 printf("%s ", val); */
         } else if (val[0] == '0' && val[1] == '0')
-                out = au_unescape((char *)&val[2]); // Abstract name
+                out = au_unescape((char *)&val[2]); // Abstract name af_unix
 	else
                 out = au_unescape((char *)val);
 	if (out)
 		return out;
 	return strdup(val); // Something is wrong with string, just send as is
+}
+
+static const char *print_proctitle(const char *val)
+{
+	char *out = (char *)print_escaped(val);
+	if (*val != '"') {
+		size_t len = strlen(val) / 2;
+		const char *end = out + len;
+		char *ptr = out;
+		while ((ptr  = rawmemchr(ptr, '\0'))) {
+			if (ptr >= end)
+				break;
+			*ptr = ' ';
+			ptr++;
+		}
+	}
+	return out;
 }
 
 static const char *print_perm(const char *val)
@@ -596,11 +615,17 @@ static const char *print_mode_short_int(unsigned int ival)
         // check on special bits
         buf[0] = 0;
         if (S_ISUID & ival)
-                strcat(buf, ",suid");
-        if (S_ISGID & ival)
-                strcat(buf, ",sgid");
-        if (S_ISVTX & ival)
-                strcat(buf, ",sticky");
+                strcat(buf, "suid");
+        if (S_ISGID & ival) {
+                if (buf[0])
+			strcat(buf, ",");
+		strcat(buf, "sgid");
+	}
+        if (S_ISVTX & ival) {
+                if (buf[0])
+			strcat(buf, ",");
+                strcat(buf, "sticky");
+	}
 
 	// and the read, write, execute flags in octal
 	if (buf[0] == 0) {
@@ -1707,6 +1732,28 @@ static const char *print_umount(const char *val)
 	return strdup(buf);
 }
 
+static const char *print_ioctl_req(const char *val)
+{
+	int req;
+	char *out;
+	const char *r;
+
+	errno = 0;
+	req = strtoul(val, NULL, 16);
+	if (errno) {
+		if (asprintf(&out, "conversion error(%s)", val) < 0)
+			out = NULL;
+                return out;
+	}
+
+	r = ioctlreq_i2s(req);
+	if (r != NULL)
+		return strdup(r);
+	if (asprintf(&out, "0x%s", val) < 0)
+		out = NULL;
+	return out;
+}
+
 static const char *print_a0(const char *val, const idata *id)
 {
 	char *out;
@@ -1856,6 +1903,8 @@ static const char *print_a1(const char *val, const idata *id)
 			return print_signals(val, 16);
 		else if (strcmp(sys, "umount2") == 0)
 			return print_umount(val);
+		else if (strcmp(sys, "ioctl") == 0)
+			return print_ioctl_req(val);
 	}
 	if (asprintf(&out, "0x%s", val) < 0)
 			out = NULL;
@@ -2330,6 +2379,10 @@ int auparse_interp_adjust_type(int rtype, const char *name, const char *val)
 		type = AUPARSE_TYPE_MODE_SHORT;
 	else if (rtype == AUDIT_CRYPTO_KEY_USER && strcmp(name, "fp") == 0)
 		type = AUPARSE_TYPE_UNCLASSIFIED;
+	else if ((strcmp(name, "id") == 0) &&
+		(rtype == AUDIT_ADD_GROUP || rtype == AUDIT_GRP_MGMT ||
+			rtype == AUDIT_DEL_GROUP))
+		type = AUPARSE_TYPE_GID;
 	else
 		type = lookup_type(name);
 
@@ -2348,7 +2401,7 @@ const char *auparse_do_interpretation(int type, const idata *id)
 			out = print_gid(id->val, 10);
 			break;
 		case AUPARSE_TYPE_SYSCALL:
-			out = print_syscall(id->val, id);
+			out = print_syscall(id);
 			break;
 		case AUPARSE_TYPE_ARCH:
 			out = print_arch(id->val, id->machine);
@@ -2433,6 +2486,9 @@ const char *auparse_do_interpretation(int type, const idata *id)
 			break;
 		case AUPARSE_TYPE_MMAP:
 			out = print_mmap(id->val);
+			break;
+		case AUPARSE_TYPE_PROCTITLE:
+			out = print_proctitle(id->val);
 			break;
 		case AUPARSE_TYPE_MAC_LABEL:
 		case AUPARSE_TYPE_UNCLASSIFIED:

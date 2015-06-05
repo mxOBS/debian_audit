@@ -1,5 +1,5 @@
 # Makefile.am -- 
-# Copyright 2006-08,2011-13 Red Hat Inc., Durham, North Carolina.
+# Copyright 2006-08,2011-14 Red Hat Inc., Durham, North Carolina.
 # All Rights Reserved.
 #
 # This library is free software; you can redistribute it and/or
@@ -29,8 +29,9 @@ LIBS =
 lib_LTLIBRARIES = libauparse.la
 include_HEADERS = auparse.h auparse-defs.h
 libauparse_la_SOURCES = nvpair.c interpret.c nvlist.c ellist.c		\
-	auparse.c auditd-config.c message.c data_buf.c auparse-defs.h	\
-	auparse-idata.h data_buf.h nvlist.h auparse.h ellist.h		\
+	auparse.c auditd-config.c message.c data_buf.c strsplit.c	\
+	auparse-defs.h	auparse-idata.h data_buf.h 			\
+	nvlist.h auparse.h ellist.h					\
 	internal.h nvpair.h rnode.h interpret.h				\
 	private.h expression.c expression.h tty_named_keys.h
 nodist_libauparse_la_SOURCES = $(BUILT_SOURCES)
@@ -42,10 +43,13 @@ libauparse_la_LDFLAGS = -Wl,-z,relro
 message.c:
 	cp ${top_srcdir}/lib/message.c .
 
+strsplit.c:
+	cp ${top_srcdir}/lib/strsplit.c .
+
 BUILT_SOURCES = accesstabs.h captabs.h clocktabs.h clone-flagtabs.h \
 	epoll_ctls.h famtabs.h fcntl-cmdtabs.h \
 	flagtabs.h icmptypetabs.h ipctabs.h ipccmdtabs.h\
-	ipoptnametabs.h ip6optnametabs.h \
+	ioctlreqtabs.h ipoptnametabs.h ip6optnametabs.h \
 	mmaptabs.h mounttabs.h nfprototabs.h open-flagtabs.h \
 	persontabs.h prctl_opttabs.h pktoptnametabs.h \
 	prottabs.h ptracetabs.h \
@@ -56,7 +60,7 @@ BUILT_SOURCES = accesstabs.h captabs.h clocktabs.h clone-flagtabs.h \
 noinst_PROGRAMS = gen_accesstabs_h gen_captabs_h gen_clock_h \
 	gen_clone-flagtabs_h \
 	gen_epoll_ctls_h gen_famtabs_h \
-	gen_fcntl-cmdtabs_h gen_flagtabs_h \
+	gen_fcntl-cmdtabs_h gen_flagtabs_h gen_ioctlreqtabs_h \
 	gen_icmptypetabs_h gen_ipctabs_h gen_ipccmdtabs_h\
 	gen_ipoptnametabs_h gen_ip6optnametabs_h gen_nfprototabs_h \
 	gen_mmaptabs_h gen_mounttabs_h \
@@ -116,6 +120,11 @@ gen_icmptypetabs_h_SOURCES = ../lib/gen_tables.c ../lib/gen_tables.h icmptypetab
 gen_icmptypetabs_h_CFLAGS = $(AM_CFLAGS) '-DTABLE_H="icmptypetab.h"'
 icmptypetabs.h: gen_icmptypetabs_h Makefile
 	./gen_icmptypetabs_h --i2s icmptype > $@
+
+gen_ioctlreqtabs_h_SOURCES = ../lib/gen_tables.c ../lib/gen_tables.h ioctlreqtab.h
+gen_ioctlreqtabs_h_CFLAGS = $(AM_CFLAGS) '-DTABLE_H="ioctlreqtab.h"'
+ioctlreqtabs.h: gen_ioctlreqtabs_h Makefile
+	./gen_ioctlreqtabs_h --i2s ioctlreq > $@
 
 gen_ipctabs_h_SOURCES = ../lib/gen_tables.c ../lib/gen_tables.h ipctab.h
 gen_ipctabs_h_CFLAGS = $(AM_CFLAGS) '-DTABLE_H="ipctab.h"'

@@ -144,7 +144,7 @@ static int nv_split(char *buf, struct nv_pair *nv)
 
 	nv->name = NULL;
 	nv->value = NULL;
-	ptr = strtok_r(buf, " ", &saved);
+	ptr = audit_strsplit_r(buf, &saved);
 	if (ptr == NULL)
 		return 0; /* If there's nothing, go to next line */
 	if (ptr[0] == '#')
@@ -152,20 +152,20 @@ static int nv_split(char *buf, struct nv_pair *nv)
 	nv->name = ptr;
 
 	/* Check for a '=' */
-	ptr = strtok_r(NULL, " ", &saved);
+	ptr = audit_strsplit_r(NULL, &saved);
 	if (ptr == NULL)
 		return 1;
 	if (strcmp(ptr, "=") != 0)
 		return 2;
 
 	/* get the value */
-	ptr = strtok_r(NULL, " ", &saved);
+	ptr = audit_strsplit_r(NULL, &saved);
 	if (ptr == NULL)
 		return 1;
 	nv->value = ptr;
 
 	/* Make sure there's nothing else */
-	ptr = strtok_r(NULL, " ", &saved);
+	ptr = audit_strsplit_r(NULL, &saved);
 	if (ptr)
 		return 1;
 
@@ -490,6 +490,24 @@ int audit_set_backlog_limit(int fd, uint32_t limit)
 		audit_msg(audit_priority(errno),
 			"Error sending backlog limit request (%s)", 
 			strerror(-rc));
+	return rc;
+}
+
+int audit_set_backlog_wait_time(int fd, uint32_t bwt)
+{
+	int rc = -1;
+#if HAVE_DECL_AUDIT_VERSION_BACKLOG_WAIT_TIME
+	struct audit_status s;
+
+	memset(&s, 0, sizeof(s));
+	s.mask          = AUDIT_STATUS_BACKLOG_WAIT_TIME;
+	s.backlog_wait_time = bwt;
+	rc = audit_send(fd, AUDIT_SET, &s, sizeof(s));
+	if (rc < 0)
+		audit_msg(audit_priority(errno),
+			"Error sending backlog limit request (%s)", 
+			strerror(-rc));
+#endif
 	return rc;
 }
 
@@ -1191,13 +1209,14 @@ int audit_determine_machine(const char *arch)
 #endif
 #ifdef WITH_AARCH64
 		case MACH_AARCH64:
-			if (bits != __AUDIT_ARCH_64BIT)
+			if (bits && bits != __AUDIT_ARCH_64BIT)
 				return -6;
 			break;
 #endif
-		case MACH_86_64: /* fallthrough */
-		case MACH_PPC64: /* fallthrough */
-		case MACH_S390X: /* fallthrough */
+		case MACH_86_64:   /* fallthrough */
+		case MACH_PPC64:   /* fallthrough */
+		case MACH_PPC64LE: /* fallthrough */
+		case MACH_S390X:   /* fallthrough */
 			break;
 		default:
 			return -6;

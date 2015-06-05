@@ -180,6 +180,7 @@ static const struct nv_list failure_actions[] =
 {
   {"ignore",  FA_IGNORE },
   {"syslog",  FA_SYSLOG },
+  {"rotate",  FA_ROTATE },
   {"email",   FA_EMAIL },
   {"exec",    FA_EXEC },
   {"suspend", FA_SUSPEND },
@@ -452,7 +453,7 @@ static int nv_split(char *buf, struct nv_pair *nv)
 	nv->name = NULL;
 	nv->value = NULL;
 	nv->option = NULL;
-	ptr = strtok(buf, " ");
+	ptr = audit_strsplit(buf);
 	if (ptr == NULL)
 		return 0; /* If there's nothing, go to next line */
 	if (ptr[0] == '#')
@@ -460,25 +461,25 @@ static int nv_split(char *buf, struct nv_pair *nv)
 	nv->name = ptr;
 
 	/* Check for a '=' */
-	ptr = strtok(NULL, " ");
+	ptr = audit_strsplit(NULL);
 	if (ptr == NULL)
 		return 1;
 	if (strcmp(ptr, "=") != 0)
 		return 2;
 
 	/* get the value */
-	ptr = strtok(NULL, " ");
+	ptr = audit_strsplit(NULL);
 	if (ptr == NULL)
 		return 1;
 	nv->value = ptr;
 
 	/* See if there's an option */
-	ptr = strtok(NULL, " ");
+	ptr = audit_strsplit(NULL);
 	if (ptr) {
 		nv->option = ptr;
 
 		/* Make sure there's nothing else */
-		ptr = strtok(NULL, " ");
+		ptr = audit_strsplit(NULL);
 		if (ptr)
 			return 1;
 	}
@@ -1028,7 +1029,10 @@ static int validate_email(const char *acct)
 					audit_msg(LOG_ERR,
 				"validate_email: failed looking up host for %s",
 					ptr1+1);
-				return 2;
+				// FIXME: gethostbyname is having trouble
+				// telling when we have a temporary vs permanent
+				// dns failure. So, for now, treat all as temp
+				return 1;
 			}
 			else if (h_errno == TRY_AGAIN)
 				audit_msg(LOG_DEBUG,
@@ -1161,7 +1165,8 @@ static int disk_error_action_parser(struct nv_pair *nv, int line,
 								nv->value);
 	for (i=0; failure_actions[i].name != NULL; i++) {
 		if (strcasecmp(nv->value, failure_actions[i].name) == 0) {
-			if (failure_actions[i].option == FA_EMAIL) {
+			if (failure_actions[i].option == FA_EMAIL ||
+				failure_actions[i].option == FA_ROTATE) {
 				audit_msg(LOG_ERR, 
 			"Illegal option %s for disk_error_action - line %d",
 					nv->value, line);

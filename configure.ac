@@ -29,7 +29,7 @@ define([AC_INIT_NOTICE],
 ])
 
 AC_REVISION($Revision: 1.3 $)dnl
-AC_INIT(audit,2.4)
+AC_INIT(audit,2.4.2)
 AC_PREREQ(2.12)dnl
 AM_CONFIG_HEADER(config.h)
 
@@ -64,6 +64,7 @@ AC_CHECK_SIZEOF([unsigned long])
 AM_PROG_CC_C_O
 AC_CHECK_DECLS([MS_DIRSYNC], [], [], [[#include <sys/mount.h>]])
 AC_CHECK_DECLS([AUDIT_FEATURE_VERSION], [], [], [[#include <linux/audit.h>]])
+AC_CHECK_DECLS([AUDIT_VERSION_BACKLOG_WAIT_TIME], [], [], [[#include <linux/audit.h>]])
 
 ALLWARNS=""
 ALLDEBUG="-g"
@@ -91,8 +92,10 @@ if test x$use_python = xno ; then
 else
 AC_MSG_RESULT(testing)
 AM_PATH_PYTHON
-if test -f /usr/include/python${am_cv_python_version}/Python.h ; then
+PYINCLUDEDIR=`python${am_cv_python_version} -c "from distutils import sysconfig; print(sysconfig.get_config_var('INCLUDEPY'))"`
+if test -f ${PYINCLUDEDIR}/Python.h ; then
 	python_found="yes"
+	AC_SUBST(PYINCLUDEDIR)
 	pybind_dir="python"
 	AC_SUBST(pybind_dir)
 	AC_MSG_NOTICE(Python bindings will be built)
