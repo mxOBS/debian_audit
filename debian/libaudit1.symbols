@@ -56,6 +56,7 @@ libaudit.so.1 libaudit1 #MINVER#
  audit_send@Base 1:2.2.1
  audit_send_user_message@Base 1:2.2.1
  audit_set_backlog_limit@Base 1:2.2.1
+ audit_set_backlog_wait_time@Base 1:2.4.2
  audit_set_enabled@Base 1:2.2.1
  audit_set_failure@Base 1:2.2.1
  audit_set_feature@Base 1:2.4
@@ -63,6 +64,8 @@ libaudit.so.1 libaudit1 #MINVER#
  audit_set_pid@Base 1:2.2.1
  audit_set_rate_limit@Base 1:2.2.1
  audit_setloginuid@Base 1:2.2.1
+ audit_strsplit@Base 1:2.4.2
+ audit_strsplit_r@Base 1:2.4.2
  audit_syscall_to_name@Base 1:2.2.1
  audit_trim_subtrees@Base 1:2.2.1
  audit_update_watch_perms@Base 1:2.2.1

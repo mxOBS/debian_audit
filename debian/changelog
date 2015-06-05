@@ -1,10 +1,11 @@
 audit (1:2.4.2-1) UNRELEASED; urgency=medium
 
   * New upstream release
+    - Adjust the .symbols files
   * debian/watch: Fix URL to download the proper tarball
   * debian/control: Bump Standards-Version to 3.9.6 (no further changes)
 
- -- Laurent Bigonville <bigon@debian.org>  Fri, 05 Jun 2015 11:44:50 +0200
+ -- Laurent Bigonville <bigon@debian.org>  Fri, 05 Jun 2015 12:16:47 +0200
 
 audit (1:2.4-1) unstable; urgency=medium
 
