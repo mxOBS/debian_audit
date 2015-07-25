@@ -5,6 +5,8 @@ Build-Depends: debhelper (>= 9),
                dh-autoreconf,
                dh-systemd (>= 1.4),
                dh-python,
+               dh-golang,
+               golang-go,
                dpkg-dev (>= 1.16.1~),
                intltool,
                libcap-ng-dev,
@@ -109,6 +111,17 @@ Description: Python bindings for security auditing
  The package contains the Python bindings for libaudit and libauparse, which
  are used to monitor systems for security related events. Python can be used to
  parse and process the security event messages.
+
+Package: golang-redhat-audit-dev
+Section: devel
+Architecture: all
+Depends: ${misc:Depends}
+Built-Using: ${misc:Built-Using}
+Description: Go client bindings for the libaudit library
+ The package contains the Go bindings to libaudit that only allows for logging
+ audit events.
+ .
+ This package contains the source.
 
 Package: audispd-plugins
 Section: admin
