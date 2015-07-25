@@ -13,9 +13,6 @@ PYDEFAULTVER := $(shell pyversions --default --version)
 PYVERS := $(shell pyversions --requested --version debian/control)                                                                             
 PYVERS := $(filter-out $(PYDEFAULTVER), $(PYVERS)) # $(PYDEFAULTVER)
 
-ifeq ($(DEB_HOST_ARCH),arm64)
-  EXTRA_ARCH_TABLE := --with-aarch64
-endif
 ifeq ($(DEB_HOST_ARCH),alpha)
   EXTRA_ARCH_TABLE := --with-alpha
 endif
@@ -38,7 +35,7 @@ debian/config-python-stamp:
 		--with-prelude \
 		--with-libwrap \
 		--with-libcap-ng \
-		--with-arm ${EXTRA_ARCH_TABLE}
+		--with-arm --with-aarch64 ${EXTRA_ARCH_TABLE}
 	touch $@
 debian/config-python%-stamp: debian/config-python-stamp
 	cp -lpr debian/build/swig            debian/build/swig.$*
