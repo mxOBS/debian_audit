@@ -21,7 +21,7 @@ ifeq ($(DEB_HOST_ARCH),hppa)
 endif
 
 %:
-	dh $@ --builddirectory=debian/build --buildsystem=autoconf --with autoreconf --with python2 --with systemd --with golang
+	dh $@ --builddirectory=debian/build --buildsystem=autoconf --with autoreconf --with python2 --with python3 --with systemd --with golang
 
 override_dh_auto_configure: debian/config-python-stamp $(PYVERS:%=debian/config-python%-stamp)
 debian/config-python-stamp:
@@ -36,6 +36,8 @@ debian/config-python-stamp:
 		--with-libwrap \
 		--with-libcap-ng \
 		--with-golang \
+		--with-python \
+		--with-python3 \
 		--with-arm --with-aarch64 ${EXTRA_ARCH_TABLE}
 	touch $@
 debian/config-python%-stamp: debian/config-python-stamp

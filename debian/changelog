@@ -1,8 +1,9 @@
 audit (1:2.4.4-2) UNRELEASED; urgency=medium
 
   * Start building the golang binding
+  * Start building python3 binding package
 
- -- Laurent Bigonville <bigon@debian.org>  Mon, 24 Aug 2015 23:57:13 +0200
+ -- Laurent Bigonville <bigon@debian.org>  Tue, 08 Sep 2015 20:46:01 +0200
 
 audit (1:2.4.4-1) unstable; urgency=medium
 

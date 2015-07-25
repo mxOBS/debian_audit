@@ -17,6 +17,7 @@ Build-Depends: debhelper (>= 9),
                libprelude-dev,
                libwrap0-dev,
                python-all-dev (>= 2.6.6-3~),
+               python3-all-dev,
                swig
 Standards-Version: 3.9.6
 Section: libs
@@ -24,6 +25,7 @@ Homepage: http://people.redhat.com/sgrubb/audit/
 Vcs-Git: git://anonscm.debian.org/collab-maint/audit.git
 Vcs-Browser: http://anonscm.debian.org/gitweb/?p=collab-maint/audit.git
 X-Python-Version: >= 2.5
+X-Python3-Version: >= 3.2
 
 Package: auditd
 Section: admin
@@ -109,6 +111,16 @@ Depends: ${misc:Depends}, ${python:Depends}, ${shlibs:Depends}
 Provides: ${python:Provides}
 Description: Python bindings for security auditing
  The package contains the Python bindings for libaudit and libauparse, which
+ are used to monitor systems for security related events. Python can be used to
+ parse and process the security event messages.
+
+Package: python3-audit
+Section: python
+Architecture: linux-any
+Depends: ${misc:Depends}, ${python3:Depends}, ${shlibs:Depends}
+Provides: ${python3:Provides}
+Description: Python3 bindings for security auditing
+ The package contains the Python3 bindings for libaudit and libauparse, which
  are used to monitor systems for security related events. Python can be used to
  parse and process the security event messages.
 
