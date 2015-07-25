@@ -23,8 +23,8 @@ Delete all rules and watches. This can take a key option (\-k), too.
 Set enabled flag. When \fB0\fP is passed, this can be used to temporarily disable auditing. When \fB1\fP is passed as an argument, it will enable auditing. To lock the audit configuration so that it can't be changed, pass a \fB2\fP as the argument. Locking the configuration is intended to be the last command in audit.rules for anyone wishing this feature to be active. Any attempt to change the configuration in this mode will be audited and denied. The configuration can only be changed by rebooting the machine.
 .TP
 \fB\-f\fP [\fB0\fP..\fB2\fP]
-Set failure flag
-\fB0\fP=silent \fB1\fP=printk \fB2\fP=panic. This option lets you determine how you want the kernel to handle critical errors. Example conditions where this flag is consulted includes: transmission errors to userspace audit daemon, backlog limit exceeded, out of kernel memory, and rate limit exceeded. The default value is \fB1\fP. Secure environments will probably want to set this to \fB2\fP.
+Set failure mode
+\fB0\fP=silent \fB1\fP=printk \fB2\fP=panic. This option lets you determine how you want the kernel to handle critical errors. Example conditions where this mode may have an effect includes: transmission errors to userspace audit daemon, backlog limit exceeded, out of kernel memory, and rate limit exceeded. The default value is \fB1\fP. Secure environments will probably want to set this to \fB2\fP.
 .TP
 .B \-h
 Help
@@ -55,7 +55,7 @@ List all rules 1 per line. Two more options may be given to this command. You ca
 Send a user space message into the audit system. This can only be done if you have CAP_AUDIT_WRITE capability (normally the root user has this). The resulting event will be the USER type.
 .TP
 .B \-s
-Report the kernel's audit subsystem status. It will tell you the in-kernel values that can be set by \fB-e\fP, \fB-f\fP, \fB-r\fP, and \fB-b\fP options. The pid value is the process number of the audit daemon. Note that a pid of 0 indicates that the audit daemon is not running. The lost entry will tell you how many event records that have been discarded due to the kernel audit queue overflowing. The backlog field tells how many event records are currently queued waiting for auditd to read them.
+Report the kernel's audit subsystem status. It will tell you the in-kernel values that can be set by \fB-e\fP, \fB-f\fP, \fB-r\fP, and \fB-b\fP options. The pid value is the process number of the audit daemon. Note that a pid of 0 indicates that the audit daemon is not running. The lost entry will tell you how many event records that have been discarded due to the kernel audit queue overflowing. The backlog field tells how many event records are currently queued waiting for auditd to read them. This option can be followed by the \fB-i\fP to get a couple fields interpreted.
 .TP
 .BI \-v
 Print the version of auditctl.

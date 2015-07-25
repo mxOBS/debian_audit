@@ -1,5 +1,5 @@
 # Makefile.am -- 
-# Copyright 2006-08,2014 Red Hat Inc., Durham, North Carolina.
+# Copyright 2006-08,2014-15 Red Hat Inc., Durham, North Carolina.
 # All Rights Reserved.
 #
 # This library is free software; you can redistribute it and/or
@@ -26,7 +26,7 @@ check_PROGRAMS = auparse_test
 dist_check_SCRIPTS = auparse_test.py
 EXTRA_DIST = auparse_test.ref auparse_test.ref.py test.log test2.log
 
-INCLUDES = -I${top_srcdir}/auparse -I${top_srcdir}/lib
+AM_CPPFLAGS = -I${top_srcdir}/auparse -I${top_srcdir}/lib
 
 auparse_test_SOURCES = auparse_test.c
 auparse_test_LDFLAGS = -static
@@ -42,8 +42,8 @@ check: auparse_test
 	./auparse_test > auparse_test.cur
 	diff -u $(top_srcdir)/auparse/test/auparse_test.ref auparse_test.cur
 if HAVE_PYTHON
-	cp ${top_builddir}/swig/.libs/_audit.so ${top_builddir}/swig
-	PYTHONPATH=${top_builddir}/bindings/python/.libs/:${top_builddir}/swig:${top_builddir}/swig/.libs \
+	cp ${top_builddir}/bindings/swig/python/.libs/_audit.so ${top_builddir}/bindings/swig/python
+	PYTHONPATH=${top_builddir}/bindings/python/python2/.libs/:${top_builddir}/bindings/swig/python:${top_builddir}/bindings/swig/python/.libs \
 	LD_LIBRARY_PATH=${top_builddir}/auparse/.libs \
 		srcdir=$(srcdir) $(srcdir)/auparse_test.py \
 		| $(drop_srcdir) > auparse_test.cur
@@ -60,14 +60,14 @@ memcheck: auparse_test
 
 pycheck: auparse_test.py
 if HAVE_PYTHON
-	PYTHONPATH=${top_builddir}/bindings/python/.libs/:${top_builddir}/swig:${top_builddir}/swig/.libs \
+	PYTHONPATH=${top_builddir}/bindings/python/python2/.libs/:${top_builddir}/bindings/swig/python:${top_builddir}/bindings/swig/python/.libs \
 	LD_LIBRARY_PATH=${top_builddir}/auparse/.libs \
 		srcdir=$(srcdir) $(srcdir)/auparse_test.py
 endif
 
 pydiffcheck: auparse_test.py 
 if HAVE_PYTHON
-	PYTHONPATH=${top_builddir}/bindings/python/.libs/:${top_builddir}/swig:${top_builddir}/swig/.libs \
+	PYTHONPATH=${top_builddir}/bindings/python/python2/.libs/:${top_builddir}/bindings/swig/python:${top_builddir}/bindings/swig/python/.libs \
 	LD_LIBRARY_PATH=${top_builddir}/auparse/.libs \
 		srcdir=$(srcdir) $(srcdir)/auparse_test.py \
 		| $(drop_srcdir) > auparse_test.cur
@@ -76,7 +76,7 @@ endif
 
 pymemcheck: auparse_test.py
 if HAVE_PYTHON
-	PYTHONPATH=${top_builddir}/bindings/python/.libs/:${top_builddir}/swig:${top_builddir}/swig/.libs \
+	PYTHONPATH=${top_builddir}/bindings/python/python2/.libs/:${top_builddir}/bindings/swig/python:${top_builddir}/bindings/swig/python/.libs \
 	LD_LIBRARY_PATH=${top_builddir}/auparse/.libs srcdir=$(srcdir) valgrind --leak-check=yes --show-reachable=yes python $(srcdir)/auparse_test.py
 
 ${top_builddir}/bindings/python/build/*/auparse.so: ${top_srcdir}/bindings/python/auparse_python.c
@@ -86,6 +86,6 @@ endif
 clean-generic:
 	$(RM) *.cur
 if HAVE_PYTHON
-	$(RM) ${top_builddir}/swig/_audit.so
+	$(RM) ${top_builddir}/bindings/swig/python/_audit.so
 endif
 	test "$(top_srcdir)" = "$(top_builddir)" || $(RM) test*.log

@@ -9,7 +9,7 @@
 
 Summary: User space tools for 2.6 kernel auditing
 Name: audit
-Version: 2.4.2
+Version: 2.4.3
 Release: 1
 License: GPLv2+
 Group: System Environment/Daemons
@@ -75,6 +75,17 @@ Requires: %{name}-libs = %{version}-%{release}
 The audit-libs-python package contains the bindings so that libaudit
 and libauparse can be used by python.
 
+%package libs-python3
+Summary: Python3 bindings for libaudit
+License: LGPLv2+
+Group: Development/Libraries
+BuildRequires: python3-devel swig
+Requires: %{name} = %{version}-%{release}
+
+%description libs-python3
+The audit-libs-python3 package contains the bindings so that libaudit
+and libauparse can be used by python3.
+
 %package -n audispd-plugins
 Summary: Plugins for the audit event dispatcher
 License: GPLv2+
@@ -94,7 +105,7 @@ behavior.
 %setup -q
 
 %build
-%configure --sbindir=/sbin --libdir=/%{_lib} --with-python=yes --with-golang --with-libwrap --enable-gssapi-krb5=yes --with-libcap-ng=yes \
+%configure --sbindir=/sbin --libdir=/%{_lib} --with-python=yes --with-python3=yes --with-golang --with-libwrap --enable-gssapi-krb5=yes --enable-zos-remote --with-libcap-ng=yes \
 %if %{WITH_SYSTEMD}
 	--enable-systemd
 %endif
@@ -198,6 +209,7 @@ fi
 %{_includedir}/auparse.h
 %{_includedir}/auparse-defs.h
 %{_libdir}/pkgconfig/audit.pc
+%{_libdir}/pkgconfig/auparse.pc
 %{_mandir}/man3/*
 
 %files libs-static
@@ -210,6 +222,10 @@ fi
 %attr(755,root,root) %{python_sitearch}/_audit.so
 %attr(755,root,root) %{python_sitearch}/auparse.so
 %{python_sitearch}/audit.py*
+
+%files libs-python3
+%defattr(-,root,root,-)
+%attr(755,root,root) %{python3_sitearch}/*
 
 %files
 %defattr(-,root,root,-)
@@ -280,6 +296,6 @@ fi
 
 
 %changelog
-* Tue Apr 28 2014 Steve Grubb <sgrubb@redhat.com> 2.4.2-1
+* Thu Jul 16 2015 Steve Grubb <sgrubb@redhat.com> 2.4.3-1
 - New upstream release
 
