@@ -88,6 +88,13 @@ override_dh_auto_install: debian/install-python-stamp $(PYVERS:%=debian/install-
 	mv debian/tmp/lib/${DEB_HOST_MULTIARCH}/libauparse.a \
 		debian/tmp/usr/lib/${DEB_HOST_MULTIARCH}/libauparse.a
 
+	mkdir -p debian/tmp/usr/lib/${DEB_HOST_MULTIARCH}/pkgconfig/
+
+	mv debian/tmp/lib/${DEB_HOST_MULTIARCH}/pkgconfig/audit.pc \
+		debian/tmp/usr/lib/${DEB_HOST_MULTIARCH}/pkgconfig/audit.pc
+	mv debian/tmp/lib/${DEB_HOST_MULTIARCH}/pkgconfig/auparse.pc \
+		debian/tmp/usr/lib/${DEB_HOST_MULTIARCH}/pkgconfig/auparse.pc
+
 override_dh_install:
 	dh_install --list-missing
 
