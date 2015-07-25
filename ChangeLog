@@ -1,3 +1,18 @@
+2.4.3
+- Add python3 support for libaudit
+- Cleanup automake warnings
+- Add AuParser_search_add_timestamp_item_ex to python bindings
+- Add AuParser_get_type_name to python bindings
+- Correct processing of obj_gid in auditctl (Aleksander Zdyb)
+- Make plugin config file parsing more robust for long lines (#1235457)
+- Make auditctl status print lost field as unsigned number
+- Add interpretation mode for auditctl -s
+- Add python3 support to auparse library
+- Make --enable-zos-remote a build time configuration option (Clayton Shotwell)
+- Updates for cross compiling (Clayton Shotwell)
+- Add MAC_CHECK audit event type
+- Add libauparse pkgconfig file (Aleksander Zdyb)
+
 2.4.2
 - Ausearch should parse exe field in SECCOMP events
 - Improve output for short mode interpretations in auparse
