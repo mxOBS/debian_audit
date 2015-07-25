@@ -1,3 +1,9 @@
+audit (1:2.4-1+pc1) stable; urgency=medium
+
+  * Install audit.pc file in the respective -dev package
+
+ -- Josua Mayer <josua.mayer97@gmail.com>  Sun, 27 Aug 2017 23:40:07 +0200
+
 audit (1:2.4-1) unstable; urgency=medium
 
   * New upstream release
