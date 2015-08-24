@@ -36,6 +36,7 @@ libauparse.so.0 libauparse0 #MINVER#
  auparse_next_record@Base 1:2.2.1
  auparse_node_compare@Base 1:2.2.1
  auparse_reset@Base 1:2.2.1
+ auparse_set_escape_mode@Base 1:2.4.4
  auparse_timestamp_compare@Base 1:2.2.1
  ausearch_add_expression@Base 1:2.2.1
  ausearch_add_interpreted_item@Base 1:2.2.1
@@ -46,3 +47,4 @@ libauparse.so.0 libauparse0 #MINVER#
  ausearch_clear@Base 1:2.2.1
  ausearch_next_event@Base 1:2.2.1
  ausearch_set_stop@Base 1:2.2.1
+ set_escape_mode@Base 1:2.4.4

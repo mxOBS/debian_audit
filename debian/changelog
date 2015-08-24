@@ -5,12 +5,13 @@ audit (1:2.4.4-1) UNRELEASED; urgency=medium
       CVE-2015-5186)
     - Internal libev updated to 4.20, this should fix the clang FTBFS (Closes:
       #787066)
+    - debian/libauparse0.symbols: Adjust the symbols file
   * Install .pc files in the respective -dev packages
   * debian/control: Explicitly build-depends against dh-python
   * debian/rules: Unconditionally enable Aarch64 processor support now that
     it's an official port.
 
- -- Laurent Bigonville <bigon@debian.org>  Mon, 24 Aug 2015 23:00:13 +0200
+ -- Laurent Bigonville <bigon@debian.org>  Mon, 24 Aug 2015 23:15:59 +0200
 
 audit (1:2.4.2-1) unstable; urgency=medium
 
