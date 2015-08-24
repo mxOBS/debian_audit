@@ -29,7 +29,7 @@ define([AC_INIT_NOTICE],
 ])
 
 AC_REVISION($Revision: 1.3 $)dnl
-AC_INIT(audit,2.4.3)
+AC_INIT(audit,2.4.4)
 AC_PREREQ(2.12)dnl
 AM_CONFIG_HEADER(config.h)
 
@@ -104,7 +104,7 @@ if test -f ${PYINCLUDEDIR}/Python.h ; then
 else
 	python_found="no"
 	if test x$use_python = xyes ; then
-		AC_MSG_ERROR([Python explicitly required and python headers found])
+		AC_MSG_ERROR([Python explicitly requested and python headers were not found])
 	else
 		AC_MSG_WARN("Python headers not found - python bindings will not be made")
 	fi

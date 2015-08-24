@@ -482,7 +482,7 @@ int report_status(int fd)
 int parse_syscall(struct audit_rule_data *rule_new, const char *optarg)
 {
 	int retval = 0;
-	char *saved = NULL;
+	char *saved;
 
 	if (strchr(optarg, ',')) {
 		char *ptr, *tmp = strdup(optarg);
@@ -555,6 +555,7 @@ static int setopt(int count, int lineno, char *vars[])
 			audit_msg(LOG_ERR,
 				"Too many options for status command");
 			retval = -1;
+			break;
 		} else if (optind == 2 && count == 3) { 
 			if (strcmp(vars[optind], "-i") == 0) {
 				interpret = 1;
@@ -845,11 +846,22 @@ static int setopt(int count, int lineno, char *vars[])
 			audit_msg(LOG_ERR,
 	  "The -m option must be only the only option and takes 1 parameter");
 			retval = -1;
-		} else if (audit_log_user_message( fd, AUDIT_USER,
+		} else {
+			const char*s = optarg;
+			while (*s) {
+				if (*s < 32) {
+					audit_msg(LOG_ERR,
+					"Illegal character in audit event");
+					return -1;
+				}
+				s++;
+			}
+			if (audit_log_user_message( fd, AUDIT_USER,
 					optarg, NULL, NULL, NULL, 1) <= 0)
 			retval = -1;
 		else
 			return -2;  // success - no reply for this
+		}
 		break;
 	case 'R':
 		audit_msg(LOG_ERR, "Error - nested rule files not supported");
