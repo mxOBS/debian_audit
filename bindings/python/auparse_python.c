@@ -580,6 +580,26 @@ AuParser_add_callback(AuParser *self, PyObject *args)
 }
 
 /********************************
+ * auparse_set_escape_mode
+ ********************************/
+PyDoc_STRVAR(set_escape_mode_doc,
+"set_escape_mode() Set audit parser escaping\n\
+\n\
+This function sets the character escaping applied to value fields in the audit record.\n\
+Returns None.\n\
+");
+static PyObject *
+AuParser_set_escape_mode(PyObject *args)
+{
+    int mode;
+
+    if (!PyArg_ParseTuple(args, "i", &mode)) return NULL;
+    auparse_set_escape_mode(mode);
+
+    return NULL;
+}
+
+/********************************
  * auparse_reset
  ********************************/
 PyDoc_STRVAR(reset_doc,
@@ -1489,7 +1509,7 @@ AuParser_get_field_int(AuParser *self)
 
 // FIXME: can't tell if interpret is succesful, always returns some string in somewhat arbitrary format.
 PyDoc_STRVAR(interpret_field_doc,
-"interpret_field() Return an interpretation of the current field as a string.\n\
+"interpret_field() Return an interpretation of the current field as a string that has the chosen character escaping applied.\n\
 \n\
 If the field cannot be interpreted the field is returned unmodified.\n\
 Returns None if the field value is unavailable.\n\
@@ -1518,6 +1538,7 @@ static PyMethodDef AuParser_methods[] = {
     {"feed",              (PyCFunction)AuParser_feed,              METH_VARARGS, feed_doc},
     {"flush_feed",        (PyCFunction)AuParser_flush_feed,        METH_NOARGS,  flush_feed_doc},
     {"add_callback",      (PyCFunction)AuParser_add_callback,      METH_VARARGS, add_callback_doc},
+    {"set_escape_mode",   (PyCFunction)AuParser_set_escape_mode,   METH_VARARGS, set_escape_mode_doc},
     {"reset",             (PyCFunction)AuParser_reset,             METH_NOARGS,  reset_doc},
     {"search_add_expression", (PyCFunction)AuParser_search_add_expression, METH_VARARGS, search_add_expression_doc},
     {"search_add_item",   (PyCFunction)AuParser_search_add_item,   METH_VARARGS, search_add_item_doc},
@@ -1688,6 +1709,12 @@ initauparse(void)
     PyModule_AddIntConstant(m, "AUSEARCH_EXISTS",        AUSEARCH_EXISTS);
     PyModule_AddIntConstant(m, "AUSEARCH_EQUAL",         AUSEARCH_EQUAL);
     PyModule_AddIntConstant(m, "AUSEARCH_NOT_EQUAL",     AUSEARCH_NOT_EQUAL);
+    PyModule_AddIntConstant(m, "AUSEARCH_TIME_LT",       AUSEARCH_TIME_LT);
+    PyModule_AddIntConstant(m, "AUSEARCH_TIME_LE",       AUSEARCH_TIME_LE);
+    PyModule_AddIntConstant(m, "AUSEARCH_TIME_GE",       AUSEARCH_TIME_GE);
+    PyModule_AddIntConstant(m, "AUSEARCH_TIME_GT",       AUSEARCH_TIME_GT);
+    PyModule_AddIntConstant(m, "AUSEARCH_TIME_EQ",       AUSEARCH_TIME_EQ);
+    PyModule_AddIntConstant(m, "AUSEARCH_INTERPRETED",   0x40000000);
 
     /* austop_t */
     PyModule_AddIntConstant(m, "AUSEARCH_STOP_EVENT",    AUSEARCH_STOP_EVENT);
@@ -1722,6 +1749,26 @@ initauparse(void)
     PyModule_AddIntConstant(m, "AUPARSE_TYPE_A2",      AUPARSE_TYPE_A2);
     PyModule_AddIntConstant(m, "AUPARSE_TYPE_SIGNAL",  AUPARSE_TYPE_SIGNAL);
     PyModule_AddIntConstant(m, "AUPARSE_TYPE_LIST",    AUPARSE_TYPE_LIST);
+    PyModule_AddIntConstant(m, "AUPARSE_TYPE_TTY_DATA", AUPARSE_TYPE_TTY_DATA);
+    PyModule_AddIntConstant(m, "AUPARSE_TYPE_SESSION", AUPARSE_TYPE_SESSION);
+    PyModule_AddIntConstant(m, "AUPARSE_TYPE_CAP_BITMAP", AUPARSE_TYPE_CAP_BITMAP);
+    PyModule_AddIntConstant(m, "AUPARSE_TYPE_NFPROTO", AUPARSE_TYPE_NFPROTO);
+    PyModule_AddIntConstant(m, "AUPARSE_TYPE_ICMPTYPE", AUPARSE_TYPE_ICMPTYPE);
+    PyModule_AddIntConstant(m, "AUPARSE_TYPE_PROTOCOL", AUPARSE_TYPE_PROTOCOL);
+    PyModule_AddIntConstant(m, "AUPARSE_TYPE_ADDR", AUPARSE_TYPE_ADDR);
+    PyModule_AddIntConstant(m, "AUPARSE_TYPE_PERSONALITY", AUPARSE_TYPE_PERSONALITY);
+    PyModule_AddIntConstant(m, "AUPARSE_TYPE_SECCOMP", AUPARSE_TYPE_SECCOMP);
+    PyModule_AddIntConstant(m, "AUPARSE_TYPE_OFLAG", AUPARSE_TYPE_OFLAG);
+    PyModule_AddIntConstant(m, "AUPARSE_TYPE_MMAP", AUPARSE_TYPE_MMAP);
+    PyModule_AddIntConstant(m, "AUPARSE_TYPE_MODE_SHORT", AUPARSE_TYPE_MODE_SHORT);
+    PyModule_AddIntConstant(m, "AUPARSE_TYPE_MAC_LABEL", AUPARSE_TYPE_MAC_LABEL);
+    PyModule_AddIntConstant(m, "AUPARSE_TYPE_PROCTITLE", AUPARSE_TYPE_PROCTITLE);
+
+    /* Escape types */
+    PyModule_AddIntConstant(m, "AUPARSE_ESC_RAW", AUPARSE_ESC_RAW);
+    PyModule_AddIntConstant(m, "AUPARSE_ESC_TTY", AUPARSE_ESC_TTY);
+    PyModule_AddIntConstant(m, "AUPARSE_ESC_SHELL", AUPARSE_ESC_SHELL);
+    PyModule_AddIntConstant(m, "AUPARSE_ESC_SHELL_QUOTE", AUPARSE_ESC_SHELL_QUOTE);
 
 #ifdef IS_PY3K
     return m;
