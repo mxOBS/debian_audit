@@ -1,12 +1,16 @@
-audit (1:2.4.3-1) UNRELEASED; urgency=medium
+audit (1:2.4.4-1) UNRELEASED; urgency=medium
 
   * New upstream release
+    - Fix log terminal emulator escape sequences handling (Closes: #795457
+      CVE-2015-5186)
+    - Internal libev updated to 4.20, this should fix the clang FTBFS (Closes:
+      #787066)
   * Install .pc files in the respective -dev packages
   * debian/control: Explicitly build-depends against dh-python
   * debian/rules: Unconditionally enable Aarch64 processor support now that
     it's an official port.
 
- -- Laurent Bigonville <bigon@debian.org>  Sat, 25 Jul 2015 22:20:06 +0200
+ -- Laurent Bigonville <bigon@debian.org>  Mon, 24 Aug 2015 23:00:13 +0200
 
 audit (1:2.4.2-1) unstable; urgency=medium
 
