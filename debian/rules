@@ -26,6 +26,8 @@ endif
 override_dh_auto_configure: debian/config-python-stamp $(PYVERS:%=debian/config-python%-stamp)
 debian/config-python-stamp:
 	dh_testdir
+# We should also have "--with-golang" but it's not available in all arch and
+# the golang binding package is arch:all anyway.
 	dh_auto_configure -- \
 		--sbindir=/sbin \
 		--libdir=/lib/${DEB_HOST_MULTIARCH} \
@@ -35,7 +37,6 @@ debian/config-python-stamp:
 		--with-prelude \
 		--with-libwrap \
 		--with-libcap-ng \
-		--with-golang \
 		--with-python \
 		--with-python3 \
 		--with-arm --with-aarch64 ${EXTRA_ARCH_TABLE}
