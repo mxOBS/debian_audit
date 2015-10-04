@@ -1,8 +1,8 @@
-audit (1:2.4.4-4) UNRELEASED; urgency=medium
+audit (1:2.4.4-4) unstable; urgency=medium
 
   * Build python3 bindings for all python3 versions (Closes: #800117)
 
- -- Laurent Bigonville <bigon@debian.org>  Sun, 04 Oct 2015 15:02:37 +0200
+ -- Laurent Bigonville <bigon@debian.org>  Sun, 04 Oct 2015 15:10:41 +0200
 
 audit (1:2.4.4-3) unstable; urgency=medium
 
