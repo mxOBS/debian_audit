@@ -9,7 +9,7 @@
 
 Summary: User space tools for 2.6 kernel auditing
 Name: audit
-Version: 2.4.4
+Version: 2.4.5
 Release: 1
 License: GPLv2+
 Group: System Environment/Daemons
@@ -208,6 +208,7 @@ fi
 %{_includedir}/libaudit.h
 %{_includedir}/auparse.h
 %{_includedir}/auparse-defs.h
+%{_datadir}/aclocal/audit.m4
 %{_libdir}/pkgconfig/audit.pc
 %{_libdir}/pkgconfig/auparse.pc
 %{_mandir}/man3/*
@@ -296,6 +297,6 @@ fi
 
 
 %changelog
-* Thu Jul 16 2015 Steve Grubb <sgrubb@redhat.com> 2.4.4-1
+* Fri Dec 18 2015 Steve Grubb <sgrubb@redhat.com> 2.4.5-1
 - New upstream release
 

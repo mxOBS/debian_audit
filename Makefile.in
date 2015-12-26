@@ -186,8 +186,8 @@ CSCOPE = cscope
 DIST_SUBDIRS = $(SUBDIRS)
 am__DIST_COMMON = $(srcdir)/Makefile.in $(srcdir)/config.h.in AUTHORS \
 	COPYING COPYING.LIB ChangeLog INSTALL NEWS README THANKS TODO \
-	compile config.guess config.sub depcomp install-sh ltmain.sh \
-	missing py-compile
+	compile config.guess config.sub install-sh ltmain.sh missing \
+	py-compile
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
 distdir = $(PACKAGE)-$(VERSION)
 top_distdir = $(distdir)
@@ -284,6 +284,7 @@ LIBWRAP_LIBS = @LIBWRAP_LIBS@
 LIPO = @LIPO@
 LN_S = @LN_S@
 LTLIBOBJS = @LTLIBOBJS@
+LT_SYS_LIBRARY_PATH = @LT_SYS_LIBRARY_PATH@
 MAKEINFO = @MAKEINFO@
 MANIFEST_TOOL = @MANIFEST_TOOL@
 MKDIR_P = @MKDIR_P@
@@ -387,7 +388,7 @@ top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 use_python3 = @use_python3@
 SUBDIRS = lib auparse src/mt src/libev src audisp tools bindings init.d \
-	docs
+	m4 docs
 
 EXTRA_DIST = ChangeLog AUTHORS NEWS README INSTALL audit.spec \
         COPYING COPYING.LIB \
