@@ -1206,6 +1206,12 @@ AUDIT_GRP_CHAUTHTOK = _audit.AUDIT_GRP_CHAUTHTOK
 _audit.AUDIT_MAC_CHECK_swigconstant(_audit)
 AUDIT_MAC_CHECK = _audit.AUDIT_MAC_CHECK
 
+_audit.AUDIT_ACCT_LOCK_swigconstant(_audit)
+AUDIT_ACCT_LOCK = _audit.AUDIT_ACCT_LOCK
+
+_audit.AUDIT_ACCT_UNLOCK_swigconstant(_audit)
+AUDIT_ACCT_UNLOCK = _audit.AUDIT_ACCT_UNLOCK
+
 _audit.AUDIT_FIRST_DAEMON_swigconstant(_audit)
 AUDIT_FIRST_DAEMON = _audit.AUDIT_FIRST_DAEMON
 

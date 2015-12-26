@@ -1,3 +1,13 @@
+2.4.5
+- Fix auditd disk flushing for data and sync modes
+- Fix auditctl to not show options not supported on older OS
+- Add audit.m4 file to aid adding support to other projects
+- Fix C99 inline function build issue
+- Add account lock and unlock event types
+- Change logging loophole check to geteuid()
+- Fix ausearch to not consider AUDIT_PROCTITLE events malformed (Burn Alting)
+- Fix ausearch to parse FEATURE_CHANGE events
+
 2.4.4
 - Fix linked list correctness in ausearch/report
 - Add more cross compile fixups (Clayton Shotwell)
