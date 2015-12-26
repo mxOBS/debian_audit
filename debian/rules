@@ -124,8 +124,8 @@ override_dh_installlogrotate:
 override_dh_installinit:
 	dh_installinit --restart-after-upgrade -- start 37 2 3 4 5 . stop 39 0 1 6 .
 
-override_dh_fixperms:
-	dh_fixperms
+override_dh_fixperms-arch:
+	dh_fixperms -a
 	#chmod o-wx debian/auditd/usr/bin/aulastlog
 	#chmod o-wx debian/auditd/sbin/auditctl
 	#chmod o-wx debian/auditd/sbin/auditd
