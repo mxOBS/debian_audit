@@ -1,10 +1,10 @@
-audit (1:2.4.5-1) UNRELEASED; urgency=medium
+audit (1:2.4.5-1) unstable; urgency=medium
 
   * New upstream release
   * Fix FTBFS when building arch-independent packages (Closes: #805996)
   * debian/libaudit-dev.install: Install audit.m4 file
 
- -- Laurent Bigonville <bigon@debian.org>  Sat, 26 Dec 2015 02:50:52 +0100
+ -- Laurent Bigonville <bigon@debian.org>  Sat, 26 Dec 2015 02:52:39 +0100
 
 audit (1:2.4.4-4) unstable; urgency=medium
 
