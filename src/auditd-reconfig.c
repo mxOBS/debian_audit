@@ -33,9 +33,13 @@
 #include "auditd-config.h"
 #include "private.h"
 
+/* externs we need to know about */
+extern void reconfig_ready(void);
+extern struct auditd_reply_list *reconfig_rep;
+
 /* This is the configuration manager code */
 static pthread_t config_thread;
-static pthread_mutex_t config_lock;
+static pthread_mutex_t config_lock; // Only let one run at a time
 static void *config_thread_main(void *arg);
 
 void init_config_manager(void)
@@ -107,17 +111,18 @@ static void *config_thread_main(void *arg)
 		memcpy(rep->reply.msg.data, &new_config, sizeof(new_config));
 		rep->reply.conf = (struct daemon_conf *)rep->reply.msg.data;
 		rep->reply.type = AUDIT_DAEMON_RECONFIG;
-		enqueue_event(rep);
+		reconfig_ready();
 	} else {
 		// need to send a failed event message
 		char txt[MAX_AUDIT_MESSAGE_LENGTH];
 		snprintf(txt, sizeof(txt),
-	    "reconfig aborted, sending auid=%u pid=%d subj=%s res=failed",
+	    "op=reconfigure state=no-change auid=%u pid=%d subj=%s res=failed",
 			rep->reply.signal_info->uid,
 			rep->reply.signal_info->pid,
 			(rep->reply.len > 24) ? 
 				rep->reply.signal_info->ctx : "?");
-		send_audit_event(AUDIT_DAEMON_CONFIG, txt);
+		// FIXME: need to figure out sending this
+		//send_audit_event(AUDIT_DAEMON_CONFIG, txt);
 		free_config(&new_config);
 		free(rep);
 	}

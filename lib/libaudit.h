@@ -1,5 +1,5 @@
 /* libaudit.h -- 
- * Copyright 2004-2015 Red Hat Inc., Durham, North Carolina.
+ * Copyright 2004-2016 Red Hat Inc., Durham, North Carolina.
  * All Rights Reserved.
  *
  * This library is free software; you can redistribute it and/or
@@ -104,6 +104,7 @@ extern "C" {
 #define AUDIT_DAEMON_RESUME	1206	/* Auditd should resume logging */
 #define AUDIT_DAEMON_ACCEPT	1207    /* Auditd accepted remote connection */
 #define AUDIT_DAEMON_CLOSE	1208    /* Auditd closed remote connection */
+#define AUDIT_DAEMON_ERR	1209    /* Auditd internal error */
 
 #define AUDIT_FIRST_EVENT	1300
 #define AUDIT_LAST_EVENT	1399
@@ -267,6 +268,17 @@ extern "C" {
 #define AUDIT_FILTER_MASK	0x07	/* Mask to get actual filter */
 #define AUDIT_FILTER_UNSET	0x80	/* This value means filter is unset */
 
+/* These defines describe what features are in the kernel */
+#ifndef AUDIT_FEATURE_BITMAP_BACKLOG_LIMIT
+#define AUDIT_FEATURE_BITMAP_BACKLOG_LIMIT      0x00000001
+#endif
+#ifndef AUDIT_FEATURE_BITMAP_BACKLOG_WAIT_TIME
+#define AUDIT_FEATURE_BITMAP_BACKLOG_WAIT_TIME  0x00000002
+#endif
+#ifndef AUDIT_FEATURE_BITMAP_EXECUTABLE_PATH
+#define AUDIT_FEATURE_BITMAP_EXECUTABLE_PATH    0x00000004
+#endif
+
 /* Defines for interfield comparison update */
 #ifndef AUDIT_OBJ_UID
 #define AUDIT_OBJ_UID  109
@@ -276,6 +288,9 @@ extern "C" {
 #endif
 #ifndef AUDIT_FIELD_COMPARE
 #define AUDIT_FIELD_COMPARE 111
+#endif
+#ifndef AUDIT_EXE
+#define AUDIT_EXE 112
 #endif
 
 #ifndef AUDIT_COMPARE_UID_TO_OBJ_UID
@@ -504,6 +519,7 @@ extern int audit_request_status(int fd);
 extern int audit_is_enabled(int fd);
 extern int get_auditfail_action(auditfail_t *failmode);
 extern int audit_request_features(int fd);
+extern uint32_t audit_get_features(void);
 
 /* AUDIT_SET */
 typedef enum { WAIT_NO, WAIT_YES } rep_wait_t;
@@ -583,4 +599,3 @@ extern void audit_rule_free_data(struct audit_rule_data *rule);
 #endif
 
 #endif
-

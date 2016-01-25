@@ -1233,6 +1233,9 @@ AUDIT_DAEMON_ACCEPT = _audit.AUDIT_DAEMON_ACCEPT
 _audit.AUDIT_DAEMON_CLOSE_swigconstant(_audit)
 AUDIT_DAEMON_CLOSE = _audit.AUDIT_DAEMON_CLOSE
 
+_audit.AUDIT_DAEMON_ERR_swigconstant(_audit)
+AUDIT_DAEMON_ERR = _audit.AUDIT_DAEMON_ERR
+
 _audit.AUDIT_FIRST_EVENT_swigconstant(_audit)
 AUDIT_FIRST_EVENT = _audit.AUDIT_FIRST_EVENT
 
@@ -1496,6 +1499,12 @@ AUDIT_FILTER_MASK = _audit.AUDIT_FILTER_MASK
 
 _audit.AUDIT_FILTER_UNSET_swigconstant(_audit)
 AUDIT_FILTER_UNSET = _audit.AUDIT_FILTER_UNSET
+
+_audit.AUDIT_FEATURE_BITMAP_EXECUTABLE_PATH_swigconstant(_audit)
+AUDIT_FEATURE_BITMAP_EXECUTABLE_PATH = _audit.AUDIT_FEATURE_BITMAP_EXECUTABLE_PATH
+
+_audit.AUDIT_EXE_swigconstant(_audit)
+AUDIT_EXE = _audit.AUDIT_EXE
 
 _audit.EM_ARM_swigconstant(_audit)
 EM_ARM = _audit.EM_ARM
@@ -1851,6 +1860,10 @@ get_auditfail_action = _audit.get_auditfail_action
 def audit_request_features(fd):
     return _audit.audit_request_features(fd)
 audit_request_features = _audit.audit_request_features
+
+def audit_get_features():
+    return _audit.audit_get_features()
+audit_get_features = _audit.audit_get_features
 
 _audit.WAIT_NO_swigconstant(_audit)
 WAIT_NO = _audit.WAIT_NO

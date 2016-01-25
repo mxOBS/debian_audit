@@ -15,7 +15,7 @@
 @SET_MAKE@
 
 # Makefile.am -- 
-# Copyright 2006-08,2014-15 Red Hat Inc., Durham, North Carolina.
+# Copyright 2006-08,2014-16 Red Hat Inc., Durham, North Carolina.
 # All Rights Reserved.
 #
 # This library is free software; you can redistribute it and/or
@@ -110,7 +110,7 @@ POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
 target_triplet = @target@
-check_PROGRAMS = auparse_test$(EXEEXT)
+check_PROGRAMS = auparse_test$(EXEEXT) auparselol_test$(EXEEXT)
 subdir = auparse/test
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/m4/ax_prog_cc_for_build.m4 \
@@ -136,6 +136,14 @@ am__v_lt_1 =
 auparse_test_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
 	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
 	$(auparse_test_LDFLAGS) $(LDFLAGS) -o $@
+am_auparselol_test_OBJECTS = auparselol_test.$(OBJEXT)
+auparselol_test_OBJECTS = $(am_auparselol_test_OBJECTS)
+auparselol_test_DEPENDENCIES = ${top_builddir}/auparse/libauparse.la \
+	${top_builddir}/lib/libaudit.la
+auparselol_test_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC \
+	$(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(CCLD) \
+	$(AM_CFLAGS) $(CFLAGS) $(auparselol_test_LDFLAGS) $(LDFLAGS) \
+	-o $@
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
 am__v_P_0 = false
@@ -169,8 +177,8 @@ AM_V_CCLD = $(am__v_CCLD_@AM_V@)
 am__v_CCLD_ = $(am__v_CCLD_@AM_DEFAULT_V@)
 am__v_CCLD_0 = @echo "  CCLD    " $@;
 am__v_CCLD_1 = 
-SOURCES = $(auparse_test_SOURCES)
-DIST_SOURCES = $(auparse_test_SOURCES)
+SOURCES = $(auparse_test_SOURCES) $(auparselol_test_SOURCES)
+DIST_SOURCES = $(auparse_test_SOURCES) $(auparselol_test_SOURCES)
 am__can_run_installinfo = \
   case $$AM_UPDATE_INFO_DIR in \
     n|no|NO) false;; \
@@ -357,11 +365,16 @@ use_python3 = @use_python3@
 CONFIG_CLEAN_FILES = *.loT *.rej *.orig *.cur
 AUTOMAKE_OPTIONS = no-dependencies
 dist_check_SCRIPTS = auparse_test.py
-EXTRA_DIST = auparse_test.ref auparse_test.ref.py test.log test2.log
+EXTRA_DIST = auparse_test.ref auparse_test.ref.py test.log test2.log test3.log auditd_raw.sed
 AM_CPPFLAGS = -I${top_srcdir}/auparse -I${top_srcdir}/lib
 auparse_test_SOURCES = auparse_test.c
 auparse_test_LDFLAGS = -static
 auparse_test_LDADD = ${top_builddir}/auparse/libauparse.la \
+	${top_builddir}/lib/libaudit.la
+
+auparselol_test_SOURCES = auparselol_test.c
+auparselol_test_LDFLAGS = -static
+auparselol_test_LDADD = ${top_builddir}/auparse/libauparse.la \
 	${top_builddir}/lib/libaudit.la
 
 drop_srcdir = sed 's,$(srcdir)/test,test,'
@@ -411,6 +424,10 @@ clean-checkPROGRAMS:
 auparse_test$(EXEEXT): $(auparse_test_OBJECTS) $(auparse_test_DEPENDENCIES) $(EXTRA_auparse_test_DEPENDENCIES) 
 	@rm -f auparse_test$(EXEEXT)
 	$(AM_V_CCLD)$(auparse_test_LINK) $(auparse_test_OBJECTS) $(auparse_test_LDADD) $(LIBS)
+
+auparselol_test$(EXEEXT): $(auparselol_test_OBJECTS) $(auparselol_test_DEPENDENCIES) $(EXTRA_auparselol_test_DEPENDENCIES) 
+	@rm -f auparselol_test$(EXEEXT)
+	$(AM_V_CCLD)$(auparselol_test_LINK) $(auparselol_test_OBJECTS) $(auparselol_test_LDADD) $(LIBS)
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
@@ -637,12 +654,15 @@ uninstall-am:
 .PRECIOUS: Makefile
 
 
-check: auparse_test
+check: auparse_test auparselol_test
 	test "$(top_srcdir)" = "$(top_builddir)" || \
 			cp $(top_srcdir)/auparse/test/test*.log .
 	LC_ALL=C \
 	./auparse_test > auparse_test.cur
 	diff -u $(top_srcdir)/auparse/test/auparse_test.ref auparse_test.cur
+	./auparselol_test -f test3.log --check | sort > auparse_test.cur
+	sed -f $(top_srcdir)/auparse/test/auditd_raw.sed test3.log | sort > auparse_test.raw
+	diff -u auparse_test.raw auparse_test.cur
 @HAVE_PYTHON_TRUE@	cp ${top_builddir}/bindings/swig/python/.libs/_audit.so ${top_builddir}/bindings/swig/python
 @HAVE_PYTHON_TRUE@	PYTHONPATH=${top_builddir}/bindings/python/python2/.libs/:${top_builddir}/bindings/swig/python:${top_builddir}/bindings/swig/python/.libs \
 @HAVE_PYTHON_TRUE@	LD_LIBRARY_PATH=${top_builddir}/auparse/.libs \
@@ -651,9 +671,12 @@ check: auparse_test
 @HAVE_PYTHON_TRUE@	diff -u $(top_srcdir)/auparse/test/auparse_test.ref.py auparse_test.cur
 	echo -e "===================\nAuparse Test Passes\n==================="
 
-diffcheck: auparse_test
+diffcheck: auparse_test auparselol_test
 	./auparse_test > auparse_test.cur
 	diff -u $(srcdir)/auparse_test.ref auparse_test.cur
+	./auparselol_test -f test3.log --check | sort > auparse_test.cur
+	sed -f ./auditd_raw.sed test3.log | sort > auparse_test.raw
+	diff -u auparse_test.raw auparse_test.cur
 
 memcheck: auparse_test
 	valgrind --leak-check=yes --show-reachable=yes ./auparse_test 
@@ -679,6 +702,7 @@ pymemcheck: auparse_test.py
 
 clean-generic:
 	$(RM) *.cur
+	$(RM) auparse_test.raw
 @HAVE_PYTHON_TRUE@	$(RM) ${top_builddir}/bindings/swig/python/_audit.so
 	test "$(top_srcdir)" = "$(top_builddir)" || $(RM) test*.log
 
