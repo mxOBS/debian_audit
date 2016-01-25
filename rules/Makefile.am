@@ -1,5 +1,5 @@
-# Makefile.am -- 
-# Copyright 2004-08,2015-16 Red Hat Inc., Durham, North Carolina.
+# Makefile.am --
+# Copyright 2015 Red Hat Inc., Durham, North Carolina.
 # All Rights Reserved.
 #
 # This program is free software; you can redistribute it and/or modify
@@ -18,18 +18,14 @@
 #
 # Authors:
 #   Steve Grubb <sgrubb@redhat.com>
-#   Rickard E. (Rik) Faith <faith@redhat.com>
 #
 
-SUBDIRS = lib auparse src/libev src audisp tools bindings init.d \
-	m4 docs rules
-EXTRA_DIST = ChangeLog AUTHORS NEWS README INSTALL audit.spec \
-        COPYING COPYING.LIB \
-	contrib/skeleton.c contrib/avc_snap \
-	contrib/plugin/Makefile contrib/plugin/audisp-example.c \
-	contrib/plugin/audisp-example.conf
-CONFIG_CLEAN_FILES = debug*.list config/*
+CONFIG_CLEAN_FILES = *.rej *.orig
 
-clean-generic:
-	rm -rf autom4te*.cache 
-	rm -f *.rej *.orig *.lang
+EXTRA_DIST = 10-base-config.rules 10-no-audit.rules 11-loginuid.rules \
+20-dont-audit.rules 21-no32bit.rules 22-power-abuse.rules \
+30-nispom.rules 30-stig.rules 31-privileged.rules \
+40-local.rules 41-containers.rules 42-injection.rules 43-module-load.rules \
+50-einval.rules 51-networking.rules \
+99-finalize.rules README-rules
+ 

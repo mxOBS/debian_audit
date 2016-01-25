@@ -122,7 +122,7 @@ am__aclocal_m4_deps = $(top_srcdir)/m4/ax_prog_cc_for_build.m4 \
 am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
 DIST_COMMON = $(srcdir)/Makefile.am $(dist_audit_DATA) \
-	$(dist_auditr_DATA) $(am__DIST_COMMON)
+	$(am__DIST_COMMON)
 mkinstalldirs = $(install_sh) -d
 CONFIG_HEADER = $(top_builddir)/config.h
 CONFIG_CLEAN_VPATH_FILES =
@@ -153,8 +153,7 @@ am__uninstall_files_from_dir = { \
     || { echo " ( cd '$$dir' && rm -f" $$files ")"; \
          $(am__cd) "$$dir" && rm -f $$files; }; \
   }
-am__installdirs = "$(DESTDIR)$(sbindir)" "$(DESTDIR)$(auditdir)" \
-	"$(DESTDIR)$(auditrdir)"
+am__installdirs = "$(DESTDIR)$(sbindir)" "$(DESTDIR)$(auditdir)"
 SCRIPTS = $(sbin_SCRIPTS)
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
@@ -175,7 +174,7 @@ am__can_run_installinfo = \
     n|no|NO) false;; \
     *) (install-info --version) >/dev/null 2>&1;; \
   esac
-DATA = $(dist_audit_DATA) $(dist_auditr_DATA)
+DATA = $(dist_audit_DATA)
 am__tagged_files = $(HEADERS) $(SOURCES) $(TAGS_FILES) $(LISP)
 am__DIST_COMMON = $(srcdir)/Makefile.in
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
@@ -338,7 +337,7 @@ top_srcdir = @top_srcdir@
 use_python3 = @use_python3@
 CONFIG_CLEAN_FILES = *.rej *.orig
 EXTRA_DIST = auditd.init auditd.service auditd.sysconfig auditd.conf \
-	audit.rules auditd.cron libaudit.conf audispd.conf auditd.condrestart \
+	auditd.cron libaudit.conf audispd.conf auditd.condrestart \
 	auditd.restart auditd.resume auditd.rotate auditd.stop augenrules
 
 libconfig = libaudit.conf
@@ -351,7 +350,6 @@ dispconfigdir = $(sysconfdir)/audisp
 auditdir = $(sysconfdir)/audit
 auditrdir = $(auditdir)/rules.d
 dist_audit_DATA = auditd.conf
-dist_auditr_DATA = audit.rules
 sbin_SCRIPTS = augenrules
 all: all-am
 
@@ -447,27 +445,6 @@ uninstall-dist_auditDATA:
 	@list='$(dist_audit_DATA)'; test -n "$(auditdir)" || list=; \
 	files=`for p in $$list; do echo $$p; done | sed -e 's|^.*/||'`; \
 	dir='$(DESTDIR)$(auditdir)'; $(am__uninstall_files_from_dir)
-install-dist_auditrDATA: $(dist_auditr_DATA)
-	@$(NORMAL_INSTALL)
-	@list='$(dist_auditr_DATA)'; test -n "$(auditrdir)" || list=; \
-	if test -n "$$list"; then \
-	  echo " $(MKDIR_P) '$(DESTDIR)$(auditrdir)'"; \
-	  $(MKDIR_P) "$(DESTDIR)$(auditrdir)" || exit 1; \
-	fi; \
-	for p in $$list; do \
-	  if test -f "$$p"; then d=; else d="$(srcdir)/"; fi; \
-	  echo "$$d$$p"; \
-	done | $(am__base_list) | \
-	while read files; do \
-	  echo " $(INSTALL_DATA) $$files '$(DESTDIR)$(auditrdir)'"; \
-	  $(INSTALL_DATA) $$files "$(DESTDIR)$(auditrdir)" || exit $$?; \
-	done
-
-uninstall-dist_auditrDATA:
-	@$(NORMAL_UNINSTALL)
-	@list='$(dist_auditr_DATA)'; test -n "$(auditrdir)" || list=; \
-	files=`for p in $$list; do echo $$p; done | sed -e 's|^.*/||'`; \
-	dir='$(DESTDIR)$(auditrdir)'; $(am__uninstall_files_from_dir)
 tags TAGS:
 
 ctags CTAGS:
@@ -509,7 +486,7 @@ check-am: all-am
 check: check-am
 all-am: Makefile $(SCRIPTS) $(DATA)
 installdirs:
-	for dir in "$(DESTDIR)$(sbindir)" "$(DESTDIR)$(auditdir)" "$(DESTDIR)$(auditrdir)"; do \
+	for dir in "$(DESTDIR)$(sbindir)" "$(DESTDIR)$(auditdir)"; do \
 	  test -z "$$dir" || $(MKDIR_P) "$$dir"; \
 	done
 install: install-am
@@ -562,7 +539,7 @@ info: info-am
 
 info-am:
 
-install-data-am: install-dist_auditDATA install-dist_auditrDATA
+install-data-am: install-dist_auditDATA
 	@$(NORMAL_INSTALL)
 	$(MAKE) $(AM_MAKEFLAGS) install-data-hook
 install-dvi: install-dvi-am
@@ -608,8 +585,7 @@ ps: ps-am
 
 ps-am:
 
-uninstall-am: uninstall-dist_auditDATA uninstall-dist_auditrDATA \
-	uninstall-sbinSCRIPTS
+uninstall-am: uninstall-dist_auditDATA uninstall-sbinSCRIPTS
 	@$(NORMAL_INSTALL)
 	$(MAKE) $(AM_MAKEFLAGS) uninstall-hook
 .MAKE: install-am install-data-am install-exec-am install-strip \
@@ -619,17 +595,16 @@ uninstall-am: uninstall-dist_auditDATA uninstall-dist_auditrDATA \
 	cscopelist-am ctags-am distclean distclean-generic \
 	distclean-libtool distdir dvi dvi-am html html-am info info-am \
 	install install-am install-data install-data-am \
-	install-data-hook install-dist_auditDATA \
-	install-dist_auditrDATA install-dvi install-dvi-am \
-	install-exec install-exec-am install-exec-hook install-html \
-	install-html-am install-info install-info-am install-man \
-	install-pdf install-pdf-am install-ps install-ps-am \
-	install-sbinSCRIPTS install-strip installcheck installcheck-am \
-	installdirs maintainer-clean maintainer-clean-generic \
-	mostlyclean mostlyclean-generic mostlyclean-libtool pdf pdf-am \
-	ps ps-am tags-am uninstall uninstall-am \
-	uninstall-dist_auditDATA uninstall-dist_auditrDATA \
-	uninstall-hook uninstall-sbinSCRIPTS
+	install-data-hook install-dist_auditDATA install-dvi \
+	install-dvi-am install-exec install-exec-am install-exec-hook \
+	install-html install-html-am install-info install-info-am \
+	install-man install-pdf install-pdf-am install-ps \
+	install-ps-am install-sbinSCRIPTS install-strip installcheck \
+	installcheck-am installdirs maintainer-clean \
+	maintainer-clean-generic mostlyclean mostlyclean-generic \
+	mostlyclean-libtool pdf pdf-am ps ps-am tags-am uninstall \
+	uninstall-am uninstall-dist_auditDATA uninstall-hook \
+	uninstall-sbinSCRIPTS
 
 .PRECIOUS: Makefile
 
@@ -642,7 +617,7 @@ install-data-hook:
 install-exec-hook:
 @ENABLE_SYSTEMD_TRUE@	mkdir -p ${DESTDIR}${initdir}
 @ENABLE_SYSTEMD_TRUE@	mkdir -p ${DESTDIR}${legacydir}
-@ENABLE_SYSTEMD_TRUE@	$(INSTALL_SCRIPT) -D -m 640 ${srcdir}/auditd.service ${DESTDIR}${initdir}
+@ENABLE_SYSTEMD_TRUE@	$(INSTALL_SCRIPT) -D -m 644 ${srcdir}/auditd.service ${DESTDIR}${initdir}
 @ENABLE_SYSTEMD_TRUE@	$(INSTALL_SCRIPT) -D -m 750 ${srcdir}/auditd.rotate ${DESTDIR}${legacydir}/rotate
 @ENABLE_SYSTEMD_TRUE@	$(INSTALL_SCRIPT) -D -m 750 ${srcdir}/auditd.resume ${DESTDIR}${legacydir}/resume
 @ENABLE_SYSTEMD_TRUE@	$(INSTALL_SCRIPT) -D -m 750 ${srcdir}/auditd.stop ${DESTDIR}${legacydir}/stop

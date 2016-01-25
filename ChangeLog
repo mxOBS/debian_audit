@@ -1,3 +1,16 @@
+2.5
+- Make augenrules the default method to load audit rules
+- Put rules in its own directory and break out rules into groups
+- Have auditd do a fsync before closing log
+- Make default flush setting larger
+- In auparse. terminate the generated strings (Burn Alting)
+- In auditd, add incremental_async flushing mode
+- Clean up dangling fields in DAEMON events
+- Add audit by process name support to auditctl (Richard Briggs)
+- Relax permissions on systemd files
+- Fix auparse to handle interlaced events (Burn Alting)
+- Allow more syslog facilities in audispd-syslog (Aleksander Adamowski)
+
 2.4.5
 - Fix auditd disk flushing for data and sync modes
 - Fix auditctl to not show options not supported on older OS

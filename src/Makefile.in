@@ -15,7 +15,7 @@
 @SET_MAKE@
 
 # Makefile.am-- 
-# Copyright 2004-2006, 2008,2011-15 Red Hat Inc., Durham, North Carolina.
+# Copyright 2004-2006, 2008,2011-16 Red Hat Inc., Durham, North Carolina.
 # All Rights Reserved.
 #
 # This program is free software; you can redistribute it and/or modify
@@ -455,8 +455,8 @@ auditd_SOURCES = auditd.c auditd-event.c auditd-config.c \
 	$(am__append_1)
 auditd_CFLAGS = -fPIE -DPIE -g -D_REENTRANT -D_GNU_SOURCE -fno-strict-aliasing -pthread
 auditd_LDFLAGS = -pie -Wl,-z,relro -Wl,-z,now
-auditd_DEPENDENCIES = mt/libauditmt.a libev/libev.a
-auditd_LDADD = @LIBWRAP_LIBS@ -Llibev -lev -Lmt -lauditmt -lpthread -lrt -lm $(gss_libs)
+auditd_DEPENDENCIES = libev/libev.a
+auditd_LDADD = @LIBWRAP_LIBS@ -Llibev -lev -L${top_builddir}/lib -laudit -lpthread -lrt -lm $(gss_libs)
 auditctl_SOURCES = auditctl.c auditctl-llist.c delete_all.c auditctl-listing.c
 auditctl_CFLAGS = -fPIE -DPIE -g -D_GNU_SOURCE
 auditctl_LDFLAGS = -pie -Wl,-z,relro -Wl,-z,now
@@ -938,8 +938,6 @@ uninstall-am: uninstall-sbinPROGRAMS
 .PRECIOUS: Makefile
 
 
-mt/libauditmt.a:
-	make -C mt
 libev/libev.a:
 	make -C libev
 
