@@ -15,7 +15,7 @@
 @SET_MAKE@
 
 # Makefile.am -- 
-# Copyright 2006-08,2011-15 Red Hat Inc., Durham, North Carolina.
+# Copyright 2006-08,2011-16 Red Hat Inc., Durham, North Carolina.
 # All Rights Reserved.
 #
 # This library is free software; you can redistribute it and/or
@@ -132,7 +132,8 @@ noinst_PROGRAMS = gen_accesstabs_h$(EXEEXT) gen_captabs_h$(EXEEXT) \
 	gen_sockoptnametabs_h$(EXEEXT) gen_socktabs_h$(EXEEXT) \
 	gen_sockleveltabs_h$(EXEEXT) gen_socktypetabs_h$(EXEEXT) \
 	gen_tcpoptnametabs_h$(EXEEXT) gen_typetabs_h$(EXEEXT) \
-	gen_umounttabs_h$(EXEEXT)
+	gen_umounttabs_h$(EXEEXT) gen_inethooktabs_h$(EXEEXT) \
+	gen_netactiontabs_h$(EXEEXT)
 subdir = auparse
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/m4/ax_prog_cc_for_build.m4 \
@@ -255,6 +256,14 @@ gen_icmptypetabs_h_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC \
 	$(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(CCLD) \
 	$(gen_icmptypetabs_h_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) \
 	$(LDFLAGS) -o $@
+am_gen_inethooktabs_h_OBJECTS =  \
+	gen_inethooktabs_h-gen_tables.$(OBJEXT)
+gen_inethooktabs_h_OBJECTS = $(am_gen_inethooktabs_h_OBJECTS)
+gen_inethooktabs_h_LDADD = $(LDADD)
+gen_inethooktabs_h_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC \
+	$(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(CCLD) \
+	$(gen_inethooktabs_h_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) \
+	$(LDFLAGS) -o $@
 am_gen_ioctlreqtabs_h_OBJECTS =  \
 	gen_ioctlreqtabs_h-gen_tables.$(OBJEXT)
 gen_ioctlreqtabs_h_OBJECTS = $(am_gen_ioctlreqtabs_h_OBJECTS)
@@ -306,6 +315,14 @@ gen_mounttabs_h_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC \
 	$(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(CCLD) \
 	$(gen_mounttabs_h_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) $(LDFLAGS) \
 	-o $@
+am_gen_netactiontabs_h_OBJECTS =  \
+	gen_netactiontabs_h-gen_tables.$(OBJEXT)
+gen_netactiontabs_h_OBJECTS = $(am_gen_netactiontabs_h_OBJECTS)
+gen_netactiontabs_h_LDADD = $(LDADD)
+gen_netactiontabs_h_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC \
+	$(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(CCLD) \
+	$(gen_netactiontabs_h_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) \
+	$(LDFLAGS) -o $@
 am_gen_nfprototabs_h_OBJECTS = gen_nfprototabs_h-gen_tables.$(OBJEXT)
 gen_nfprototabs_h_OBJECTS = $(am_gen_nfprototabs_h_OBJECTS)
 gen_nfprototabs_h_LDADD = $(LDADD)
@@ -498,10 +515,11 @@ SOURCES = $(libauparse_la_SOURCES) $(nodist_libauparse_la_SOURCES) \
 	$(gen_clock_h_SOURCES) $(gen_clone_flagtabs_h_SOURCES) \
 	$(gen_epoll_ctls_h_SOURCES) $(gen_famtabs_h_SOURCES) \
 	$(gen_fcntl_cmdtabs_h_SOURCES) $(gen_flagtabs_h_SOURCES) \
-	$(gen_icmptypetabs_h_SOURCES) $(gen_ioctlreqtabs_h_SOURCES) \
-	$(gen_ip6optnametabs_h_SOURCES) $(gen_ipccmdtabs_h_SOURCES) \
-	$(gen_ipctabs_h_SOURCES) $(gen_ipoptnametabs_h_SOURCES) \
-	$(gen_mmaptabs_h_SOURCES) $(gen_mounttabs_h_SOURCES) \
+	$(gen_icmptypetabs_h_SOURCES) $(gen_inethooktabs_h_SOURCES) \
+	$(gen_ioctlreqtabs_h_SOURCES) $(gen_ip6optnametabs_h_SOURCES) \
+	$(gen_ipccmdtabs_h_SOURCES) $(gen_ipctabs_h_SOURCES) \
+	$(gen_ipoptnametabs_h_SOURCES) $(gen_mmaptabs_h_SOURCES) \
+	$(gen_mounttabs_h_SOURCES) $(gen_netactiontabs_h_SOURCES) \
 	$(gen_nfprototabs_h_SOURCES) $(gen_open_flagtabs_h_SOURCES) \
 	$(gen_persontabs_h_SOURCES) $(gen_pktoptnametabs_h_SOURCES) \
 	$(gen_prctl_opttabs_h_SOURCES) $(gen_prottabs_h_SOURCES) \
@@ -518,10 +536,11 @@ DIST_SOURCES = $(libauparse_la_SOURCES) $(gen_accesstabs_h_SOURCES) \
 	$(gen_clone_flagtabs_h_SOURCES) $(gen_epoll_ctls_h_SOURCES) \
 	$(gen_famtabs_h_SOURCES) $(gen_fcntl_cmdtabs_h_SOURCES) \
 	$(gen_flagtabs_h_SOURCES) $(gen_icmptypetabs_h_SOURCES) \
-	$(gen_ioctlreqtabs_h_SOURCES) $(gen_ip6optnametabs_h_SOURCES) \
-	$(gen_ipccmdtabs_h_SOURCES) $(gen_ipctabs_h_SOURCES) \
-	$(gen_ipoptnametabs_h_SOURCES) $(gen_mmaptabs_h_SOURCES) \
-	$(gen_mounttabs_h_SOURCES) $(gen_nfprototabs_h_SOURCES) \
+	$(gen_inethooktabs_h_SOURCES) $(gen_ioctlreqtabs_h_SOURCES) \
+	$(gen_ip6optnametabs_h_SOURCES) $(gen_ipccmdtabs_h_SOURCES) \
+	$(gen_ipctabs_h_SOURCES) $(gen_ipoptnametabs_h_SOURCES) \
+	$(gen_mmaptabs_h_SOURCES) $(gen_mounttabs_h_SOURCES) \
+	$(gen_netactiontabs_h_SOURCES) $(gen_nfprototabs_h_SOURCES) \
 	$(gen_open_flagtabs_h_SOURCES) $(gen_persontabs_h_SOURCES) \
 	$(gen_pktoptnametabs_h_SOURCES) $(gen_prctl_opttabs_h_SOURCES) \
 	$(gen_prottabs_h_SOURCES) $(gen_ptracetabs_h_SOURCES) \
@@ -718,7 +737,6 @@ datarootdir = @datarootdir@
 docdir = @docdir@
 dvidir = @dvidir@
 exec_prefix = @exec_prefix@
-gobind_dir = @gobind_dir@
 gss_libs = @gss_libs@
 host = @host@
 host_alias = @host_alias@
@@ -791,7 +809,8 @@ BUILT_SOURCES = accesstabs.h captabs.h clocktabs.h clone-flagtabs.h \
 	rlimittabs.h recvtabs.h schedtabs.h seccomptabs.h \
 	seektabs.h shm_modetabs.h signaltabs.h sockoptnametabs.h \
 	socktabs.h sockleveltabs.h socktypetabs.h \
-	tcpoptnametabs.h typetabs.h umounttabs.h
+	tcpoptnametabs.h typetabs.h umounttabs.h inethooktabs.h \
+	netactiontabs.h
 
 gen_accesstabs_h_SOURCES = ../lib/gen_tables.c ../lib/gen_tables.h accesstab.h
 gen_accesstabs_h_CFLAGS = '-DTABLE_H="accesstab.h"'
@@ -874,6 +893,10 @@ gen_typetabs_h_SOURCES = ../lib/gen_tables.c ../lib/gen_tables.h typetab.h
 gen_typetabs_h_CFLAGS = '-DTABLE_H="typetab.h"'
 gen_umounttabs_h_SOURCES = ../lib/gen_tables.c ../lib/gen_tables.h umounttab.h
 gen_umounttabs_h_CFLAGS = '-DTABLE_H="umounttab.h"'
+gen_inethooktabs_h_SOURCES = ../lib/gen_tables.c ../lib/gen_tables.h inethooktab.h
+gen_inethooktabs_h_CFLAGS = '-DTABLE_H="inethooktab.h"'
+gen_netactiontabs_h_SOURCES = ../lib/gen_tables.c ../lib/gen_tables.h netactiontab.h
+gen_netactiontabs_h_CFLAGS = '-DTABLE_H="netactiontab.h"'
 all: $(BUILT_SOURCES)
 	$(MAKE) $(AM_MAKEFLAGS) all-recursive
 
@@ -994,6 +1017,10 @@ gen_icmptypetabs_h$(EXEEXT): $(gen_icmptypetabs_h_OBJECTS) $(gen_icmptypetabs_h_
 	@rm -f gen_icmptypetabs_h$(EXEEXT)
 	$(AM_V_CCLD)$(gen_icmptypetabs_h_LINK) $(gen_icmptypetabs_h_OBJECTS) $(gen_icmptypetabs_h_LDADD) $(LIBS)
 
+gen_inethooktabs_h$(EXEEXT): $(gen_inethooktabs_h_OBJECTS) $(gen_inethooktabs_h_DEPENDENCIES) $(EXTRA_gen_inethooktabs_h_DEPENDENCIES) 
+	@rm -f gen_inethooktabs_h$(EXEEXT)
+	$(AM_V_CCLD)$(gen_inethooktabs_h_LINK) $(gen_inethooktabs_h_OBJECTS) $(gen_inethooktabs_h_LDADD) $(LIBS)
+
 gen_ioctlreqtabs_h$(EXEEXT): $(gen_ioctlreqtabs_h_OBJECTS) $(gen_ioctlreqtabs_h_DEPENDENCIES) $(EXTRA_gen_ioctlreqtabs_h_DEPENDENCIES) 
 	@rm -f gen_ioctlreqtabs_h$(EXEEXT)
 	$(AM_V_CCLD)$(gen_ioctlreqtabs_h_LINK) $(gen_ioctlreqtabs_h_OBJECTS) $(gen_ioctlreqtabs_h_LDADD) $(LIBS)
@@ -1021,6 +1048,10 @@ gen_mmaptabs_h$(EXEEXT): $(gen_mmaptabs_h_OBJECTS) $(gen_mmaptabs_h_DEPENDENCIES
 gen_mounttabs_h$(EXEEXT): $(gen_mounttabs_h_OBJECTS) $(gen_mounttabs_h_DEPENDENCIES) $(EXTRA_gen_mounttabs_h_DEPENDENCIES) 
 	@rm -f gen_mounttabs_h$(EXEEXT)
 	$(AM_V_CCLD)$(gen_mounttabs_h_LINK) $(gen_mounttabs_h_OBJECTS) $(gen_mounttabs_h_LDADD) $(LIBS)
+
+gen_netactiontabs_h$(EXEEXT): $(gen_netactiontabs_h_OBJECTS) $(gen_netactiontabs_h_DEPENDENCIES) $(EXTRA_gen_netactiontabs_h_DEPENDENCIES) 
+	@rm -f gen_netactiontabs_h$(EXEEXT)
+	$(AM_V_CCLD)$(gen_netactiontabs_h_LINK) $(gen_netactiontabs_h_OBJECTS) $(gen_netactiontabs_h_LDADD) $(LIBS)
 
 gen_nfprototabs_h$(EXEEXT): $(gen_nfprototabs_h_OBJECTS) $(gen_nfprototabs_h_DEPENDENCIES) $(EXTRA_gen_nfprototabs_h_DEPENDENCIES) 
 	@rm -f gen_nfprototabs_h$(EXEEXT)
@@ -1126,6 +1157,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/gen_fcntl_cmdtabs_h-gen_tables.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/gen_flagtabs_h-gen_tables.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/gen_icmptypetabs_h-gen_tables.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/gen_inethooktabs_h-gen_tables.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/gen_ioctlreqtabs_h-gen_tables.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/gen_ip6optnametabs_h-gen_tables.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/gen_ipccmdtabs_h-gen_tables.Po@am__quote@
@@ -1133,6 +1165,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/gen_ipoptnametabs_h-gen_tables.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/gen_mmaptabs_h-gen_tables.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/gen_mounttabs_h-gen_tables.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/gen_netactiontabs_h-gen_tables.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/gen_nfprototabs_h-gen_tables.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/gen_open_flagtabs_h-gen_tables.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/gen_persontabs_h-gen_tables.Po@am__quote@
@@ -1307,6 +1340,20 @@ gen_icmptypetabs_h-gen_tables.obj: ../lib/gen_tables.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(gen_icmptypetabs_h_CFLAGS) $(CFLAGS) -c -o gen_icmptypetabs_h-gen_tables.obj `if test -f '../lib/gen_tables.c'; then $(CYGPATH_W) '../lib/gen_tables.c'; else $(CYGPATH_W) '$(srcdir)/../lib/gen_tables.c'; fi`
 
+gen_inethooktabs_h-gen_tables.o: ../lib/gen_tables.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(gen_inethooktabs_h_CFLAGS) $(CFLAGS) -MT gen_inethooktabs_h-gen_tables.o -MD -MP -MF $(DEPDIR)/gen_inethooktabs_h-gen_tables.Tpo -c -o gen_inethooktabs_h-gen_tables.o `test -f '../lib/gen_tables.c' || echo '$(srcdir)/'`../lib/gen_tables.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/gen_inethooktabs_h-gen_tables.Tpo $(DEPDIR)/gen_inethooktabs_h-gen_tables.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='../lib/gen_tables.c' object='gen_inethooktabs_h-gen_tables.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(gen_inethooktabs_h_CFLAGS) $(CFLAGS) -c -o gen_inethooktabs_h-gen_tables.o `test -f '../lib/gen_tables.c' || echo '$(srcdir)/'`../lib/gen_tables.c
+
+gen_inethooktabs_h-gen_tables.obj: ../lib/gen_tables.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(gen_inethooktabs_h_CFLAGS) $(CFLAGS) -MT gen_inethooktabs_h-gen_tables.obj -MD -MP -MF $(DEPDIR)/gen_inethooktabs_h-gen_tables.Tpo -c -o gen_inethooktabs_h-gen_tables.obj `if test -f '../lib/gen_tables.c'; then $(CYGPATH_W) '../lib/gen_tables.c'; else $(CYGPATH_W) '$(srcdir)/../lib/gen_tables.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/gen_inethooktabs_h-gen_tables.Tpo $(DEPDIR)/gen_inethooktabs_h-gen_tables.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='../lib/gen_tables.c' object='gen_inethooktabs_h-gen_tables.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(gen_inethooktabs_h_CFLAGS) $(CFLAGS) -c -o gen_inethooktabs_h-gen_tables.obj `if test -f '../lib/gen_tables.c'; then $(CYGPATH_W) '../lib/gen_tables.c'; else $(CYGPATH_W) '$(srcdir)/../lib/gen_tables.c'; fi`
+
 gen_ioctlreqtabs_h-gen_tables.o: ../lib/gen_tables.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(gen_ioctlreqtabs_h_CFLAGS) $(CFLAGS) -MT gen_ioctlreqtabs_h-gen_tables.o -MD -MP -MF $(DEPDIR)/gen_ioctlreqtabs_h-gen_tables.Tpo -c -o gen_ioctlreqtabs_h-gen_tables.o `test -f '../lib/gen_tables.c' || echo '$(srcdir)/'`../lib/gen_tables.c
 @am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/gen_ioctlreqtabs_h-gen_tables.Tpo $(DEPDIR)/gen_ioctlreqtabs_h-gen_tables.Po
@@ -1404,6 +1451,20 @@ gen_mounttabs_h-gen_tables.obj: ../lib/gen_tables.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='../lib/gen_tables.c' object='gen_mounttabs_h-gen_tables.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(gen_mounttabs_h_CFLAGS) $(CFLAGS) -c -o gen_mounttabs_h-gen_tables.obj `if test -f '../lib/gen_tables.c'; then $(CYGPATH_W) '../lib/gen_tables.c'; else $(CYGPATH_W) '$(srcdir)/../lib/gen_tables.c'; fi`
+
+gen_netactiontabs_h-gen_tables.o: ../lib/gen_tables.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(gen_netactiontabs_h_CFLAGS) $(CFLAGS) -MT gen_netactiontabs_h-gen_tables.o -MD -MP -MF $(DEPDIR)/gen_netactiontabs_h-gen_tables.Tpo -c -o gen_netactiontabs_h-gen_tables.o `test -f '../lib/gen_tables.c' || echo '$(srcdir)/'`../lib/gen_tables.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/gen_netactiontabs_h-gen_tables.Tpo $(DEPDIR)/gen_netactiontabs_h-gen_tables.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='../lib/gen_tables.c' object='gen_netactiontabs_h-gen_tables.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(gen_netactiontabs_h_CFLAGS) $(CFLAGS) -c -o gen_netactiontabs_h-gen_tables.o `test -f '../lib/gen_tables.c' || echo '$(srcdir)/'`../lib/gen_tables.c
+
+gen_netactiontabs_h-gen_tables.obj: ../lib/gen_tables.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(gen_netactiontabs_h_CFLAGS) $(CFLAGS) -MT gen_netactiontabs_h-gen_tables.obj -MD -MP -MF $(DEPDIR)/gen_netactiontabs_h-gen_tables.Tpo -c -o gen_netactiontabs_h-gen_tables.obj `if test -f '../lib/gen_tables.c'; then $(CYGPATH_W) '../lib/gen_tables.c'; else $(CYGPATH_W) '$(srcdir)/../lib/gen_tables.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/gen_netactiontabs_h-gen_tables.Tpo $(DEPDIR)/gen_netactiontabs_h-gen_tables.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='../lib/gen_tables.c' object='gen_netactiontabs_h-gen_tables.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(gen_netactiontabs_h_CFLAGS) $(CFLAGS) -c -o gen_netactiontabs_h-gen_tables.obj `if test -f '../lib/gen_tables.c'; then $(CYGPATH_W) '../lib/gen_tables.c'; else $(CYGPATH_W) '$(srcdir)/../lib/gen_tables.c'; fi`
 
 gen_nfprototabs_h-gen_tables.o: ../lib/gen_tables.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(gen_nfprototabs_h_CFLAGS) $(CFLAGS) -MT gen_nfprototabs_h-gen_tables.o -MD -MP -MF $(DEPDIR)/gen_nfprototabs_h-gen_tables.Tpo -c -o gen_nfprototabs_h-gen_tables.o `test -f '../lib/gen_tables.c' || echo '$(srcdir)/'`../lib/gen_tables.c
@@ -2341,6 +2402,22 @@ gen_umounttabs_h$(BUILD_EXEEXT): CFLAGS=$(CFLAGS_FOR_BUILD)
 gen_umounttabs_h$(BUILD_EXEEXT): CPPFLAGS=$(CPPFLAGS_FOR_BUILD)
 umounttabs.h: gen_umounttabs_h Makefile
 	./gen_umounttabs_h --i2s-transtab umount > $@
+$(gen_inethooktabs_h_OBJECTS): CC=$(CC_FOR_BUILD)
+$(gen_inethooktabs_h_OBJECTS): CFLAGS=$(CFLAGS_FOR_BUILD)
+$(gen_inethooktabs_h_OBJECTS): CPPFLAGS=$(CPPFLAGS_FOR_BUILD)
+gen_inethooktabs_h$(BUILD_EXEEXT): CC=$(CC_FOR_BUILD)
+gen_inethooktabs_h$(BUILD_EXEEXT): CFLAGS=$(CFLAGS_FOR_BUILD)
+gen_inethooktabs_h$(BUILD_EXEEXT): CPPFLAGS=$(CPPFLAGS_FOR_BUILD)
+inethooktabs.h: gen_inethooktabs_h Makefile
+	./gen_inethooktabs_h --i2s inethook > $@
+$(gen_netactiontabs_h_OBJECTS): CC=$(CC_FOR_BUILD)
+$(gen_netactiontabs_h_OBJECTS): CFLAGS=$(CFLAGS_FOR_BUILD)
+$(gen_netactiontabs_h_OBJECTS): CPPFLAGS=$(CPPFLAGS_FOR_BUILD)
+gen_netactiontabs_h$(BUILD_EXEEXT): CC=$(CC_FOR_BUILD)
+gen_netactiontabs_h$(BUILD_EXEEXT): CFLAGS=$(CFLAGS_FOR_BUILD)
+gen_netactiontabs_h$(BUILD_EXEEXT): CPPFLAGS=$(CPPFLAGS_FOR_BUILD)
+netactiontabs.h: gen_netactiontabs_h Makefile
+	./gen_netactiontabs_h --i2s netaction > $@
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.

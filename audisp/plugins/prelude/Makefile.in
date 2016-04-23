@@ -353,7 +353,6 @@ datarootdir = @datarootdir@
 docdir = @docdir@
 dvidir = @dvidir@
 exec_prefix = @exec_prefix@
-gobind_dir = @gobind_dir@
 gss_libs = @gss_libs@
 host = @host@
 host_alias = @host_alias@

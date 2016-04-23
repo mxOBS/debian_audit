@@ -1,5 +1,5 @@
-/* epoll_ctl.h --
- * Copyright 2008,2012,2014 Red Hat Inc., Durham, North Carolina.
+/* inethooktab.h --
+ * Copyright 2016 Red Hat Inc., Durham, North Carolina.
  * All Rights Reserved.
  *
  * This library is free software; you can redistribute it and/or
@@ -18,9 +18,13 @@
  *
  * Authors:
  *      Steve Grubb <sgrubb@redhat.com>
- * Location: include/uapi/linux/eventpoll.h
+ * Location: net/netfilter/x_tables.c textify_hooks() 
  */
 
-_S(1,		"EPOLL_CTL_ADD" )
-_S(2,		"EPOLL_CTL_DEL" )
-_S(3,		"EPOLL_CTL_MOD" )
+_S(0, "PREROUTING")
+_S(1, "INPUT")
+_S(2, "FORWARD")
+_S(3, "OUTPUT")
+_S(4, "POSTROUTING")
+_S(5, "BROUTING")
+

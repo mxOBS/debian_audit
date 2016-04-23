@@ -1,3 +1,19 @@
+2.5.1
+- Updated and added audit rules
+- Updated errno table for 4.4 kernel
+- Change interpretation of exit to use errno define rather than a number
+- Add distribute_network configuration option to auditd
+- New aggregate only mode for auditd
+- Cleanup tmp file left by augenrules --check
+- Fix initial build from svn without golang support installed
+- Update auparse interpretations for hook, action, macproto, chardev, and net
+- Update interpretations for the 4.5 kernel
+- Fix DST bug in ausearch/report time handling
+- Add optional ExecStopPost to auditd.service to clear rules on service exit
+- Update ausearch/report buffer size for locales with large time formats
+- Add auparse_feed_age_events function to auparse library
+- Use auparse_feed_age_events in zos & prelude plugins
+
 2.5
 - Make augenrules the default method to load audit rules
 - Put rules in its own directory and break out rules into groups
