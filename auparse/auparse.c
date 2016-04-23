@@ -201,7 +201,7 @@ static int au_ready = 0;
  *   NULL - no memory
  *   ptr  - pointer to array of event nodes (au_lolnode)
  */
-au_lolnode *au_lol_create(au_lol *lol)
+static au_lolnode *au_lol_create(au_lol *lol)
 {
 	int sz = ARRAY_LIMIT * sizeof(au_lolnode);
 
@@ -226,7 +226,7 @@ au_lolnode *au_lol_create(au_lol *lol)
  * Rtns:
  *	void
  */
-void au_lol_clear(au_lol * lol, int reset)
+static void au_lol_clear(au_lol * lol, int reset)
 {
 	int i;
 
@@ -262,7 +262,7 @@ void au_lol_clear(au_lol * lol, int reset)
  *   ptr  - pointer to au_lolnode which holds the event list structure
  *   NULL - failed to reallocate memory
  */
-au_lolnode *au_lol_append(au_lol *lol, event_list_t *l)
+static au_lolnode *au_lol_append(au_lol *lol, event_list_t *l)
 {
 	int i;
 	size_t new_size;
@@ -655,6 +655,13 @@ int auparse_feed_has_data(const auparse_state_t *au)
 		return 1;
 
 	return 0;
+}
+
+void auparse_feed_age_events(const auparse_state_t *au)
+{
+	time_t t = time(NULL);
+	au_check_events(&au_lo, t);
+	consume_feed(au, 0);
 }
 
 void auparse_set_escape_mode(auparse_esc_t mode)
@@ -1252,17 +1259,11 @@ static int retrieve_next_line(auparse_state_t *au)
 			else
 				if (rc > 0)
 					au->line_number++;
-				return rc;
+			return rc;
 		default:
 			return -1;
 	}
 	return -1;		/* should never reach here */
-}
-
-static void push_line(auparse_state_t *au)
-{
-	au->line_number--;
-	au->line_pushed = 1;
 }
 
 /*******
@@ -1345,7 +1346,6 @@ static int au_auparse_next_event(auparse_state_t *au)
 {
 	int rc, i, built;
 	event_list_t *l;
-	rnode *r;
 	au_event_t e;
 
 	/*
@@ -1491,7 +1491,6 @@ static int au_auparse_next_event(auparse_state_t *au)
 			return 1;
 		}
 	}
-
 }
 
 // Brute force go to next event. Returns < 0 on error, 0 no data, > 0 success

@@ -1,5 +1,5 @@
 /* ausearch-common.h -- 
- * Copyright 2006-08,2010,2014 Red Hat Inc., Durham, North Carolina.
+ * Copyright 2006-08,2010,2014,2016 Red Hat Inc., Durham, North Carolina.
  * Copyright (c) 2011 IBM Corp.
  * All Rights Reserved.
  *
@@ -26,6 +26,8 @@
 #ifndef AUREPORT_COMMON_H
 #define AUREPORT_COMMON_H
 
+#include <sys/types.h>
+#include <time.h>
 #include "ausearch-string.h"
 
 /*

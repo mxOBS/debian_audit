@@ -1,5 +1,5 @@
-/* epoll_ctl.h --
- * Copyright 2008,2012,2014 Red Hat Inc., Durham, North Carolina.
+/* netactiontab.h --
+ * Copyright 2016 Red Hat Inc., Durham, North Carolina.
  * All Rights Reserved.
  *
  * This library is free software; you can redistribute it and/or
@@ -18,9 +18,10 @@
  *
  * Authors:
  *      Steve Grubb <sgrubb@redhat.com>
- * Location: include/uapi/linux/eventpoll.h
+ * Location: include/uapi/linux/netfilter/xt_AUDIT.h
  */
 
-_S(1,		"EPOLL_CTL_ADD" )
-_S(2,		"EPOLL_CTL_DEL" )
-_S(3,		"EPOLL_CTL_MOD" )
+_S(0, "ACCEPT")
+_S(1, "DROP")
+_S(2, "REJECT")
+

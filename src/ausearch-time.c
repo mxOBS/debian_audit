@@ -1,5 +1,5 @@
 /* ausearch-time.c - time handling utility functions
- * Copyright 2006-08,2011 Red Hat Inc., Durham, North Carolina.
+ * Copyright 2006-08,2011,2016 Red Hat Inc., Durham, North Carolina.
  * All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -20,11 +20,11 @@
  *     Steve Grubb <sgrubb@redhat.com>
  */
 
+#define _XOPEN_SOURCE
 #include "config.h"
 #include <stdio.h>
 #include <string.h>
 #include "ausearch-time.h"
-
 
 #define SECONDS_IN_DAY 24*60*60
 static void clear_tm(struct tm *t);
@@ -156,6 +156,7 @@ static void set_tm_this_year(struct tm *d)
 	replace_date(d, tv);
         d->tm_mday = 1;         /* override day of month */
         d->tm_mon = 0;          /* override month */
+	d->tm_isdst = 0;
 }
 
 /* Combine date & time into 1 struct. Results in date. */
@@ -167,9 +168,12 @@ static void add_tm(struct tm *d, struct tm *t)
 	replace_time(d, t);
 
         /* Now we need to figure out if DST is in effect */
-        dst = time(NULL);
+        dst = mktime(d);
         lt = localtime(&dst);
-        d->tm_isdst = lt->tm_isdst;
+	if (lt->tm_isdst > 0)
+	        d->tm_isdst = lt->tm_isdst;
+	else
+		d->tm_isdst = 0;
 }
 
 /* The time in t1 is replaced by t2 */
@@ -289,7 +293,7 @@ int ausearch_time_start(const char *da, const char *ti)
 	}
 
 	if (ti != NULL) {
-		char tmp_t[36];
+		char tmp_t[64];
 
 		if (strlen(ti) <= 5) {
 			snprintf(tmp_t, sizeof(tmp_t), "%s:00", ti);
@@ -366,7 +370,7 @@ int ausearch_time_end(const char *da, const char *ti)
 	}
 
 	if (ti != NULL) {
-		char tmp_t[36];
+		char tmp_t[64];
 
 		if (strlen(ti) <= 5) {
 			snprintf(tmp_t, sizeof(tmp_t), "%s:00", ti);

@@ -110,6 +110,8 @@
 #include "pktoptnametabs.h"
 #include "umounttabs.h"
 #include "ioctlreqtabs.h"
+#include "inethooktabs.h"
+#include "netactiontabs.h"
 
 typedef enum { AVC_UNSET, AVC_DENIED, AVC_GRANTED } avc_t;
 typedef enum { S_UNSET=-1, S_FAILED, S_SUCCESS } success_t;
@@ -604,7 +606,8 @@ static const char *print_exit(const char *val)
         }
 
         if (ival < 0) {
-		if (asprintf(&out, "%lld(%s)", ival, strerror(-ival)) < 0)
+		if (asprintf(&out, "%s(%s)", audit_errno_to_name(-ival),
+					strerror(-ival)) < 0)
 			out = NULL;
 		return out;
         }
@@ -2271,6 +2274,72 @@ static const char *print_protocol(const char *val)
 	return out;
 }
 
+/* FIXME - this assumes inet hook. Could also be an arp hook */
+static const char *print_hook(const char *val)
+{
+	int hook;
+	char *out;
+	const char *str;
+
+	errno = 0;
+	hook = strtoul(val, NULL, 16);
+	if (errno) {
+		if (asprintf(&out, "conversion error(%s)", val) < 0)
+			out = NULL;
+		return out;
+	}
+	str = inethook_i2s(hook);
+	if (str == NULL) {
+		if (asprintf(&out, "unknown hook(%s)", val) < 0)
+			out = NULL;
+		return out;
+	} else
+		return strdup(str);
+}
+
+static const char *print_netaction(const char *val)
+{
+	int action;
+	char *out;
+	const char *str;
+
+	errno = 0;
+	action = strtoul(val, NULL, 16);
+	if (errno) {
+		if (asprintf(&out, "conversion error(%s)", val) < 0)
+			out = NULL;
+		return out;
+	}
+	str = netaction_i2s(action);
+	if (str == NULL) {
+		if (asprintf(&out, "unknown action(%s)", val) < 0)
+			out = NULL;
+		return out;
+	} else
+		return strdup(str);
+}
+
+/* Ethernet packet types */
+static const char *print_macproto(const char *val)
+{
+	int type;
+	char *out;
+	const char *str;
+
+	errno = 0;
+	type = strtoul(val, NULL, 16);
+	if (errno) {
+		if (asprintf(&out, "conversion error(%s)", val) < 0)
+			out = NULL;
+		return out;
+	}
+	if (type == 0x0800)
+		return strdup("IP");
+	else if (type == 0x0806)
+		return strdup("ARP");
+	return strdup("UNKNOWN");
+}
+
 static const char *print_addr(const char *val)
 {
 	char *out = strdup(val);
@@ -2629,6 +2698,15 @@ const char *auparse_do_interpretation(int type, const idata *id)
 			break;
 		case AUPARSE_TYPE_PROCTITLE:
 			out = print_proctitle(id->val);
+			break;
+		case AUPARSE_TYPE_HOOK:
+			out = print_hook(id->val);
+			break;
+		case AUPARSE_TYPE_NETACTION:
+			out = print_netaction(id->val);
+			break;
+		case AUPARSE_TYPE_MACPROTO:
+			out = print_macproto(id->val);
 			break;
 		case AUPARSE_TYPE_MAC_LABEL:
 		case AUPARSE_TYPE_UNCLASSIFIED:
