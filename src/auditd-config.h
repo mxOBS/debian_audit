@@ -43,10 +43,12 @@ typedef enum { N_NONE, N_HOSTNAME, N_FQD, N_NUMERIC, N_USER } node_t;
 struct daemon_conf
 {
 	daemon_t daemonize;
+	unsigned int local_events;
 	qos_t qos;		/* use blocking/non-blocking sockets */
 	uid_t sender_uid;	/* the uid for sender of sighup */
 	pid_t sender_pid;	/* the pid for sender of sighup */
 	const char *sender_ctx;	/* the context for the sender of sighup */
+	unsigned int write_logs;
 	const char *log_file;
 	logging_formats log_format;
 	gid_t log_group;

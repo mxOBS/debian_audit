@@ -1,3 +1,10 @@
+2.5.2
+- Fix memory leak caused by unneeded reference in auparse python bindings
+- Revise function hiding technique to better protect audit ABI
+- Interpret old-auid, exit syscall parameters
+- Create local_events config option to auditd
+- Create write_logs option for auditd and deprecate NOLOG log_format option
+
 2.5.1
 - Updated and added audit rules
 - Updated errno table for 4.4 kernel

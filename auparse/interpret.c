@@ -273,7 +273,6 @@ int set_escape_mode(auparse_esc_t mode)
 	escape_mode = mode;
 	return 0;
 }
-hidden_def(set_escape_mode)
 
 static int is_hex_string(const char *str)
 {
@@ -1897,6 +1896,19 @@ static const char *print_ioctl_req(const char *val)
 	return out;
 }
 
+static const char *print_exit_syscall(const char *val)
+{
+	char *out;
+
+	if (strcmp(val, "0") == 0)
+		out = strdup("EXIT_SUCCESS");
+	else if (strcmp(val, "1") == 0)
+		out = strdup("EXIT_FAILURE");
+	else
+		out = strdup("UNKNOWN");
+	return out;
+}
+
 static const char *print_a0(const char *val, const idata *id)
 {
 	char *out;
@@ -1977,6 +1989,8 @@ static const char *print_a0(const char *val, const idata *id)
 			return print_dirfd(val);
                	else if (strcmp(sys, "ipccall") == 0)
 			return print_ipccall(val, 16);
+		else if (strncmp(sys, "exit", 4) == 0)
+			return print_exit_syscall(val);
 	}
 	if (asprintf(&out, "0x%s", val) < 0)
 			out = NULL;
@@ -2324,7 +2338,6 @@ static const char *print_macproto(const char *val)
 {
 	int type;
 	char *out;
-	const char *str;
 
 	errno = 0;
 	type = strtoul(val, NULL, 16);
@@ -2597,7 +2610,6 @@ int auparse_interp_adjust_type(int rtype, const char *name, const char *val)
 
 	return type;
 }
-hidden_def(auparse_interp_adjust_type)
 
 const char *auparse_do_interpretation(int type, const idata *id)
 {
@@ -2728,5 +2740,4 @@ const char *auparse_do_interpretation(int type, const idata *id)
 	}
 	return out;
 }
-hidden_def(auparse_do_interpretation)
 
