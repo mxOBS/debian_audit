@@ -1,6 +1,7 @@
 audit (1:2.5.1-1) UNRELEASED; urgency=medium
 
   * New upstream release
+    - Adjust the .symbols files
   * debian/control: Bump Standards-Version to 3.9.8 (no further changes)
   * debian/auditd.default, debian/auditd.init: With this version, the
     systemd service file generates the audit.rules file before starting the
@@ -8,7 +9,7 @@ audit (1:2.5.1-1) UNRELEASED; urgency=medium
   * debian/auditd.examples: The examples files have moved to a rules/
     directory
 
- -- Laurent Bigonville <bigon@debian.org>  Tue, 03 May 2016 16:46:15 +0200
+ -- Laurent Bigonville <bigon@debian.org>  Tue, 03 May 2016 16:53:28 +0200
 
 audit (1:2.4.5-1) unstable; urgency=medium
 

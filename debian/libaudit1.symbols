@@ -1,6 +1,7 @@
 libaudit.so.1 libaudit1 #MINVER#
  _audit_archadded@Base 1:2.2.1
  _audit_elf@Base 1:2.2.1
+ _audit_exeadded@Base 1:2.5.1
  _audit_permadded@Base 1:2.2.1
  _audit_syscalladded@Base 1:2.2.1
  audit_action_to_name@Base 1:2.2.1
@@ -19,6 +20,7 @@ libaudit.so.1 libaudit1 #MINVER#
  audit_field_to_name@Base 1:2.2.1
  audit_flag_to_name@Base 1:2.2.1
  audit_ftype_to_name@Base 1:2.2.1
+ audit_get_features@Base 1:2.5.1
  audit_get_reply@Base 1:2.2.1
  audit_getloginuid@Base 1:2.2.1
  audit_is_enabled@Base 1:2.2.1

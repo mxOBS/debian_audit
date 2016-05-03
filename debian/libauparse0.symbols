@@ -1,10 +1,12 @@
 libauparse.so.0 libauparse0 #MINVER#
+ au_terminate_all_events@Base 1:2.5.1
  audit_strsplit@Base 1:2.4.2
  audit_strsplit_r@Base 1:2.4.2
  auparse_add_callback@Base 1:2.2.1
  auparse_destroy@Base 1:2.2.1
  auparse_do_interpretation@Base 1:2.3.1
  auparse_feed@Base 1:2.2.1
+ auparse_feed_age_events@Base 1:2.5.1
  auparse_feed_has_data@Base 1:2.2.2
  auparse_find_field@Base 1:2.2.1
  auparse_find_field_next@Base 1:2.2.1
