@@ -1,5 +1,3 @@
-contrib/capp.rules
-contrib/lspp.rules
-contrib/nispom.rules
-contrib/stig.rules
+rules/*.rules
+rules/README-rules
 init.d/auditd.cron
