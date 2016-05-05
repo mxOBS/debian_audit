@@ -14,8 +14,10 @@ audit (1:2.5.2-1) UNRELEASED; urgency=medium
     FTBFS because of this (Closes: #823427)
   * debian/auditd.lintian-overrides: $remote_fs is not needed in the stop
     action, this is only needed for augenrules used in the start one.
+  * debian/rules: Install the default configuration, the build system is not
+    doing that for us anymore.
 
- -- Laurent Bigonville <bigon@debian.org>  Thu, 05 May 2016 14:10:04 +0200
+ -- Laurent Bigonville <bigon@debian.org>  Thu, 05 May 2016 14:36:31 +0200
 
 audit (1:2.4.5-1) unstable; urgency=medium
 

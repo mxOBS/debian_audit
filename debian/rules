@@ -96,6 +96,10 @@ override_dh_auto_install: debian/install-python-stamp $(PYVERS:%=debian/install-
 	$(RM) debian/tmp/lib/${DEB_HOST_MULTIARCH}/libaudit.so
 	$(RM) debian/tmp/lib/${DEB_HOST_MULTIARCH}/libauparse.so
 
+	# Install the default configuration
+	install -o root -g root -m 0750 -d debian/tmp/etc/audit/rules.d/
+	install -o root -g root -m 0640 rules/10-base-config.rules debian/tmp/etc/audit/rules.d/audit.rules
+
 	mkdir -p debian/tmp/usr/lib/${DEB_HOST_MULTIARCH}/
 
 	ln -s /lib/${DEB_HOST_MULTIARCH}/libaudit.so.1.0.0 \
