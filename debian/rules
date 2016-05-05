@@ -118,6 +118,9 @@ override_dh_auto_install: debian/install-python-stamp $(PYVERS:%=debian/install-
 override_dh_install:
 	dh_install --list-missing
 
+override_dh_installexamples:
+	dh_installexamples -XMakefile
+
 override_dh_installlogrotate:
 	# auditd has a equivalent built-in feature
 

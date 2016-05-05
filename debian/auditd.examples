@@ -1,3 +1,2 @@
-rules/*.rules
-rules/README-rules
+rules/
 init.d/auditd.cron

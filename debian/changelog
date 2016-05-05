@@ -7,8 +7,8 @@ audit (1:2.5.2-1) UNRELEASED; urgency=medium
   * debian/auditd.default, debian/auditd.init: With this version, the
     systemd service file generates the audit.rules file before starting the
     daemon. Modify the LSB script to match the behaviour. (Closes: #729704)
-  * debian/auditd.examples: The examples files have moved to a rules/
-    directory
+  * debian/auditd.examples, debian/rules: The examples files have moved to a
+    rules/ directory, install the full directory.
   * debian/rules: Remove the --with=golang flag to dh call, this seems useless
     as the build system already takes care of the go binding and the package
     FTBFS because of this (Closes: #823427)
