@@ -1,4 +1,4 @@
-audit (1:2.5.2-1) UNRELEASED; urgency=medium
+audit (1:2.5.2-1) unstable; urgency=medium
 
   * New upstream release
     - Adjust the .symbols files, the dropped symbols were never part of the
@@ -24,7 +24,7 @@ audit (1:2.5.2-1) UNRELEASED; urgency=medium
   * debian/auditd.README.Debian, debian/auditd.NEWS: Update the instructions
     now that augenrules is used by default.
 
- -- Laurent Bigonville <bigon@debian.org>  Thu, 05 May 2016 15:20:57 +0200
+ -- Laurent Bigonville <bigon@debian.org>  Thu, 05 May 2016 15:49:29 +0200
 
 audit (1:2.4.5-1) unstable; urgency=medium
 
