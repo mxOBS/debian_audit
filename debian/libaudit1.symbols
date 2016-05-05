@@ -56,7 +56,6 @@ libaudit.so.1 libaudit1 #MINVER#
  audit_rule_syscall_data@Base 1:2.2.1
  audit_rule_syscallbyname_data@Base 1:2.2.1
  audit_send@Base 1:2.2.1
- audit_send_user_message@Base 1:2.2.1
  audit_set_backlog_limit@Base 1:2.2.1
  audit_set_backlog_wait_time@Base 1:2.4.2
  audit_set_enabled@Base 1:2.2.1
