@@ -1511,6 +1511,9 @@ EM_ARM = _audit.EM_ARM
 
 _audit.EM_AARCH64_swigconstant(_audit)
 EM_AARCH64 = _audit.EM_AARCH64
+
+_audit.AUDIT_INTERP_SEPARATOR_swigconstant(_audit)
+AUDIT_INTERP_SEPARATOR = _audit.AUDIT_INTERP_SEPARATOR
 class audit_sig_info(_object):
     __swig_setmethods__ = {}
     __setattr__ = lambda self, name, value: _swig_setattr(self, audit_sig_info, name, value)
@@ -1669,6 +1672,9 @@ audit_dispatcher_header_swigregister(audit_dispatcher_header)
 
 _audit.AUDISP_PROTOCOL_VER_swigconstant(_audit)
 AUDISP_PROTOCOL_VER = _audit.AUDISP_PROTOCOL_VER
+
+_audit.AUDISP_PROTOCOL_VER2_swigconstant(_audit)
+AUDISP_PROTOCOL_VER2 = _audit.AUDISP_PROTOCOL_VER2
 
 _audit.MACH_X86_swigconstant(_audit)
 MACH_X86 = _audit.MACH_X86

@@ -2,7 +2,7 @@
 
 Summary: User space tools for 2.6 kernel auditing
 Name: audit
-Version: 2.5.2
+Version: 2.6
 Release: 1
 License: GPLv2+
 Group: System Environment/Daemons
@@ -145,6 +145,7 @@ rm -rf $RPM_BUILD_ROOT
 files=`ls /etc/audit/rules.d/ 2>/dev/null | wc -w`
 if [ "$files" -eq 0 ] ; then
 	cp /usr/share/doc/audit/rules/10-base-config.rules /etc/audit/rules.d/audit.rules
+	chmod 0640 /etc/audit/rules.d/audit.rules
 fi
 %systemd_post auditd.service
 
@@ -259,6 +260,6 @@ fi
 
 
 %changelog
-* Fri Apr 29 2016 Steve Grubb <sgrubb@redhat.com> 2.5.2-1
+* Wed Jun 22 2016 Steve Grubb <sgrubb@redhat.com> 2.6-1
 - New upstream release
 

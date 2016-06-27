@@ -1,6 +1,6 @@
 /*
 * ausearch-report.c - Format and output events
-* Copyright (c) 2005-09,2011-13 Red Hat Inc., Durham, North Carolina.
+* Copyright (c) 2005-09,2011-13,2016 Red Hat Inc., Durham, North Carolina.
 * All Rights Reserved. 
 *
 * This software may be freely redistributed and/or modified under the
@@ -80,6 +80,7 @@ static void output_raw(llist *l)
 		return;
 	}
 	do {
+		n->message[n->mlen] = AUDIT_INTERP_SEPARATOR;
 		puts(n->message);
 	} while ((n=list_next(l)));
 }
@@ -200,6 +201,7 @@ no_print:
 	}
 
 	// for each item.
+	_auparse_load_interpretations(n->interp);
 	found = 0;
 	while (str && *str && (ptr = strchr(str, '='))) {
 		char *name, *val;
@@ -274,6 +276,8 @@ no_print:
 		// print interpreted string
 		interpret(name, val, comma, n->type);
 	}
+	_auparse_free_interpretations();
+
 	// If nothing found, just print out as is
 	if (!found && ptr == NULL && str)
 		safe_print_string(str, 1);

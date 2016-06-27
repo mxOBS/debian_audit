@@ -35,18 +35,19 @@
 #include <sys/time.h>
 #include <sys/vfs.h>
 #include <limits.h>     /* POSIX_HOST_NAME_MAX */
+#include <ctype.h>	/* toupper */
 #include "auditd-event.h"
 #include "auditd-dispatch.h"
 #include "auditd-listen.h"
 #include "libaudit.h"
 #include "private.h"
+#include "auparse.h"
 
 /* This is defined in auditd.c */
 extern volatile int stop;
 
 /* Local function prototypes */
-static void handle_event(struct auditd_event *e);
-static void write_to_log(const struct auditd_event *e, const char *buf);
+static void write_to_log(const struct auditd_event *e);
 static void check_log_file_size(void);
 static void check_space_left(void);
 static void do_space_left_action(int admin);
@@ -59,7 +60,7 @@ static void shift_logs(void);
 static int  open_audit_log(void);
 static void change_runlevel(const char *level);
 static void safe_exec(const char *exe);
-static char *format_raw(const struct audit_reply *rep);
+static void handle_event(struct auditd_event *e);
 static void reconfigure(struct auditd_event *e);
 static void init_flush_thread(void);
 
@@ -82,6 +83,9 @@ static pthread_mutex_t flush_lock;
 static pthread_cond_t do_flush;
 static volatile int flush;
 
+/* Local definitions */
+#define FORMAT_BUF_LEN (MAX_AUDIT_MESSAGE_LENGTH + _POSIX_HOST_NAME_MAX)
+#define MIN_SPACE_LEFT 24
 
 int dispatch_network_events(void)
 {
@@ -129,8 +133,7 @@ int init_event(struct daemon_conf *conf)
 		check_excess_logs();
 		check_space_left();
 	}
-	format_buf = (char *)malloc(MAX_AUDIT_MESSAGE_LENGTH +
-						 _POSIX_HOST_NAME_MAX);
+	format_buf = (char *)malloc(FORMAT_BUF_LEN);
 	if (format_buf == NULL) {
 		audit_msg(LOG_ERR, "No memory for formatting, exiting");
 		fclose(log_file);
@@ -184,8 +187,257 @@ static void init_flush_thread(void)
 	pthread_create(&flush_thread, NULL, flush_thread_main, NULL);
 }
 
+static void replace_event_msg(struct auditd_event *e, const char *buf)
+{
+	if (buf) {
+		size_t len = strlen(buf);
+		if (len < MAX_AUDIT_MESSAGE_LENGTH - 1)
+			memcpy(e->reply.msg.data, buf, len+1);
+		else {
+			// If too big, we must truncate the event due to API
+			memcpy(e->reply.msg.data, buf, 
+				MAX_AUDIT_MESSAGE_LENGTH-1);
+			e->reply.msg.data[MAX_AUDIT_MESSAGE_LENGTH-1] = 0;
+			len = MAX_AUDIT_MESSAGE_LENGTH;
+		}
+		e->reply.len = len;
+	}
+}
+
+/*
+* This function will take an audit structure and return a
+* text buffer that's formatted for writing to disk. If there
+* is an error the return value is NULL.
+*/
+static const char *format_raw(const struct audit_reply *rep)
+{
+        char *ptr;
+
+        if (rep == NULL) {
+		if (config->node_name_format != N_NONE)
+			snprintf(format_buf, FORMAT_BUF_LEN - 32,
+		"node=%s type=DAEMON_ERR op=format-raw msg=NULL res=failed",
+                                config->node_name);
+		else
+	        	snprintf(format_buf, MAX_AUDIT_MESSAGE_LENGTH,
+			  "type=DAEMON_ERR op=format-raw msg=NULL res=failed");
+	} else {
+		int len, nlen;
+		const char *type, *message;
+		char unknown[32];
+		type = audit_msg_type_to_name(rep->type);
+		if (type == NULL) {
+			snprintf(unknown, sizeof(unknown), 
+				"UNKNOWN[%d]", rep->type);
+			type = unknown;
+		}
+		if (rep->message == NULL) {
+			message = "lost";
+			len = 4;
+		} else {
+			message = rep->message;
+			len = rep->len;
+		}
+
+		// Note: This can truncate messages if 
+		// MAX_AUDIT_MESSAGE_LENGTH is too small
+		if (config->node_name_format != N_NONE)
+			nlen = snprintf(format_buf, FORMAT_BUF_LEN - 32,
+				"node=%s type=%s msg=%.*s\n",
+                                config->node_name, type, len, message);
+		else
+		        nlen = snprintf(format_buf,
+				MAX_AUDIT_MESSAGE_LENGTH - 32,
+				"type=%s msg=%.*s", type, len, message);
+
+	        /* Replace \n with space so it looks nicer. */
+        	ptr = format_buf;
+	        while ((ptr = strchr(ptr, 0x0A)) != NULL)
+        	        *ptr = ' ';
+
+		/* Trim trailing space off since it wastes space */
+		if (format_buf[nlen-1] == ' ')
+			format_buf[nlen-1] = 0;
+	}
+        return format_buf;
+}
+
+static int sep_done = 0;
+static int add_separator(unsigned int len_left)
+{
+	if (sep_done == 0) {
+		format_buf[FORMAT_BUF_LEN - len_left] = AUDIT_INTERP_SEPARATOR;
+		sep_done++;
+		return 1;
+	}
+	sep_done++;
+	return 0;
+}
+
+// returns length used, 0 on error
+#define NAME_SIZE 64
+static int add_simple_field(auparse_state_t *au, size_t len_left, int encode)
+{
+	const char *value, *nptr;
+	char *enc = NULL;
+	char *ptr, field_name[NAME_SIZE];
+	size_t nlen, vlen, tlen;
+	unsigned int i;
+	int num;
+
+	// prepare field name
+	i = 0;
+	nptr = auparse_get_field_name(au);
+	while (*nptr && i < (NAME_SIZE - 1)) {
+		field_name[i] = toupper(*nptr);
+		i++;
+		nptr++;
+	}
+	field_name[i] = 0;
+	nlen = i;
+	
+	// get the translated value
+	value = auparse_interpret_field(au);
+	if (value == NULL)
+		value = "?";
+	vlen = strlen(value);
+
+	if (encode) {
+		enc = audit_encode_nv_string(field_name, value, vlen);
+		if (enc == NULL)
+			return 0;
+		tlen = 1 + strlen(enc) + 1;
+	} else
+		// calculate length to use
+		tlen = 1 + nlen + 1 + vlen + 1;
+
+	// If no room, do not truncate - just do nothing
+	if (tlen >= len_left) {
+		free(enc);
+		return 0;
+	}
+
+	// Setup pointer
+	ptr = &format_buf[FORMAT_BUF_LEN - len_left];
+	if (sep_done > 1) {
+		*ptr = ' ';
+		ptr++;
+		num = 1;
+	} else
+		num = 0;
+
+	// Add the field
+	if (encode) {
+		num += snprintf(ptr, tlen, "%s", enc);
+		free(enc);
+	} else
+		num += snprintf(ptr, tlen, "%s=%s", field_name, value);
+
+	return num;
+}
+
+/*
+* This function will take an audit structure and return a
+* text buffer that's formatted and enriched. If there is an
+* error the return value is NULL.
+*/
+static const char *format_enrich(const struct audit_reply *rep)
+{
+        if (rep == NULL) {
+		if (config->node_name_format != N_NONE)
+			snprintf(format_buf, FORMAT_BUF_LEN - 32,
+	    "node=%s type=DAEMON_ERR op=format-enriched msg=NULL res=failed",
+                                config->node_name);
+		else
+	        	snprintf(format_buf, MAX_AUDIT_MESSAGE_LENGTH,
+		    "type=DAEMON_ERR op=format-enriched msg=NULL res=failed");
+	} else {
+		int rc;
+		size_t mlen, len;
+		auparse_state_t *au;
+		char *message;
+		// Do raw format to get event started
+		format_raw(rep);
+
+		// How much room is left?
+		mlen = strlen(format_buf);
+		len = FORMAT_BUF_LEN - mlen;
+		if (len <= MIN_SPACE_LEFT)
+			return format_buf;
+
+		// create copy to parse up
+		format_buf[mlen] = 0x0A;
+		format_buf[mlen+1] = 0;
+		message = strdup(format_buf);
+		format_buf[mlen] = 0;
+
+		// init auparse
+		au = auparse_init(AUSOURCE_BUFFER, message);
+		if (au == NULL) {
+			free(message);
+			return format_buf;
+		}
+		auparse_set_escape_mode(AUPARSE_ESC_RAW);
+		sep_done = 0;
+
+		// Loop over all fields while possible to add field
+		rc = auparse_first_record(au);
+		while (rc > 0 && len > MIN_SPACE_LEFT) {
+			// See what kind of field we have
+			size_t vlen;
+			int type = auparse_get_field_type(au);
+			switch (type)
+			{
+				case AUPARSE_TYPE_UID:
+				case AUPARSE_TYPE_GID:
+					if (add_separator(len))
+						len--;
+					vlen = add_simple_field(au, len, 1);
+					len -= vlen;
+					break;
+				case AUPARSE_TYPE_SYSCALL:
+				case AUPARSE_TYPE_ARCH:
+				case AUPARSE_TYPE_SOCKADDR:
+					if (add_separator(len))
+						len--;
+					vlen = add_simple_field(au, len, 0);
+					len -= vlen;
+					break;
+				default:
+					break;
+			}
+			rc = auparse_next_field(au);
+		}
+
+		auparse_destroy(au);
+		free(message);
+	}
+        return format_buf;
+}
+
+void format_event(struct auditd_event *e)
+{
+	const char *buf;
+
+	switch (config->log_format)
+	{
+		case LF_RAW:
+			buf = format_raw(&e->reply);
+			break;
+		case LF_ENRICHED:
+			buf = format_enrich(&e->reply);
+			break;
+		default:
+			buf = NULL;
+			break;
+	}
+
+	if (e->reply.type != AUDIT_DAEMON_RECONFIG)
+		replace_event_msg(e, buf);
+}
+
 /* This function free's all memory associated with events */
-static void cleanup_event(struct auditd_event *e)
+void cleanup_event(struct auditd_event *e)
 {
 	/* Internal DAEMON messages should be free'd */
 	if (e->reply.type >= AUDIT_FIRST_DAEMON &&
@@ -195,46 +447,12 @@ static void cleanup_event(struct auditd_event *e)
 	free(e);
 }
 
-/* This function takes a malloc'd rep and places it on the queue. The 
-   dequeue'r is responsible for freeing the memory. */
+/* This function takes a local event and sends it to the handler */
 void enqueue_event(struct auditd_event *e)
 {
-	char *buf = NULL;
-	int len;
-
 	e->ack_func = NULL;
 	e->ack_data = NULL;
 	e->sequence_id = 0;
-
-	if (e->reply.type != AUDIT_DAEMON_RECONFIG) {
-		if (config->write_logs == 0) {
-			cleanup_event(e);
-			return;
-		}
-
-		switch (config->log_format)
-		{
-		case LF_RAW:
-			buf = format_raw(&e->reply);
-			break;
-		default:
-			cleanup_event(e);
-			return;
-		}
-
-		if (buf) {
-			len = strlen(buf);
-			if (len < MAX_AUDIT_MESSAGE_LENGTH - 1)
-				memcpy(e->reply.msg.data, buf, len+1);
-			else {
-				// FIXME: is truncation the right thing to do?
-				memcpy(e->reply.msg.data, buf,
-						MAX_AUDIT_MESSAGE_LENGTH-1);
-				e->reply.msg.data[MAX_AUDIT_MESSAGE_LENGTH-1]
-									= 0;
-			}
-		}
-	}
 
 	handle_event(e);
 }
@@ -256,59 +474,31 @@ struct auditd_event *create_event(char *msg, ack_func_type ack_func,
 	e->ack_data = ack_data;
 	e->sequence_id = sequence_id;
 
+	/* Network originating events need things adjusted to mimic netlink. */
 	if (e->ack_func) {
-		/* Network originating events need things moved around to
-		 * pretend its from netlink. */
-		int len = strlen (msg);
-		if (len < MAX_AUDIT_MESSAGE_LENGTH - 1)
-			memcpy (e->reply.msg.data, msg, len+1);
-		else {
-			/* FIXME: is truncation the right thing to do?  */
-			memcpy (e->reply.msg.data, msg,
-						MAX_AUDIT_MESSAGE_LENGTH-1);
-			e->reply.msg.data[MAX_AUDIT_MESSAGE_LENGTH-1] = 0;
-		}
+		replace_event_msg(e, msg);
 		e->reply.message = e->reply.msg.data;
 	}
 
 	return e;
 }
 
-void resume_logging(void)
-{
-	logging_suspended = 0; 
-	fs_space_left = 1;
-	disk_err_warning = 0;
-	fs_space_warning = 0;
-	fs_admin_space_warning = 0;
-	audit_msg(LOG_ERR, "Audit daemon is attempting to resume logging.");
-}
-
 /* This function takes the newly dequeued event and handles it. */
 static unsigned int count = 0L;
 static void handle_event(struct auditd_event *e)
 {
-	char *buf = e->reply.msg.data;
-
-	if (e->reply.type == AUDIT_DAEMON_RECONFIG) {
+	if (e->reply.type == AUDIT_DAEMON_RECONFIG && e->ack_func == NULL) {
 		reconfigure(e);
 		if (config->write_logs == 0)
-			return;
-		switch (config->log_format)
-		{
-		case LF_RAW:
-			buf = format_raw(&e->reply);
-			break;
-		default:
-			return;
-		}
+                        return;
+                format_event(e);
 	} else if (e->reply.type == AUDIT_DAEMON_ROTATE) {
 		rotate_logs_now();
 		if (config->write_logs == 0)
 			return;
 	}
 	if (!logging_suspended) {
-		write_to_log(e, buf);
+		write_to_log(e);
 
 		/* See if we need to flush to disk manually */
 		if (config->flush == FT_INCREMENTAL ||
@@ -349,7 +539,6 @@ static void handle_event(struct auditd_event *e)
 			}
 		}
 	}
-	cleanup_event(e);
 }
 
 static void send_ack(const struct auditd_event *e, int ack_type,
@@ -365,15 +554,25 @@ static void send_ack(const struct auditd_event *e, int ack_type,
 	}
 }
 
+void resume_logging(void)
+{
+	logging_suspended = 0; 
+	fs_space_left = 1;
+	disk_err_warning = 0;
+	fs_space_warning = 0;
+	fs_admin_space_warning = 0;
+	audit_msg(LOG_ERR, "Audit daemon is attempting to resume logging.");
+}
+
 /* This function writes the given buf to the current log file */
-static void write_to_log(const struct auditd_event *e, const char *buf)
+static void write_to_log(const struct auditd_event *e)
 {
 	int rc;
 	int ack_type = AUDIT_RMW_TYPE_ACK;
 	const char *msg = "";
 
 	/* write it to disk */
-	rc = fprintf(log_file, "%s\n", buf);
+	rc = fprintf(log_file, "%s\n", e->reply.msg.data);
 
 	/* error? Handle it */
 	if (rc < 0) {
@@ -403,7 +602,7 @@ static void write_to_log(const struct auditd_event *e, const char *buf)
 			log_size += rc;
 			check_log_file_size();
 			// Keep loose tabs on the free space
-			if (rc%2 == 0)
+			if ((log_size % 3) < 2)
 				check_space_left();
 		}
 
@@ -977,66 +1176,6 @@ static void safe_exec(const char *exe)
 	execve(exe, argv, NULL);
 	audit_msg(LOG_ALERT, "Audit daemon failed to exec %s", exe);
 	exit(1);
-}
-
-/*
-* This function will take an audit structure and return a
-* text buffer that's unformatted for writing to disk. If there
-* is an error the return value is NULL.
-*/
-static char *format_raw(const struct audit_reply *rep)
-{
-        char *ptr;
-
-        if (rep==NULL) {
-		if (config->node_name_format != N_NONE)
-			snprintf(format_buf, MAX_AUDIT_MESSAGE_LENGTH +
-				_POSIX_HOST_NAME_MAX - 32,
-		"node=%s type=DAEMON_ERR op=format-raw msg=NULL res=failed",
-                                config->node_name);
-		else
-	        	snprintf(format_buf, MAX_AUDIT_MESSAGE_LENGTH,
-			  "type=DAEMON_ERR op=format-raw msg=NULL res=failed");
-	} else {
-		int len, nlen;
-		const char *type, *message;
-		char unknown[32];
-		type = audit_msg_type_to_name(rep->type);
-		if (type == NULL) {
-			snprintf(unknown, sizeof(unknown), 
-				"UNKNOWN[%d]", rep->type);
-			type = unknown;
-		}
-		if (rep->message == NULL) {
-			message = "msg lost";
-			len = 8;
-		} else {
-			message = rep->message;
-			len = rep->len;
-		}
-
-		// Note: This can truncate messages if 
-		// MAX_AUDIT_MESSAGE_LENGTH is too small
-		if (config->node_name_format != N_NONE)
-			nlen = snprintf(format_buf, MAX_AUDIT_MESSAGE_LENGTH +
-				_POSIX_HOST_NAME_MAX - 32,
-				"node=%s type=%s msg=%.*s\n",
-                                config->node_name, type, len, message);
-		else
-		        nlen = snprintf(format_buf,
-				MAX_AUDIT_MESSAGE_LENGTH - 32,
-				"type=%s msg=%.*s", type, len, message);
-
-	        /* Replace \n with space so it looks nicer. */
-        	ptr = format_buf;
-	        while ((ptr = strchr(ptr, 0x0A)) != NULL)
-        	        *ptr = ' ';
-
-		/* Trim trailing space off since it wastes space */
-		if (format_buf[nlen-1] == ' ')
-			format_buf[nlen-1] = 0;
-	}
-        return format_buf;
 }
 
 static void reconfigure(struct auditd_event *e)

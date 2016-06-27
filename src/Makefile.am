@@ -35,7 +35,7 @@ endif
 auditd_CFLAGS = -fPIE -DPIE -g -D_REENTRANT -D_GNU_SOURCE -fno-strict-aliasing -pthread
 auditd_LDFLAGS = -pie -Wl,-z,relro -Wl,-z,now
 auditd_DEPENDENCIES = libev/libev.a
-auditd_LDADD = @LIBWRAP_LIBS@ -Llibev -lev -L${top_builddir}/lib -laudit -lpthread -lrt -lm $(gss_libs)
+auditd_LDADD = @LIBWRAP_LIBS@ -Llibev -lev -L${top_builddir}/lib -laudit -L${top_builddir}/auparse -lauparse -lpthread -lrt -lm $(gss_libs)
 
 auditctl_SOURCES = auditctl.c auditctl-llist.c delete_all.c auditctl-listing.c
 auditctl_CFLAGS = -fPIE -DPIE -g -D_GNU_SOURCE
@@ -43,7 +43,7 @@ auditctl_LDFLAGS = -pie -Wl,-z,relro -Wl,-z,now
 auditctl_LDADD = -L${top_builddir}/lib -laudit -L${top_builddir}/auparse -lauparse
 
 aureport_SOURCES = aureport.c auditd-config.c ausearch-llist.c aureport-options.c ausearch-string.c ausearch-parse.c aureport-scan.c aureport-output.c ausearch-lookup.c ausearch-int.c ausearch-time.c ausearch-nvpair.c ausearch-avc.c ausearch-lol.c
-aureport_LDADD = -L${top_builddir}/lib -laudit
+aureport_LDADD = -L${top_builddir}/lib -laudit -L${top_builddir}/auparse -lauparse
 
 ausearch_SOURCES = ausearch.c auditd-config.c ausearch-llist.c ausearch-options.c ausearch-report.c ausearch-match.c ausearch-string.c ausearch-parse.c ausearch-int.c ausearch-time.c ausearch-nvpair.c ausearch-lookup.c ausearch-avc.c ausearch-lol.c ausearch-checkpt.c
 ausearch_LDADD = -L${top_builddir}/lib -laudit -L${top_builddir}/auparse -lauparse
