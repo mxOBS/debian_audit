@@ -1430,6 +1430,9 @@ EM_ARM = _audit.EM_ARM
 
 _audit.EM_AARCH64_swigconstant(_audit)
 EM_AARCH64 = _audit.EM_AARCH64
+
+_audit.AUDIT_INTERP_SEPARATOR_swigconstant(_audit)
+AUDIT_INTERP_SEPARATOR = _audit.AUDIT_INTERP_SEPARATOR
 class audit_sig_info(object):
     thisown = _swig_property(lambda x: x.this.own(), lambda x, v: x.this.own(v), doc='The membership flag')
     __repr__ = _swig_repr
@@ -1516,6 +1519,9 @@ audit_dispatcher_header_swigregister(audit_dispatcher_header)
 
 _audit.AUDISP_PROTOCOL_VER_swigconstant(_audit)
 AUDISP_PROTOCOL_VER = _audit.AUDISP_PROTOCOL_VER
+
+_audit.AUDISP_PROTOCOL_VER2_swigconstant(_audit)
+AUDISP_PROTOCOL_VER2 = _audit.AUDISP_PROTOCOL_VER2
 
 _audit.MACH_X86_swigconstant(_audit)
 MACH_X86 = _audit.MACH_X86

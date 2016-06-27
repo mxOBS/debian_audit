@@ -159,23 +159,6 @@ static void set_tm_this_year(struct tm *d)
 	d->tm_isdst = 0;
 }
 
-/* Combine date & time into 1 struct. Results in date. */
-static void add_tm(struct tm *d, struct tm *t)
-{
-        time_t dst;
-        struct tm *lt;
-
-	replace_time(d, t);
-
-        /* Now we need to figure out if DST is in effect */
-        dst = mktime(d);
-        lt = localtime(&dst);
-	if (lt->tm_isdst > 0)
-	        d->tm_isdst = lt->tm_isdst;
-	else
-		d->tm_isdst = 0;
-}
-
 /* The time in t1 is replaced by t2 */
 static void replace_time(struct tm *t1, struct tm *t2)
 {
@@ -192,29 +175,6 @@ static void replace_date(struct tm *t1, struct tm *t2)
         t1->tm_year = t2->tm_year;	/* year */
         t1->tm_isdst = t2->tm_isdst;	/* daylight savings time */
 }
-
-/* Given 2 char strings, create a time struct *
-void set_time(struct tm *t, int num, const char *t1, const char *t2)
-{
-	switch (num)
-	{
-		case 1:
-			// if keyword, init time
-			// elif time use today and replace time
-			// elif date, set to 00:00:01 and replace date
-			// else error
-			break;
-		case 2:
-			// if keyword
-			//	init time with it
-			//	get other time str and replace
-			// otherwise, figure out which is time
-			//	and set time adding them
-			break;
-		default:
-			break;
-	}
-} */
 
 static int lookup_and_set_time(const char *da, struct tm *d)
 {
@@ -264,9 +224,10 @@ int ausearch_time_start(const char *da, const char *ti)
 /* If da == NULL, use current date */
 /* If ti == NULL, then use midnight 00:00:00 */
 	int rc = 0;
-	struct tm d, t;
+	struct tm d;
 	char *ret;
 
+	clear_tm(&d);
 	if (da == NULL)
 		set_tm_now(&d);
 	else {
@@ -283,6 +244,8 @@ int ausearch_time_start(const char *da, const char *ti)
 					"Error parsing start date (%s)\n", da);
 				return 1;
 			}
+			// FIX DST flag
+			start_time = mktime(&d);
 		} else {
 			int keyword=lookup_time(da);
 			if (keyword == T_RECENT || keyword == T_NOW) {
@@ -301,7 +264,7 @@ int ausearch_time_start(const char *da, const char *ti)
 			tmp_t[0]=0;
 			strncat(tmp_t, ti, sizeof(tmp_t)-1);
 		}
-		ret = strptime(tmp_t, "%X", &t);
+		ret = strptime(tmp_t, "%X", &d);
 		if (ret == NULL) {
 			fprintf(stderr,
 	"Invalid start time (%s). Hour, Minute, and Second are required.\n",
@@ -313,16 +276,15 @@ int ausearch_time_start(const char *da, const char *ti)
 			return 1;
 		}
 	} else
-		clear_tm(&t);
+		clear_tm(&d);
 
-	add_tm(&d, &t);
 	if (d.tm_year < 104) {
 		fprintf(stderr, "Error - year is %d\n", d.tm_year+1900);
 		return -1;
 	}
 set_it:
-	// printf("start is: %s\n", ctime(&start_time));
 	start_time = mktime(&d);
+	// printf("start is: %s\n", ctime(&start_time));
 	if (start_time == -1) {
 		fprintf(stderr, "Error converting start time\n");
 		rc = -1;
@@ -335,9 +297,10 @@ int ausearch_time_end(const char *da, const char *ti)
 /* If date == NULL, use current date */
 /* If ti == NULL, use current time */
 	int rc = 0;
-	struct tm d, t;
+	struct tm d;
 	char *ret;
 
+	clear_tm(&d);
 	if (da == NULL)
 		set_tm_now(&d);
 	else {
@@ -354,6 +317,8 @@ int ausearch_time_end(const char *da, const char *ti)
 					"Error parsing end date (%s)\n", da);
 				return 1;
 			}
+			// FIX DST flag
+			end_time = mktime(&d);
 		} else {
 			int keyword=lookup_time(da);
 			if (keyword == T_RECENT || keyword == T_NOW) {
@@ -378,7 +343,7 @@ int ausearch_time_end(const char *da, const char *ti)
 			tmp_t[0]=0;
 			strncat(tmp_t, ti, sizeof(tmp_t)-1);
 		}
-		ret = strptime(tmp_t, "%X", &t);
+		ret = strptime(tmp_t, "%X", &d);
 		if (ret == NULL) {
 			fprintf(stderr,
 	     "Invalid end time (%s). Hour, Minute, and Second are required.\n",
@@ -392,21 +357,18 @@ int ausearch_time_end(const char *da, const char *ti)
 	} else {
 		time_t tt = time(NULL);
 		struct tm *tv = localtime(&tt);
-		clear_tm(&t);
-		t.tm_hour = tv->tm_hour;
-		t.tm_min = tv->tm_min;
-		t.tm_sec = tv->tm_sec;
-		t.tm_isdst = tv->tm_isdst;
-
+		d.tm_hour = tv->tm_hour;
+		d.tm_min = tv->tm_min;
+		d.tm_sec = tv->tm_sec;
+		d.tm_isdst = tv->tm_isdst;
 	}
-	add_tm(&d, &t);
 	if (d.tm_year < 104) {
 		fprintf(stderr, "Error - year is %d\n", d.tm_year+1900);
 		return -1;
 	}
 set_it:
-	// printf("end is: %s\n", ctime(&end_time));
 	end_time = mktime(&d);
+	// printf("end is: %s\n", ctime(&end_time));
 	if (end_time == -1) {
 		fprintf(stderr, "Error converting end time\n");
 		rc = -1;

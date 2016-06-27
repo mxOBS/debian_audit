@@ -1,3 +1,12 @@
+2.6
+- Auditd support for enriched data: uid/gid, saddr splitting, arch, syscall
+- Make all libraries and utilities support and use enriched events
+- Define dispatcher protocol to version 2
+- Standardize all saddr interpretations in auparse
+- Fix another DST bug in ausearch time conversion (#1334772)
+- In autrace, if rule count loop times out don't assume 0 rules (#1344268)
+- In auditd, check space left a little more often (#1345854)
+
 2.5.2
 - Fix memory leak caused by unneeded reference in auparse python bindings
 - Revise function hiding technique to better protect audit ABI

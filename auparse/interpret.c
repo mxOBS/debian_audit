@@ -1,6 +1,6 @@
 /*
 * interpret.c - Lookup values to something more readable
-* Copyright (c) 2007-09,2011-15 Red Hat Inc., Durham, North Carolina.
+* Copyright (c) 2007-09,2011-16 Red Hat Inc., Durham, North Carolina.
 * All Rights Reserved. 
 *
 * This library is free software; you can redistribute it and/or
@@ -28,6 +28,7 @@
 #include "internal.h"
 #include "interpret.h"
 #include "auparse-idata.h"
+#include "nvlist.h"
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -116,8 +117,10 @@
 typedef enum { AVC_UNSET, AVC_DENIED, AVC_GRANTED } avc_t;
 typedef enum { S_UNSET=-1, S_FAILED, S_SUCCESS } success_t;
 
+static const char *print_escaped(const char *val);
 static const char *print_signals(const char *val, unsigned int base);
 static auparse_esc_t escape_mode = AUPARSE_ESC_TTY;
+static nvlist il;  // Interpretations list
 
 /*
  * This function will take a pointer to a 2 byte Ascii character buffer and
@@ -327,6 +330,103 @@ char *au_unescape(char *buf)
         return str;
 }
 
+/////////// Interpretation list functions ///////////////
+void init_interpretation_list(void)
+{
+	nvlist_create(&il);
+}
+
+/*
+ * Returns 0 on error and 1 on success
+ */
+int load_interpretation_list(const char *buffer)
+{
+	char *saved = NULL, *ptr;
+	char *buf;
+
+	if (buffer == NULL)
+		return 0;
+
+	buf = strdup(buffer);
+	ptr = audit_strsplit_r(buf, &saved);
+	if (ptr == NULL) {
+		free(buf);
+		return 0;
+	}
+
+	do {
+		nvnode n;
+		char tmp, *val;
+
+		if (*ptr == '{') {
+			val = ptr+1;
+			ptr = strchr(val, '}');
+			if (ptr) {
+				tmp = *ptr;
+				*ptr = 0;
+			} else
+				continue;	// Malformed - skip
+			n.name = strdup("saddr");
+		} else {
+			val = strchr(ptr, '=');
+			if (val) {
+				*val = 0;
+				val++;
+			} else	// Malformed - skip
+				continue;
+			n.name = strdup(ptr);
+			char *c = n.name;
+			while (*c) {
+				*c = tolower(*c);
+				c++;
+			}
+			ptr = strchr(val, ' ');
+			if (ptr) {
+				tmp = *ptr;
+				*ptr = 0;
+			} else
+				tmp = 0;
+		}
+
+		n.val = strdup(val);
+		nvlist_append(&il, &n);
+		nvlist_interp_fixup(&il);
+		if (ptr)
+			*ptr = tmp;
+	} while((ptr = audit_strsplit_r(NULL, &saved)));
+
+	free(buf);
+	return 1;
+}
+
+/*
+ * Returns malloc'ed buffer on success and NULL if no match
+ */
+const char *_lookup_interpretation(const char *name)
+{
+	nvnode *n;
+
+	nvlist_first(&il);
+	if (nvlist_find_name(&il, name)) {
+		n = nvlist_get_cur(&il);
+		// This is only called from src/ausearch-lookup.c
+		// it only looks up auid and syscall. One needs
+		// escape, the other does not.
+		if (strstr(name, "id"))
+			return print_escaped(n->interp_val);
+		else
+			return strdup(n->interp_val);
+	}
+	return NULL;
+}
+
+void free_interpretation_list(void)
+{
+	nvlist_clear(&il);
+}
+
+//////////// Start Field Value Interpretations /////////////
+
 static const char *success[3]= { "unset", "no", "yes" };
 static const char *aulookup_success(int s)
 {
@@ -366,6 +466,7 @@ static const char *aulookup_uid(uid_t uid, char *buf, size_t size)
 	if (rc) {
 		name = uid_nvl.cur->name;
 	} else {
+		// This getpw use is OK because its for protocol 1 compatibility
 		// Add it to cache
 		struct passwd *pw;
 		pw = getpwuid(uid);
@@ -896,34 +997,40 @@ static const char *print_sockaddr(const char *val)
                                 const struct sockaddr_un *un =
                                         (struct sockaddr_un *)saddr;
                                 if (un->sun_path[0])
-					rc = asprintf(&out, "%s %s", str,
+					rc = asprintf(&out,
+						"{ fam=%s path=%s }", str,
 						      un->sun_path);
                                 else // abstract name
-					rc = asprintf(&out, "%s %.108s", str,
-						      &un->sun_path[1]);
+					rc = asprintf(&out,
+						"{ fam=%s path=%.108s }",
+							str, &un->sun_path[1]);
                         }
                         break;
                 case AF_INET:
                         if (slen < sizeof(struct sockaddr_in)) {
-				rc = asprintf(&out, "%s sockaddr len too short",
-					      str);
+				rc = asprintf(&out,
+					    "{ fam=%s sockaddr len too short }",
+					     str);
 				break;
                         }
                         slen = sizeof(struct sockaddr_in);
                         if (getnameinfo(saddr, slen, name, NI_MAXHOST, serv,
                                 NI_MAXSERV, NI_NUMERICHOST |
                                         NI_NUMERICSERV) == 0 ) {
-				rc = asprintf(&out, "%s host:%s serv:%s", str,
-					      name, serv);
+				rc = asprintf(&out,
+					      "{ fam=%s laddr=%s lport=%s }",
+					      str, name, serv);
                         } else
-				rc = asprintf(&out, "%s (error resolving addr)",
-					      str);
+				rc = asprintf(&out,
+					    "{ fam=%s (error resolving addr) }",
+					    str);
                         break;
                 case AF_AX25:
                         {
                                 const struct sockaddr_ax25 *x =
                                                 (struct sockaddr_ax25 *)saddr;
-				rc = asprintf(&out, "%s call:%c%c%c%c%c%c%c",
+				rc = asprintf(&out,
+					      "{ fam=%s call=%c%c%c%c%c%c%c }",
 					      str,
 					      x->sax25_call.ax25_call[0],
 					      x->sax25_call.ax25_call[1],
@@ -938,15 +1045,16 @@ static const char *print_sockaddr(const char *val)
                         {
                                 const struct sockaddr_ipx *ip =
                                                 (struct sockaddr_ipx *)saddr;
-				rc = asprintf(&out, "%s port:%d net:%u", str,
-					      ip->sipx_port, ip->sipx_network);
+				rc = asprintf(&out,
+					"{ fam=%s lport=%d ipx-net=%u }",
+					str, ip->sipx_port, ip->sipx_network);
                         }
                         break;
                 case AF_ATMPVC:
                         {
                                 const struct sockaddr_atmpvc* at =
                                         (struct sockaddr_atmpvc *)saddr;
-				rc = asprintf(&out, "%s int:%d", str,
+				rc = asprintf(&out, "{ fam=%s int=%d }", str,
 					      at->sap_addr.itf);
                         }
                         break;
@@ -954,33 +1062,36 @@ static const char *print_sockaddr(const char *val)
                         {
                                 const struct sockaddr_x25* x =
                                         (struct sockaddr_x25 *)saddr;
-				rc = asprintf(&out, "%s addr:%.15s", str,
-					      x->sx25_addr.x25_addr);
+				rc = asprintf(&out, "{ fam=%s laddr=%.15s }",
+					      str, x->sx25_addr.x25_addr);
                         }
                         break;
                 case AF_INET6:
                         if (slen < sizeof(struct sockaddr_in6)) {
 				rc = asprintf(&out,
-					      "%s sockaddr6 len too short",
-					      str);
+					   "{ fam=%s sockaddr6 len too short }",
+					   str);
 				break;
                         }
                         slen = sizeof(struct sockaddr_in6);
                         if (getnameinfo(saddr, slen, name, NI_MAXHOST, serv,
                                 NI_MAXSERV, NI_NUMERICHOST |
                                         NI_NUMERICSERV) == 0 ) {
-				rc = asprintf(&out, "%s host:%s serv:%s", str,
-					      name, serv);
+				rc = asprintf(&out,
+						"{ fam=%s laddr=%s lport=%s }",
+						str, name, serv);
                         } else
-				rc = asprintf(&out, "%s (error resolving addr)",
-					      str);
+				rc = asprintf(&out,
+					    "{ fam=%s (error resolving addr) }",
+					    str);
                         break;
                 case AF_NETLINK:
                         {
                                 const struct sockaddr_nl *n =
                                                 (struct sockaddr_nl *)saddr;
-				rc = asprintf(&out, "%s pid:%u", str,
-					      n->nl_pid);
+				rc = asprintf(&out,
+					  "{ fam=%s nlnk-fam=%u nlnk-pid=%u }",
+					  str, n->nl_family, n->nl_pid);
                         }
                         break;
         }
@@ -2543,6 +2654,10 @@ int lookup_type(const char *name)
 	return AUPARSE_TYPE_UNCLASSIFIED;
 }
 
+/*
+ * This is the main entry point for the auparse library. Call chain is:
+ * auparse_interpret_field -> nvlist_interp_cur_val -> interpret
+ */
 const char *interpret(const rnode *r)
 {
 	const nvlist *nv = &r->nv;
@@ -2611,9 +2726,30 @@ int auparse_interp_adjust_type(int rtype, const char *name, const char *val)
 	return type;
 }
 
+/*
+ * This can be called by either interpret() or from ausearch-report or
+ * auditctl-listing.c. Returns a malloc'ed buffer that the caller must free.
+ */
 const char *auparse_do_interpretation(int type, const idata *id)
 {
 	const char *out;
+
+	// Check the interpretations list first
+	if (il.head) {
+		nvlist_first(&il);
+		if (nvlist_find_name(&il, id->name)) {
+			const char *val = il.cur->interp_val;
+
+			if (val) {
+				if (type == AUPARSE_TYPE_UID ||
+						type == AUPARSE_TYPE_GID)
+					return print_escaped(val);
+				else
+					return strdup(val);
+			}
+		}
+	}
+
 	switch(type) {
 		case AUPARSE_TYPE_UID:
 			out = print_uid(id->val, 10);
