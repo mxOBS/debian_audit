@@ -2,8 +2,9 @@ audit (1:2.6-1) UNRELEASED; urgency=medium
 
   * New upstream release
     - debian/libauparse0.symbols: Add new exported symbols
+  * debian/rules: Enable all hardening flags
 
- -- Laurent Bigonville <bigon@debian.org>  Mon, 27 Jun 2016 21:25:50 +0200
+ -- Laurent Bigonville <bigon@debian.org>  Mon, 27 Jun 2016 21:30:44 +0200
 
 audit (1:2.5.2-1) unstable; urgency=medium
 
