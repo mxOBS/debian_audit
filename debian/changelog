@@ -1,9 +1,13 @@
 audit (1:2.6.4-1) UNRELEASED; urgency=medium
 
+  [ Laurent Bigonville ]
   * New upstream release
     - Fix crash when starting the daemon (Closes: #830244)
 
- -- Laurent Bigonville <bigon@debian.org>  Tue, 12 Jul 2016 17:02:38 +0200
+  [ Nicolas Braud-Santoni ]
+  * debian/copyright: Make a DEP5-compliant, parseable file
+
+ -- Laurent Bigonville <bigon@debian.org>  Tue, 12 Jul 2016 17:05:02 +0200
 
 audit (1:2.6.3-1) unstable; urgency=medium
 
