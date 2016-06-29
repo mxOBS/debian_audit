@@ -2,7 +2,7 @@
 
 Summary: User space tools for 2.6 kernel auditing
 Name: audit
-Version: 2.6
+Version: 2.6.1
 Release: 1
 License: GPLv2+
 Group: System Environment/Daemons
@@ -240,6 +240,7 @@ fi
 %config(noreplace) %attr(640,root,root) /etc/audit/auditd.conf
 %ghost %config(noreplace) %attr(640,root,root) /etc/audit/rules.d/audit.rules
 %ghost %config(noreplace) %attr(640,root,root) /etc/audit/audit.rules
+%config(noreplace) %attr(640,root,root) /etc/audit/audit-stop.rules
 %config(noreplace) %attr(640,root,root) /etc/audisp/audispd.conf
 %config(noreplace) %attr(640,root,root) /etc/audisp/plugins.d/af_unix.conf
 %config(noreplace) %attr(640,root,root) /etc/audisp/plugins.d/syslog.conf
@@ -260,6 +261,6 @@ fi
 
 
 %changelog
-* Wed Jun 22 2016 Steve Grubb <sgrubb@redhat.com> 2.6-1
+* Wed Jun 28 2016 Steve Grubb <sgrubb@redhat.com> 2.6.1-1
 - New upstream release
 
