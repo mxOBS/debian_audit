@@ -1,11 +1,11 @@
-audit (1:2.6-1) UNRELEASED; urgency=medium
+audit (1:2.6.1-1) UNRELEASED; urgency=medium
 
   * New upstream release
     - debian/libauparse0.symbols: Add new exported symbols
   * debian/rules: Enable all hardening flags
   * debian/gbp.conf: Rename [git-buildpackage] section to [buildpackage]
 
- -- Laurent Bigonville <bigon@debian.org>  Mon, 27 Jun 2016 21:31:59 +0200
+ -- Laurent Bigonville <bigon@debian.org>  Wed, 29 Jun 2016 07:17:23 +0200
 
 audit (1:2.5.2-1) unstable; urgency=medium
 
