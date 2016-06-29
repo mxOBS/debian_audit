@@ -1,5 +1,5 @@
 /* audisp-remote.c --
- * Copyright 2008-2012 Red Hat Inc., Durham, North Carolina.
+ * Copyright 2008-2012,2016 Red Hat Inc., Durham, North Carolina.
  * All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -76,6 +76,7 @@ static volatile int sock=-1;
 static volatile int remote_ended = 0, quiet = 0;
 static int ifd;
 remote_conf_t config;
+static int warned = 0;
 
 /* Constants */
 static const char *SINGLE = "1";
@@ -244,16 +245,28 @@ static int do_action (const char *desc, const char *message,
 	case FA_EXEC:
 		safe_exec (exe, message);
 		return 0;
+	case FA_WARN_ONCE_CONT:
+		if (warned & 1)
+			return -1;
+		warned |= 1;
+		syslog (log_level, "%s, %s", desc, message);
+		return 0;
+	case FA_WARN_ONCE:
+		if (warned & 2)
+			return -1;
+		warned |= 2;
+		syslog (log_level, "%s, %s", desc, message);
+		return -1;
 	case FA_SUSPEND:
 		syslog (log_level,
 			"suspending remote logging due to %s", desc);
 		suspend = 1;
-		return 0;
+		return -1;
 	case FA_RECONNECT:
 		syslog (log_level,
 	"remote logging disconnected due to %s, will attempt reconnection",
 			desc);
-		return 0;
+		return -1;
 	case FA_SINGLE:
 		syslog (log_level,
 	"remote logging is switching system to single user mode due to %s",
@@ -414,6 +427,8 @@ static void send_one(struct queue *queue)
 	if (relay_event(event, len-1) < 0)
 		return;
 
+	/* reset on all successful transmissions */
+	warned = 0;
 	if (q_drop_head(queue) != 0)
 		queue_error();
 }
@@ -1259,9 +1274,15 @@ static int recv_msg_tcp (unsigned char *header, char *msg, uint32_t *mlen)
 	int hver, mver, rc;
 	uint32_t type, rlen, seq;
 
+	errno = 0;
 	rc = ar_read (sock, header, AUDIT_RMW_HEADER_SIZE);
 	if (rc < 16) {
-		syslog(LOG_ERR, "read from %s failed", config.remote_server);
+		if (rc == -1 && errno == 0)
+			syslog(LOG_ERR, "ack from %s timed out",
+						config.remote_server);
+		else
+			syslog(LOG_ERR, "read from %s failed",
+						config.remote_server);
 		return -1;
 	}
 

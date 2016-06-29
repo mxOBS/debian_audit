@@ -15,7 +15,7 @@
 @SET_MAKE@
 
 # Makefile.am -- 
-# Copyright 2004-2009,2013-15 Red Hat Inc., Durham, North Carolina.
+# Copyright 2004-2009,2013-16 Red Hat Inc., Durham, North Carolina.
 # All Rights Reserved.
 #
 # This library is free software; you can redistribute it and/or
@@ -172,6 +172,7 @@ am__uninstall_files_from_dir = { \
 am__installdirs = "$(DESTDIR)$(libdir)" "$(DESTDIR)$(pkgconfigdir)" \
 	"$(DESTDIR)$(includedir)"
 LTLIBRARIES = $(lib_LTLIBRARIES)
+am__DEPENDENCIES_1 =
 am_libaudit_la_OBJECTS = libaudit.lo message.lo netlink.lo \
 	lookup_table.lo audit_logging.lo deprecated.lo strsplit.lo
 am__objects_1 =
@@ -617,7 +618,7 @@ libaudit_la_SOURCES = libaudit.c message.c netlink.c \
 	lookup_table.c audit_logging.c deprecated.c \
 	strsplit.c dso.h private.h errormsg.h
 
-libaudit_la_LIBADD = 
+libaudit_la_LIBADD = $(CAPNG_LDADD)
 libaudit_la_DEPENDENCIES = $(libaudit_la_SOURCES) ../config.h
 libaudit_la_LDFLAGS = -Wl,-z,relro -version-info $(VERSION_INFO)
 nodist_libaudit_la_SOURCES = $(BUILT_SOURCES)
@@ -1445,139 +1446,173 @@ uninstall-am: uninstall-includeHEADERS uninstall-libLTLIBRARIES \
 $(gen_actiontabs_h_OBJECTS): CC=$(CC_FOR_BUILD)
 $(gen_actiontabs_h_OBJECTS): CFLAGS=$(CFLAGS_FOR_BUILD)
 $(gen_actiontabs_h_OBJECTS): CPPFLAGS=$(CPPFLAGS_FOR_BUILD)
+$(gen_actiontabs_h_OBJECTS): LDFLAGS=$(LDFLAGS_FOR_BUILD)
 gen_actiontabs_h$(BUILD_EXEEXT): CC=$(CC_FOR_BUILD)
 gen_actiontabs_h$(BUILD_EXEEXT): CFLAGS=$(CFLAGS_FOR_BUILD)
 gen_actiontabs_h$(BUILD_EXEEXT): CPPFLAGS=$(CPPFLAGS_FOR_BUILD)
+gen_actiontabs_h$(BUILD_EXEEXT): LDFLAGS=$(LDFLAGS_FOR_BUILD)
 actiontabs.h: gen_actiontabs_h Makefile
 	./gen_actiontabs_h --lowercase --i2s --s2i action > $@
 @USE_ALPHA_TRUE@$(gen_alpha_tables_h_OBJECTS): CC=$(CC_FOR_BUILD)
 @USE_ALPHA_TRUE@$(gen_alpha_tables_h_OBJECTS): CFLAGS=$(CFLAGS_FOR_BUILD)
 @USE_ALPHA_TRUE@$(gen_alpha_tables_h_OBJECTS): CPPFLAGS=$(CPPFLAGS_FOR_BUILD)
+@USE_ALPHA_TRUE@$(gen_alpha_tables_h_OBJECTS): LDFLAGS=$(LDFLAGS_FOR_BUILD)
 @USE_ALPHA_TRUE@gen_alpha_tables_h$(BUILD_EXEEXT): CC=$(CC_FOR_BUILD)
 @USE_ALPHA_TRUE@gen_alpha_tables_h$(BUILD_EXEEXT): CFLAGS=$(CFLAGS_FOR_BUILD)
 @USE_ALPHA_TRUE@gen_alpha_tables_h$(BUILD_EXEEXT): CPPFLAGS=$(CPPFLAGS_FOR_BUILD)
+@USE_ALPHA_TRUE@gen_alpha_tables_h$(BUILD_EXEEXT): LDFLAGS=$(LDFLAGS_FOR_BUILD)
 @USE_ALPHA_TRUE@alpha_tables.h: gen_alpha_tables_h Makefile
 @USE_ALPHA_TRUE@	./gen_alpha_tables_h --lowercase --i2s --s2i alpha_syscall > $@
 @USE_ARM_TRUE@$(gen_arm_tables_h_OBJECTS): CC=$(CC_FOR_BUILD)
 @USE_ARM_TRUE@$(gen_arm_tables_h_OBJECTS): CFLAGS=$(CFLAGS_FOR_BUILD)
 @USE_ARM_TRUE@$(gen_arm_tables_h_OBJECTS): CPPFLAGS=$(CPPFLAGS_FOR_BUILD)
+@USE_ARM_TRUE@$(gen_arm_tables_h_OBJECTS): LDFLAGS=$(LDFLAGS_FOR_BUILD)
 @USE_ARM_TRUE@gen_arm_tables_h$(BUILD_EXEEXT): CC=$(CC_FOR_BUILD)
 @USE_ARM_TRUE@gen_arm_tables_h$(BUILD_EXEEXT): CFLAGS=$(CFLAGS_FOR_BUILD)
 @USE_ARM_TRUE@gen_arm_tables_h$(BUILD_EXEEXT): CPPFLAGS=$(CPPFLAGS_FOR_BUILD)
+@USE_ARM_TRUE@gen_arm_tables_h$(BUILD_EXEEXT): LDFLAGS=$(LDFLAGS_FOR_BUILD)
 @USE_ARM_TRUE@arm_tables.h: gen_arm_tables_h Makefile
 @USE_ARM_TRUE@	./gen_arm_tables_h --lowercase --i2s --s2i arm_syscall > $@
 @USE_AARCH64_TRUE@$(gen_aarch64_tables_h_OBJECTS): CC=$(CC_FOR_BUILD)
 @USE_AARCH64_TRUE@$(gen_aarch64_tables_h_OBJECTS): CFLAGS=$(CFLAGS_FOR_BUILD)
 @USE_AARCH64_TRUE@$(gen_aarch64_tables_h_OBJECTS): CPPFLAGS=$(CPPFLAGS_FOR_BUILD)
+@USE_AARCH64_TRUE@$(gen_aarch64_tables_h_OBJECTS): LDFLAGS=$(LDFLAGS_FOR_BUILD)
 @USE_AARCH64_TRUE@gen_aarch64_tables_h$(BUILD_EXEEXT): CC=$(CC_FOR_BUILD)
 @USE_AARCH64_TRUE@gen_aarch64_tables_h$(BUILD_EXEEXT): CFLAGS=$(CFLAGS_FOR_BUILD)
 @USE_AARCH64_TRUE@gen_aarch64_tables_h$(BUILD_EXEEXT): CPPFLAGS=$(CPPFLAGS_FOR_BUILD)
+@USE_AARCH64_TRUE@gen_aarch64_tables_h$(BUILD_EXEEXT): LDFLAGS=$(LDFLAGS_FOR_BUILD)
 @USE_AARCH64_TRUE@aarch64_tables.h: gen_aarch64_tables_h Makefile
 @USE_AARCH64_TRUE@	./gen_aarch64_tables_h --lowercase --i2s --s2i aarch64_syscall > $@
 $(gen_errtabs_h_OBJECTS): CC=$(CC_FOR_BUILD)
 $(gen_errtabs_h_OBJECTS): CFLAGS=$(CFLAGS_FOR_BUILD)
 $(gen_errtabs_h_OBJECTS): CPPFLAGS=$(CPPFLAGS_FOR_BUILD)
+$(gen_errtabs_h_OBJECTS): LDFLAGS=$(LDFLAGS_FOR_BUILD)
 gen_errtabs_h$(BUILD_EXEEXT): CC=$(CC_FOR_BUILD)
 gen_errtabs_h$(BUILD_EXEEXT): CFLAGS=$(CFLAGS_FOR_BUILD)
 gen_errtabs_h$(BUILD_EXEEXT): CPPFLAGS=$(CPPFLAGS_FOR_BUILD)
+gen_errtabs_h$(BUILD_EXEEXT): LDFLAGS=$(LDFLAGS_FOR_BUILD)
 errtabs.h: gen_errtabs_h Makefile
 	./gen_errtabs_h --duplicate-ints --uppercase --i2s --s2i err > $@
 $(gen_fieldtabs_h_OBJECTS): CC=$(CC_FOR_BUILD)
 $(gen_fieldtabs_h_OBJECTS): CFLAGS=$(CFLAGS_FOR_BUILD)
 $(gen_fieldtabs_h_OBJECTS): CPPFLAGS=$(CPPFLAGS_FOR_BUILD)
+$(gen_fieldtabs_h_OBJECTS): LDFLAGS=$(LDFLAGS_FOR_BUILD)
 gen_fieldtabs_h$(BUILD_EXEEXT): CC=$(CC_FOR_BUILD)
 gen_fieldtabs_h$(BUILD_EXEEXT): CFLAGS=$(CFLAGS_FOR_BUILD)
 gen_fieldtabs_h$(BUILD_EXEEXT): CPPFLAGS=$(CPPFLAGS_FOR_BUILD)
+gen_fieldtabs_h$(BUILD_EXEEXT): LDFLAGS=$(LDFLAGS_FOR_BUILD)
 fieldtabs.h: gen_fieldtabs_h Makefile
 	./gen_fieldtabs_h --duplicate-ints --lowercase --i2s --s2i field > $@
 $(gen_flagtabs_h_OBJECTS): CC=$(CC_FOR_BUILD)
 $(gen_flagtabs_h_OBJECTS): CFLAGS=$(CFLAGS_FOR_BUILD)
 $(gen_flagtabs_h_OBJECTS): CPPFLAGS=$(CPPFLAGS_FOR_BUILD)
+$(gen_flagtabs_h_OBJECTS): LDFLAGS=$(LDFLAGS_FOR_BUILD)
 gen_flagtabs_h$(BUILD_EXEEXT): CC=$(CC_FOR_BUILD)
 gen_flagtabs_h$(BUILD_EXEEXT): CFLAGS=$(CFLAGS_FOR_BUILD)
 gen_flagtabs_h$(BUILD_EXEEXT): CPPFLAGS=$(CPPFLAGS_FOR_BUILD)
+gen_flagtabs_h$(BUILD_EXEEXT): LDFLAGS=$(LDFLAGS_FOR_BUILD)
 flagtabs.h: gen_flagtabs_h Makefile
 	./gen_flagtabs_h --lowercase --i2s --s2i flag > $@
 $(gen_ftypetabs_h_OBJECTS): CC=$(CC_FOR_BUILD)
 $(gen_ftypetabs_h_OBJECTS): CFLAGS=$(CFLAGS_FOR_BUILD)
 $(gen_ftypetabs_h_OBJECTS): CPPFLAGS=$(CPPFLAGS_FOR_BUILD)
+$(gen_ftypetabs_h_OBJECTS): LDFLAGS=$(LDFLAGS_FOR_BUILD)
 gen_ftypetabs_h$(BUILD_EXEEXT): CC=$(CC_FOR_BUILD)
 gen_ftypetabs_h$(BUILD_EXEEXT): CFLAGS=$(CFLAGS_FOR_BUILD)
 gen_ftypetabs_h$(BUILD_EXEEXT): CPPFLAGS=$(CPPFLAGS_FOR_BUILD)
+gen_ftypetabs_h$(BUILD_EXEEXT): LDFLAGS=$(LDFLAGS_FOR_BUILD)
 ftypetabs.h: gen_ftypetabs_h Makefile
 	./gen_ftypetabs_h --lowercase --i2s --s2i ftype > $@
 $(gen_i386_tables_h_OBJECTS): CC=$(CC_FOR_BUILD)
 $(gen_i386_tables_h_OBJECTS): CFLAGS=$(CFLAGS_FOR_BUILD)
 $(gen_i386_tables_h_OBJECTS): CPPFLAGS=$(CPPFLAGS_FOR_BUILD)
+$(gen_i386_tables_h_OBJECTS): LDFLAGS=$(LDFLAGS_FOR_BUILD)
 gen_i386_tables_h$(BUILD_EXEEXT): CC=$(CC_FOR_BUILD)
 gen_i386_tables_h$(BUILD_EXEEXT): CFLAGS=$(CFLAGS_FOR_BUILD)
 gen_i386_tables_h$(BUILD_EXEEXT): CPPFLAGS=$(CPPFLAGS_FOR_BUILD)
+gen_i386_tables_h$(BUILD_EXEEXT): LDFLAGS=$(LDFLAGS_FOR_BUILD)
 i386_tables.h: gen_i386_tables_h Makefile
 	./gen_i386_tables_h --duplicate-ints --lowercase --i2s --s2i \
 		i386_syscall > $@
 $(gen_ia64_tables_h_OBJECTS): CC=$(CC_FOR_BUILD)
 $(gen_ia64_tables_h_OBJECTS): CFLAGS=$(CFLAGS_FOR_BUILD)
 $(gen_ia64_tables_h_OBJECTS): CPPFLAGS=$(CPPFLAGS_FOR_BUILD)
+$(gen_ia64_tables_h_OBJECTS): LDFLAGS=$(LDFLAGS_FOR_BUILD)
 gen_ia64_tables_h$(BUILD_EXEEXT): CC=$(CC_FOR_BUILD)
 gen_ia64_tables_h$(BUILD_EXEEXT): CFLAGS=$(CFLAGS_FOR_BUILD)
 gen_ia64_tables_h$(BUILD_EXEEXT): CPPFLAGS=$(CPPFLAGS_FOR_BUILD)
+gen_ia64_tables_h$(BUILD_EXEEXT): LDFLAGS=$(LDFLAGS_FOR_BUILD)
 ia64_tables.h: gen_ia64_tables_h Makefile
 	./gen_ia64_tables_h --lowercase --i2s --s2i ia64_syscall > $@
 $(gen_machinetabs_h_OBJECTS): CC=$(CC_FOR_BUILD)
 $(gen_machinetabs_h_OBJECTS): CFLAGS=$(CFLAGS_FOR_BUILD)
 $(gen_machinetabs_h_OBJECTS): CPPFLAGS=$(CPPFLAGS_FOR_BUILD)
+$(gen_machinetabs_h_OBJECTS): LDFLAGS=$(LDFLAGS_FOR_BUILD)
 gen_machinetabs_h$(BUILD_EXEEXT): CC=$(CC_FOR_BUILD)
 gen_machinetabs_h$(BUILD_EXEEXT): CFLAGS=$(CFLAGS_FOR_BUILD)
 gen_machinetabs_h$(BUILD_EXEEXT): CPPFLAGS=$(CPPFLAGS_FOR_BUILD)
+gen_machinetabs_h$(BUILD_EXEEXT): LDFLAGS=$(LDFLAGS_FOR_BUILD)
 machinetabs.h: gen_machinetabs_h Makefile
 	./gen_machinetabs_h --duplicate-ints --lowercase --i2s --s2i machine \
 		> $@
 $(gen_msg_typetabs_h_OBJECTS): CC=$(CC_FOR_BUILD)
 $(gen_msg_typetabs_h_OBJECTS): CFLAGS=$(CFLAGS_FOR_BUILD)
 $(gen_msg_typetabs_h_OBJECTS): CPPFLAGS=$(CPPFLAGS_FOR_BUILD)
+$(gen_msg_typetabs_h_OBJECTS): LDFLAGS=$(LDFLAGS_FOR_BUILD)
 gen_msg_typetabs_h$(BUILD_EXEEXT): CC=$(CC_FOR_BUILD)
 gen_msg_typetabs_h$(BUILD_EXEEXT): CFLAGS=$(CFLAGS_FOR_BUILD)
 gen_msg_typetabs_h$(BUILD_EXEEXT): CPPFLAGS=$(CPPFLAGS_FOR_BUILD)
+gen_msg_typetabs_h$(BUILD_EXEEXT): LDFLAGS=$(LDFLAGS_FOR_BUILD)
 msg_typetabs.h: gen_msg_typetabs_h Makefile
 	./gen_msg_typetabs_h --uppercase --i2s --s2i msg_type > $@
 $(gen_optabs_h_OBJECTS): CC=$(CC_FOR_BUILD)
 $(gen_optabs_h_OBJECTS): CFLAGS=$(CFLAGS_FOR_BUILD)
 $(gen_optabs_h_OBJECTS): CPPFLAGS=$(CPPFLAGS_FOR_BUILD)
+$(gen_optabs_h_OBJECTS): LDFLAGS=$(LDFLAGS_FOR_BUILD)
 gen_optabs_h$(BUILD_EXEEXT): CC=$(CC_FOR_BUILD)
 gen_optabs_h$(BUILD_EXEEXT): CFLAGS=$(CFLAGS_FOR_BUILD)
 gen_optabs_h$(BUILD_EXEEXT): CPPFLAGS=$(CPPFLAGS_FOR_BUILD)
+gen_optabs_h$(BUILD_EXEEXT): LDFLAGS=$(LDFLAGS_FOR_BUILD)
 optabs.h: gen_optabs_h Makefile
 	./gen_optabs_h --i2s op > $@
 $(gen_ppc_tables_h_OBJECTS): CC=$(CC_FOR_BUILD)
 $(gen_ppc_tables_h_OBJECTS): CFLAGS=$(CFLAGS_FOR_BUILD)
 $(gen_ppc_tables_h_OBJECTS): CPPFLAGS=$(CPPFLAGS_FOR_BUILD)
+$(gen_ppc_tables_h_OBJECTS): LDFLAGS=$(LDFLAGS_FOR_BUILD)
 gen_ppc_tables_h$(BUILD_EXEEXT): CC=$(CC_FOR_BUILD)
 gen_ppc_tables_h$(BUILD_EXEEXT): CFLAGS=$(CFLAGS_FOR_BUILD)
 gen_ppc_tables_h$(BUILD_EXEEXT): CPPFLAGS=$(CPPFLAGS_FOR_BUILD)
+gen_ppc_tables_h$(BUILD_EXEEXT): LDFLAGS=$(LDFLAGS_FOR_BUILD)
 ppc_tables.h: gen_ppc_tables_h Makefile
 	./gen_ppc_tables_h --lowercase --i2s --s2i ppc_syscall > $@
 $(gen_s390_tables_h_OBJECTS): CC=$(CC_FOR_BUILD)
 $(gen_s390_tables_h_OBJECTS): CFLAGS=$(CFLAGS_FOR_BUILD)
 $(gen_s390_tables_h_OBJECTS): CPPFLAGS=$(CPPFLAGS_FOR_BUILD)
+$(gen_s390_tables_h_OBJECTS): LDFLAGS=$(LDFLAGS_FOR_BUILD)
 gen_s390_tables_h$(BUILD_EXEEXT): CC=$(CC_FOR_BUILD)
 gen_s390_tables_h$(BUILD_EXEEXT): CFLAGS=$(CFLAGS_FOR_BUILD)
 gen_s390_tables_h$(BUILD_EXEEXT): CPPFLAGS=$(CPPFLAGS_FOR_BUILD)
+gen_s390_tables_h$(BUILD_EXEEXT): LDFLAGS=$(LDFLAGS_FOR_BUILD)
 s390_tables.h: gen_s390_tables_h Makefile
 	./gen_s390_tables_h --lowercase --i2s --s2i s390_syscall > $@
 $(gen_s390x_tables_h_OBJECTS): CC=$(CC_FOR_BUILD)
 $(gen_s390x_tables_h_OBJECTS): CFLAGS=$(CFLAGS_FOR_BUILD)
 $(gen_s390x_tables_h_OBJECTS): CPPFLAGS=$(CPPFLAGS_FOR_BUILD)
+$(gen_s390x_tables_h_OBJECTS): LDFLAGS=$(LDFLAGS_FOR_BUILD)
 gen_s390x_tables_h$(BUILD_EXEEXT): CC=$(CC_FOR_BUILD)
 gen_s390x_tables_h$(BUILD_EXEEXT): CFLAGS=$(CFLAGS_FOR_BUILD)
 gen_s390x_tables_h$(BUILD_EXEEXT): CPPFLAGS=$(CPPFLAGS_FOR_BUILD)
+gen_s390x_tables_h$(BUILD_EXEEXT): LDFLAGS=$(LDFLAGS_FOR_BUILD)
 s390x_tables.h: gen_s390x_tables_h Makefile
 	./gen_s390x_tables_h --lowercase --i2s --s2i s390x_syscall > $@
 $(gen_x86_64_tables_h_OBJECTS): CC=$(CC_FOR_BUILD)
 $(gen_x86_64_tables_h_OBJECTS): CFLAGS=$(CFLAGS_FOR_BUILD)
 $(gen_x86_64_tables_h_OBJECTS): CPPFLAGS=$(CPPFLAGS_FOR_BUILD)
+$(gen_x86_64_tables_h_OBJECTS): LDFLAGS=$(LDFLAGS_FOR_BUILD)
 gen_x86_64_tables_h$(BUILD_EXEEXT): CC=$(CC_FOR_BUILD)
 gen_x86_64_tables_h$(BUILD_EXEEXT): CFLAGS=$(CFLAGS_FOR_BUILD)
 gen_x86_64_tables_h$(BUILD_EXEEXT): CPPFLAGS=$(CPPFLAGS_FOR_BUILD)
+gen_x86_64_tables_h$(BUILD_EXEEXT): LDFLAGS=$(LDFLAGS_FOR_BUILD)
 x86_64_tables.h: gen_x86_64_tables_h Makefile
 	./gen_x86_64_tables_h --lowercase --i2s --s2i x86_64_syscall > $@
 

@@ -36,6 +36,7 @@
 #include <sys/vfs.h>
 #include <limits.h>     /* POSIX_HOST_NAME_MAX */
 #include <ctype.h>	/* toupper */
+#include <libgen.h>	/* dirname */
 #include "auditd-event.h"
 #include "auditd-dispatch.h"
 #include "auditd-listen.h"
@@ -53,6 +54,7 @@ static void check_space_left(void);
 static void do_space_left_action(int admin);
 static void do_disk_full_action(void);
 static void do_disk_error_action(const char *func, int err);
+static void fix_disk_permissions(void);
 static void check_excess_logs(void); 
 static void rotate_logs_now(void);
 static void rotate_logs(unsigned int num_logs);
@@ -60,7 +62,6 @@ static void shift_logs(void);
 static int  open_audit_log(void);
 static void change_runlevel(const char *level);
 static void safe_exec(const char *exe);
-static void handle_event(struct auditd_event *e);
 static void reconfigure(struct auditd_event *e);
 static void init_flush_thread(void);
 
@@ -113,6 +114,7 @@ int init_event(struct daemon_conf *conf)
 
 	/* Now open the log */
 	if (config->daemonize == D_BACKGROUND) {
+		fix_disk_permissions();
 		if (open_audit_log())
 			return 1;
 	} else {
@@ -454,7 +456,7 @@ void enqueue_event(struct auditd_event *e)
 	e->ack_data = NULL;
 	e->sequence_id = 0;
 
-	handle_event(e);
+        handle_event(e);
 }
 
 /* This function allocates memory and fills the event fields with
@@ -483,9 +485,9 @@ struct auditd_event *create_event(char *msg, ack_func_type ack_func,
 	return e;
 }
 
-/* This function takes the newly dequeued event and handles it. */
+/* This function takes the event and handles it. */
 static unsigned int count = 0L;
-static void handle_event(struct auditd_event *e)
+void handle_event(struct auditd_event *e)
 {
 	if (e->reply.type == AUDIT_DAEMON_RECONFIG && e->ack_func == NULL) {
 		reconfigure(e);
@@ -886,6 +888,43 @@ static void check_excess_logs(void)
 	}
 	free(name);
 }
+
+static void fix_disk_permissions(void)
+{
+	char *path, *dir;
+	unsigned int i, len;
+
+	if (config == NULL || config->log_file == NULL)
+		return;
+
+	len = strlen(config->log_file) + 16;
+
+	path = malloc(len);
+	if (path == NULL)
+		return;
+
+	// Start with the directory
+	strcpy(path, config->log_file);
+	dir = dirname(path);
+	chmod(dir, config->log_group ? S_IRWXU|S_IRWXG : S_IRWXU);
+	chown(dir, 0, config->log_group ? config->log_group : 0);
+
+	// Now, for each file...
+	for (i = 1; i < config->num_logs; i++) {
+		int rc;
+		snprintf(path, len, "%s.%d", config->log_file, i);
+		rc = chmod(path, config->log_group ? S_IWUSR|S_IRUSR|S_IRGRP :
+			S_IWUSR|S_IRUSR);
+		if (rc && errno == ENOENT)
+			break;
+	}
+
+	// Now the current file
+	chmod(config->log_file, config->log_group ? S_IWUSR|S_IRUSR|S_IRGRP :
+			S_IWUSR|S_IRUSR);
+
+	free(path);
+}
  
 static void rotate_logs(unsigned int num_logs)
 {
@@ -1206,7 +1245,7 @@ static void reconfigure(struct auditd_event *e)
 	oconf->disk_error_exe = nconf->disk_error_exe;
 	disk_err_warning = 0;
 
-	// numlogs is next
+	// number of logs
 	oconf->num_logs = nconf->num_logs;
 
 	// flush freq
@@ -1226,6 +1265,17 @@ static void reconfigure(struct auditd_event *e)
 
 	// log format
 	oconf->log_format = nconf->log_format;
+
+	if (oconf->write_logs != nconf->write_logs) {
+		oconf->write_logs = nconf->write_logs;
+		need_reopen = 1;
+	}
+
+	// log_group
+	if (oconf->log_group != nconf->log_group) {
+		oconf->log_group = nconf->log_group;
+		need_reopen = 1;
+	}
 
 	// action_mail_acct
 	if (strcmp(oconf->action_mail_acct, nconf->action_mail_acct)) {
@@ -1306,7 +1356,10 @@ static void reconfigure(struct auditd_event *e)
 
 	// network listener
 	auditd_tcp_listen_reconfigure(nconf, oconf);
-	
+
+	// distribute network events	
+	oconf->distribute_network_events = nconf->distribute_network_events;
+
 	/* At this point we will work on the items that are related to 
 	 * a single log file. */
 
@@ -1344,6 +1397,7 @@ static void reconfigure(struct auditd_event *e)
 
 	if (need_reopen) {
 		fclose(log_file);
+		fix_disk_permissions();
 		if (open_audit_log()) {
 			int saved_errno = errno;
 			audit_msg(LOG_NOTICE, 

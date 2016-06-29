@@ -188,6 +188,8 @@ static int extract_type(const char *str)
 	tptr = strndupa(ptr, ptr2 - ptr);
 	// find =
 	str = strchr(tptr, '=');
+	if (str == NULL)
+		return -1; // Malformed - bomb out
 	// name is 1 past
 	str++;
 	return audit_name_to_msg_type(str);
@@ -216,7 +218,7 @@ void distribute_event(struct auditd_event *e)
 
 	/* End of Event is for realtime interface - skip local logging of it */
 	if (e->reply.type != AUDIT_EOE)
-		enqueue_event(e); /* Write to local disk */
+		handle_event(e); /* Write to local disk */
 
 	/* Last chance to send...maybe the pipe is empty now. */
 	if ((attempt && route) || (e->reply.type == AUDIT_DAEMON_RECONFIG))
@@ -596,9 +598,10 @@ int main(int argc, char *argv[])
 	}
 
 #ifndef DEBUG
-	/* Make sure we are root */
-	if (getuid() != 0) {
-		fprintf(stderr, "You must be root to run this program.\n");
+	/* Make sure we can do our job */
+	if (!audit_can_control() || !audit_can_read()) {
+		fprintf(stderr,
+		"You must be root or have capabilities to run this program.\n");
 		return 4;
 	}
 #endif

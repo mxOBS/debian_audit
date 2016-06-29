@@ -1,3 +1,16 @@
+2.6.1
+- Do capabilities check rather than uid
+- Auditd fixup directory and file permissions on startup
+- Add some missing config items to auditd reconfigure
+- In audisp-remote add warn_once and warn_once_continue action handlers
+- In audisp-remote only emit 1 warning when disk_full or error is reached.
+- Aulast now searches on user name as a string for enriched events
+- Ausearch now searches on user name as a string for enriched events
+- Create audit-stop.rules to clean up audit subsystem on stop
+- Adjust LDFLAGS for cross compiled helper utilities (Laurent Bigonville)
+- Fix event formatting issue in audispd
+- Fix bug causing ack to not be sent from auditd to audisp-remote
+
 2.6
 - Auditd support for enriched data: uid/gid, saddr splitting, arch, syscall
 - Make all libraries and utilities support and use enriched events

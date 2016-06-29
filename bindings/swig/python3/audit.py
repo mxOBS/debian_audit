@@ -1852,4 +1852,16 @@ def audit_rule_free_data(rule: 'audit_rule_data') -> "void":
     return _audit.audit_rule_free_data(rule)
 audit_rule_free_data = _audit.audit_rule_free_data
 
+def audit_can_control() -> "int":
+    return _audit.audit_can_control()
+audit_can_control = _audit.audit_can_control
+
+def audit_can_write() -> "int":
+    return _audit.audit_can_write()
+audit_can_write = _audit.audit_can_write
+
+def audit_can_read() -> "int":
+    return _audit.audit_can_read()
+audit_can_read = _audit.audit_can_read
+
 
