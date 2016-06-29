@@ -1,7 +1,7 @@
 libauparse.so.0 libauparse0 #MINVER#
  _auparse_free_interpretations@Base 1:2.6
  _auparse_load_interpretations@Base 1:2.6
- _lookup_interpretation@Base 1:2.6
+ _auparse_lookup_interpretation@Base 1:2.6.1
  au_terminate_all_events@Base 1:2.5.1
  auparse_add_callback@Base 1:2.2.1
  auparse_destroy@Base 1:2.2.1

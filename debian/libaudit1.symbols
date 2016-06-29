@@ -9,6 +9,9 @@ libaudit.so.1 libaudit1 #MINVER#
  audit_add_rule_data@Base 1:2.2.1
  audit_add_watch@Base 1:2.2.1
  audit_add_watch_dir@Base 1:2.2.1
+ audit_can_control@Base 1:2.6.1
+ audit_can_read@Base 1:2.6.1
+ audit_can_write@Base 1:2.6.1
  audit_close@Base 1:2.2.1
  audit_delete_rule_data@Base 1:2.2.1
  audit_detect_machine@Base 1:2.2.1
