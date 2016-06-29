@@ -1,7 +1,7 @@
 audit (1:2.6.1-1) unstable; urgency=medium
 
   * New upstream release
-    - debian/libauparse0.symbols: Add new exported symbols
+    - debian/*.symbols: Add new exported symbols
   * debian/rules: Enable all hardening flags
   * debian/gbp.conf: Rename [git-buildpackage] section to [buildpackage]
 
