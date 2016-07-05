@@ -1,12 +1,15 @@
-audit (1:2.6.1-2) UNRELEASED; urgency=medium
+audit (1:2.6.3-1) UNRELEASED; urgency=medium
 
+  * New upstream release
+    - Save and restore libcap-ng state when doing a capability check (Closes:
+      #829677)
   * debian/auditd.lintian-overrides: Add override for permissions of the
     /etc/audit/audit-stop.rules file
   * debian/auditd.default, debian/auditd.init: Merge AUDITD_CLEAN_STOP and
     AUDITD_STOP_DISABLE together and use the new upstream rules file
     (/etc/audit/audit-stop.rules) to clean the rules when stopping the daemon.
 
- -- Laurent Bigonville <bigon@debian.org>  Wed, 29 Jun 2016 22:49:18 +0200
+ -- Laurent Bigonville <bigon@debian.org>  Tue, 05 Jul 2016 22:18:56 +0200
 
 audit (1:2.6.1-1) unstable; urgency=medium
 
