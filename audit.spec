@@ -2,7 +2,7 @@
 
 Summary: User space tools for 2.6 kernel auditing
 Name: audit
-Version: 2.6.1
+Version: 2.6.3
 Release: 1
 License: GPLv2+
 Group: System Environment/Daemons
@@ -134,6 +134,8 @@ touch -r ./audit.spec $RPM_BUILD_ROOT/usr/share/man/man5/libaudit.conf.5.gz
 
 %check
 make check
+# Get rid of make files that they don't get packaged.
+rm -f rules/Makefile*
 
 %clean
 rm -rf $RPM_BUILD_ROOT
@@ -261,6 +263,6 @@ fi
 
 
 %changelog
-* Wed Jun 28 2016 Steve Grubb <sgrubb@redhat.com> 2.6.1-1
+* Tue Jul 05 2016 Steve Grubb <sgrubb@redhat.com> 2.6.3-1
 - New upstream release
 

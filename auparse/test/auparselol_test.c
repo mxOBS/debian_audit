@@ -180,7 +180,7 @@ int main(int argc, char **argv)
                 usage();
                 return 1;
             }
-            auparse_set_escape_mode(em);
+            auparse_set_escape_mode(NULL, em);
             break;
         case 'c':              /* check */
             flags |= F_CHECK;
@@ -217,7 +217,7 @@ int main(int argc, char **argv)
 
     if ((event_cnt = malloc(sizeof(int))) == NULL) {
         fprintf(stderr,
-                "%s: No memory to allocate %u bytes\n",
+                "%s: No memory to allocate %lu bytes\n",
                 argv[0], sizeof(int));
         return 1;
     }
