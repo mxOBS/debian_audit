@@ -97,7 +97,7 @@ Description: Dynamic library for security auditing - common files
 Package: libaudit-dev
 Section: libdevel
 Architecture: linux-any
-Depends: libaudit1 (= ${binary:Version}), ${misc:Depends}
+Depends: libaudit1 (= ${binary:Version}), libcap-ng-dev, ${misc:Depends}
 Multi-arch: same
 Description: Header files and static library for security auditing
  The audit-libs-devel package contains the static libraries and header
