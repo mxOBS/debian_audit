@@ -3,7 +3,7 @@ audit (1:2.6.4-1) UNRELEASED; urgency=medium
   [ Laurent Bigonville ]
   * New upstream release
     - Fix crash when starting the daemon (Closes: #830244)
-  * debian/patches/02-fix-pc-file.patch: Fix librares order when doing static
+  * debian/patches/02-fix-pc-file.patch: Fix libraries order when doing static
     link (Closes: #829500)
 
   [ Nicolas Braud-Santoni ]
