@@ -1626,6 +1626,10 @@ class audit_reply(_object):
     __swig_getmethods__["conf"] = _audit.audit_reply_conf_get
     if _newclass:
         conf = _swig_property(_audit.audit_reply_conf_get, _audit.audit_reply_conf_set)
+    __swig_setmethods__["features"] = _audit.audit_reply_features_set
+    __swig_getmethods__["features"] = _audit.audit_reply_features_get
+    if _newclass:
+        features = _swig_property(_audit.audit_reply_features_get, _audit.audit_reply_features_set)
 
     def __init__(self):
         this = _audit.new_audit_reply()

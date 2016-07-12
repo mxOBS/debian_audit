@@ -1488,6 +1488,7 @@ class audit_reply(object):
     error = _swig_property(_audit.audit_reply_error_get, _audit.audit_reply_error_set)
     signal_info = _swig_property(_audit.audit_reply_signal_info_get, _audit.audit_reply_signal_info_set)
     conf = _swig_property(_audit.audit_reply_conf_get, _audit.audit_reply_conf_set)
+    features = _swig_property(_audit.audit_reply_features_get, _audit.audit_reply_features_set)
 
     def __init__(self):
         this = _audit.new_audit_reply()
