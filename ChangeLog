@@ -1,3 +1,14 @@
+2.6.4
+- Fix interpretation of saddr fields when using enriched events
+- In netlink_handler of auditd, ensure ack_func is initialized to NULL
+- Use full path to auditctl in augenrules
+- Raise the number of log files auditd allows to 999
+- In auditd reconfig, update use_libwrap setting
+- Fix memory leak in reconfigure
+- Add EHWPOISON definition for errno lookup table if missing (Thomas Petazzoni)
+- Better detect struct audit_status existence (Thomas Petazzoni)
+- Rework dispatcher protocol 1 to be what it used to be
+
 2.6.3
 - Fix NULL poiinter deref in auparse
 - Optionally add dependency to libcap-ng in audit.pc

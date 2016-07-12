@@ -1,5 +1,5 @@
 /* auditd-listen.c -- 
- * Copyright 2008,2009,2011 Red Hat Inc., Durham, North Carolina.
+ * Copyright 2008,2009,2011,2016 Red Hat Inc., Durham, North Carolina.
  * All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -18,6 +18,7 @@
  *
  * Authors:
  *   DJ Delorie <dj@redhat.com>
+ *   Steve Grubb <sgrubb@redhat.com>
  * 
  */
 
@@ -109,7 +110,7 @@ static char *sockaddr_to_addr4(struct sockaddr_in *addr)
 	return buf;
 }
 
-static void set_close_on_exec (int fd)
+static void set_close_on_exec(int fd)
 {
 	int flags = fcntl (fd, F_GETFD);
 	if (flags == -1)
@@ -1041,6 +1042,8 @@ static void periodic_reconfigure(struct daemon_conf *config)
 void auditd_tcp_listen_reconfigure ( struct daemon_conf *nconf,
 				     struct daemon_conf *oconf )
 {
+	use_libwrap = nconf->use_libwrap;
+
 	/* Look at network things that do not need restarting */
 	if (oconf->tcp_client_min_port != nconf->tcp_client_min_port ||
 		    oconf->tcp_client_max_port != nconf->tcp_client_max_port ||
@@ -1062,4 +1065,8 @@ void auditd_tcp_listen_reconfigure ( struct daemon_conf *nconf,
 		oconf->tcp_listen_queue = nconf->tcp_listen_queue;
 		// FIXME: need to restart the network stuff
 	}
+	free(oconf->krb5_principal);
+	// Copying the config for now. Should compare if the same
+	// and recredential if needed.
+	oconf->krb5_principal = nconf->krb5_principal;
 }
