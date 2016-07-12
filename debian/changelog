@@ -5,11 +5,12 @@ audit (1:2.6.4-1) UNRELEASED; urgency=medium
     - Fix crash when starting the daemon (Closes: #830244)
   * debian/patches/02-fix-pc-file.patch: Fix libraries order when doing static
     link (Closes: #829500)
+  * debian/copyright: Add myself to the copyright file
 
   [ Nicolas Braud-Santoni ]
   * debian/copyright: Make a DEP5-compliant, parseable file
 
- -- Laurent Bigonville <bigon@debian.org>  Tue, 12 Jul 2016 17:16:23 +0200
+ -- Laurent Bigonville <bigon@debian.org>  Tue, 12 Jul 2016 17:36:54 +0200
 
 audit (1:2.6.3-1) unstable; urgency=medium
 

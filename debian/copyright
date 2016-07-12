@@ -21,9 +21,9 @@ License: LGPL-2.1
   for the complete text of the GNU Lesser General Public License.
 
 Files: debian/*
-Copyright: 2007-2016 Philipp Matthias Hahn <pmhahn@debian.org>
+Copyright: 2007-2011 Philipp Matthias Hahn <pmhahn@debian.org>
+           2012-2016 Laurent Bigonville <bigon@debian.org>
 License: GPL-2
-
 
 License: GPL-2
  This package is free software; you can redistribute it and/or modify
