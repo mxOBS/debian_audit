@@ -1,4 +1,4 @@
-audit (1:2.6.5-1) UNRELEASED; urgency=medium
+audit (1:2.6.5-1) unstable; urgency=medium
 
   [ Laurent Bigonville ]
   * New upstream release
@@ -9,7 +9,7 @@ audit (1:2.6.5-1) UNRELEASED; urgency=medium
   [ Nicolas Braud-Santoni ]
   * debian/copyright: Make a DEP5-compliant, parseable file
 
- -- Laurent Bigonville <bigon@debian.org>  Fri, 15 Jul 2016 11:15:39 +0200
+ -- Laurent Bigonville <bigon@debian.org>  Fri, 15 Jul 2016 11:25:41 +0200
 
 audit (1:2.6.3-1) unstable; urgency=medium
 
