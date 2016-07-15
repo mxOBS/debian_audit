@@ -1,3 +1,11 @@
+2.6.5
+- Correct the header length for dispatched events
+- Revise buffer handling in auditd to fix dispatched events
+- Fix spelling in man pages
+- Add documentation link to systemd unit file
+- Correct af_unix pathname detection in ausearch/report
+- Add remote_ended info to audisp-remote stat dump
+
 2.6.4
 - Fix interpretation of saddr fields when using enriched events
 - In netlink_handler of auditd, ensure ack_func is initialized to NULL
@@ -10,7 +18,7 @@
 - Rework dispatcher protocol 1 to be what it used to be
 
 2.6.3
-- Fix NULL poiinter deref in auparse
+- Fix NULL pointer deref in auparse
 - Optionally add dependency to libcap-ng in audit.pc
 
 2.6.2
