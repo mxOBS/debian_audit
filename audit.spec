@@ -2,7 +2,7 @@
 
 Summary: User space tools for 2.6 kernel auditing
 Name: audit
-Version: 2.6.5
+Version: 2.6.6
 Release: 1
 License: GPLv2+
 Group: System Environment/Daemons
@@ -104,7 +104,7 @@ mkdir -p $RPM_BUILD_ROOT/{sbin,etc/audispd/plugins.d,etc/audit/rules.d}
 mkdir -p $RPM_BUILD_ROOT/%{_mandir}/{man5,man8}
 mkdir -p $RPM_BUILD_ROOT/%{_lib}
 mkdir -p $RPM_BUILD_ROOT/%{_libdir}/audit
-mkdir -p $RPM_BUILD_ROOT/%{_var}/log/audit
+mkdir --mode=0700 -p $RPM_BUILD_ROOT/%{_var}/log/audit
 mkdir -p $RPM_BUILD_ROOT/%{_var}/spool/audit
 make DESTDIR=$RPM_BUILD_ROOT install
 
@@ -234,7 +234,7 @@ fi
 %attr(750,root,root) %{_libexecdir}/initscripts/legacy-actions/auditd/stop
 %attr(750,root,root) %{_libexecdir}/initscripts/legacy-actions/auditd/restart
 %attr(750,root,root) %{_libexecdir}/initscripts/legacy-actions/auditd/condrestart
-%attr(750,root,root) %dir %{_var}/log/audit
+%attr(-,root,-) %dir %{_var}/log/audit
 %attr(750,root,root) %dir /etc/audit
 %attr(750,root,root) %dir /etc/audit/rules.d
 %attr(750,root,root) %dir /etc/audisp
@@ -263,6 +263,6 @@ fi
 
 
 %changelog
-* Thu Jul 14 2016 Steve Grubb <sgrubb@redhat.com> 2.6.5-1
+* Mon Aug 01 2016 Steve Grubb <sgrubb@redhat.com> 2.6.6-1
 - New upstream release
 
