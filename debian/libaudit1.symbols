@@ -1,4 +1,5 @@
 libaudit.so.1 libaudit1 #MINVER#
+* Build-Depends-Package: libaudit-dev
  _audit_archadded@Base 1:2.2.1
  _audit_elf@Base 1:2.2.1
  _audit_exeadded@Base 1:2.5.1
