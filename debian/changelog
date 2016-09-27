@@ -1,8 +1,9 @@
-audit (1:2.6.6-2) UNRELEASED; urgency=medium
+audit (1:2.6.7-1) UNRELEASED; urgency=medium
 
+  * New upstream release
   * debian/*.symbols: Add the Build-Depends-Package field
 
- -- Laurent Bigonville <bigon@debian.org>  Wed, 14 Sep 2016 14:40:27 +0200
+ -- Laurent Bigonville <bigon@debian.org>  Tue, 27 Sep 2016 15:21:04 +0200
 
 audit (1:2.6.6-1) unstable; urgency=medium
 
