@@ -2,9 +2,11 @@ audit (1:2.6.7-1) UNRELEASED; urgency=medium
 
   * New upstream release
     - debian/patches/02-restorecon-path.patch: Fix restorecon path
+    - debian/libauparse0.symbols: Drop au_terminate_all_events symbol, it was
+      never part of the public API
   * debian/*.symbols: Add the Build-Depends-Package field
 
- -- Laurent Bigonville <bigon@debian.org>  Tue, 27 Sep 2016 15:35:42 +0200
+ -- Laurent Bigonville <bigon@debian.org>  Tue, 27 Sep 2016 15:39:02 +0200
 
 audit (1:2.6.6-1) unstable; urgency=medium
 
