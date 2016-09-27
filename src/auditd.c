@@ -596,11 +596,16 @@ int main(int argc, char *argv[])
 	}
 
 #ifndef DEBUG
-	/* Make sure we can do our job */
+	/* Make sure we can do our job. Containers may not give you
+	 * capabilities, so we revert to a uid check for that case. */
 	if (!audit_can_control() || !audit_can_read()) {
-		fprintf(stderr,
+		if (!config.local_events && geteuid() == 0)
+			;
+		else {
+			fprintf(stderr,
 		"You must be root or have capabilities to run this program.\n");
-		return 4;
+			return 4;
+		}
 	}
 #endif
 
@@ -929,7 +934,6 @@ static void clean_exit(void)
 	if (fd >= 0) {
 		if (!opt_aggregate_only)
 			audit_set_pid(fd, 0, WAIT_NO);
-		fsync(fd);
 		audit_close(fd);
 	}
 	if (pidfile)

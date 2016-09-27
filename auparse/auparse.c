@@ -26,6 +26,7 @@
 #include "auparse.h"
 #include "interpret.h"
 #include "auparse-idata.h"
+#include "libaudit.h"
 #include <errno.h>
 #include <stdlib.h>
 #include <string.h>
@@ -58,8 +59,8 @@ static int setup_log_file_array(auparse_state_t *au)
         int len, num = 0, i = 0;
 
         /* Load config so we know where logs are */
-	set_aumessage_mode(MSG_STDERR, DBG_NO);
-	load_config(&config, TEST_SEARCH);
+	set_aumessage_mode(au, MSG_STDERR, DBG_NO);
+	aup_load_config(au, &config, TEST_SEARCH);
 
 	/* for each file */
 	len = strlen(config.log_file) + 16;
@@ -299,7 +300,7 @@ static void au_check_events(auparse_state_t *au, time_t sec)
  * Rtns:
  *  void
  */
-void au_terminate_all_events(auparse_state_t *au)
+static void au_terminate_all_events(auparse_state_t *au)
 {
         int i;
 	au_lol *lol = au->au_lo;
@@ -512,6 +513,8 @@ auparse_state_t *auparse_init(ausource_t source, const void *b)
 	au->find_field = NULL;
 	au->search_where = AUSEARCH_STOP_EVENT;
 	au->escape_mode = AUPARSE_ESC_TTY;
+	au->message_mode = MSG_QUIET;
+	au->debug_message = DBG_NO;
 
 	return au;
 bad_exit:
@@ -1114,7 +1117,7 @@ static int extract_timestamp(const char *b, au_event_t *e)
 	return rc;
 }
 
-static int inline events_are_equal(au_event_t *e1, au_event_t *e2)
+static int events_are_equal(au_event_t *e1, au_event_t *e2)
 {
 	// Check time & serial first since its most likely way
 	// to spot 2 different events
