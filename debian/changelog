@@ -1,3 +1,10 @@
+audit (1:2.6.7-2) UNRELEASED; urgency=medium
+
+  * debian/patches/03-fix-segfault-sock.patch: Fix ausearch segfault caused by
+    some audit messages (Closes: #859120)
+
+ -- Laurent Bigonville <bigon@debian.org>  Fri, 31 Mar 2017 10:16:37 +0200
+
 audit (1:2.6.7-1) unstable; urgency=medium
 
   * New upstream release
