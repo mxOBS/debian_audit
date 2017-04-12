@@ -6,6 +6,7 @@ audit (1:2.6.7-2) UNRELEASED; urgency=medium
 
   [ Helmut Grohne ]
   * Fix FTCBFS: Cross compatibe python Build-Depends (Closes: #840896)
+  * Add support for the nopython build profile (Closes: #840262)
 
  -- Helmut Grohne <helmut@subdivi.de>  Fri, 31 Mar 2017 10:45:47 +0200
 
