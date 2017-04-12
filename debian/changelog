@@ -5,7 +5,7 @@ audit (1:2.6.7-2) unstable; urgency=medium
     some audit messages (Closes: #859120)
 
   [ Helmut Grohne ]
-  * Fix FTCBFS: Cross compatibe python Build-Depends (Closes: #840896)
+  * Fix FTCBFS: Cross compatible python Build-Depends (Closes: #840896)
   * Add support for the nopython build profile (Closes: #840262)
 
  -- Laurent Bigonville <bigon@debian.org>  Wed, 12 Apr 2017 18:17:21 +0200
