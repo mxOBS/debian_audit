@@ -355,6 +355,7 @@ int main(int argc, char *argv[])
 	sigaction(SIGALRM, &sa, NULL);
 	sa.sa_handler = child_handler;
 	sigaction(SIGCHLD, &sa, NULL);
+	setsid();
 
 	/* move stdin to its own fd */
 	if (argc == 3 && strcmp(argv[1], "--input") == 0) 
@@ -362,7 +363,8 @@ int main(int argc, char *argv[])
 	else
 		audit_fd = dup(0);
 	if (audit_fd < 0) {
-		syslog(LOG_ERR, "Failed setting up input, exiting");
+		syslog(LOG_ERR, "Failed setting up input(%s, %d), exiting",
+				strerror(errno), audit_fd);
 		return 1;
 	}
 
@@ -428,6 +430,12 @@ int main(int argc, char *argv[])
 
 	/* Create inbound thread */
 	pthread_create(&inbound_thread, NULL, inbound_thread_main, NULL); 
+
+	// Block these signals on main thread so poll(2) wakes up
+	sigemptyset (&sa.sa_mask);
+	sigaddset(&sa.sa_mask, SIGHUP);
+	sigaddset(&sa.sa_mask, SIGTERM);
+	pthread_sigmask(SIG_BLOCK, &sa.sa_mask, NULL);
 
 	/* Start event loop */
 	while (event_loop()) {

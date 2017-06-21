@@ -1,5 +1,5 @@
 /* msg_typetab.h --
- * Copyright 2005-07,2009-16 Red Hat Inc., Durham, North Carolina.
+ * Copyright 2005-07,2009-17 Red Hat Inc., Durham, North Carolina.
  * All Rights Reserved.
  *
  * This library is free software; you can redistribute it and/or
@@ -119,6 +119,7 @@ _S(AUDIT_NETFILTER_CFG,              "NETFILTER_CFG"                 )
 _S(AUDIT_SECCOMP,                    "SECCOMP"                       )
 _S(AUDIT_PROCTITLE,                  "PROCTITLE"                     )
 _S(AUDIT_FEATURE_CHANGE,             "FEATURE_CHANGE"                )
+_S(AUDIT_KERN_MODULE,                "KERN_MODULE"                   )
 _S(AUDIT_AVC,                        "AVC"                           )
 _S(AUDIT_SELINUX_ERR,                "SELINUX_ERR"                   )
 _S(AUDIT_AVC_PATH,                   "AVC_PATH"                      )
@@ -214,4 +215,9 @@ _S(AUDIT_CRYPTO_IPSEC_SA,            "CRYPTO_IPSEC_SA"               )
 _S(AUDIT_VIRT_CONTROL,               "VIRT_CONTROL"                  )
 _S(AUDIT_VIRT_RESOURCE,              "VIRT_RESOURCE"                 )
 _S(AUDIT_VIRT_MACHINE_ID,            "VIRT_MACHINE_ID"               )
+_S(AUDIT_VIRT_INTEGRITY_CHECK,       "VIRT_INTEGRITY_CHECK"          )
+_S(AUDIT_VIRT_CREATE,                "VIRT_CREATE"                   )
+_S(AUDIT_VIRT_DESTROY,               "VIRT_DESTROY"                  )
+_S(AUDIT_VIRT_MIGRATE_IN,            "VIRT_MIGRATE_IN"               )
+_S(AUDIT_VIRT_MIGRATE_OUT,           "VIRT_MIGRATE_OUT"              )
 

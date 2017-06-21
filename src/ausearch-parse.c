@@ -352,6 +352,8 @@ static int parse_task_info(lnode *n, search_items *s)
 			if (term == NULL)
 				return 34;
 			*term = 0;
+			if (s->terminal) // ANOM_NETLINK has one
+				free(s->terminal);
 			s->terminal = strdup(str);
 			*term = ' ';
 		}
@@ -405,6 +407,8 @@ static int parse_task_info(lnode *n, search_items *s)
 				if (term == NULL)
 					return 39;
 				*term = 0;
+				if (s->exe) // ANOM_NETLINK has one
+					free(s->exe);
 				s->exe = strdup(str);
 				*term = '"';
 			} else 
@@ -730,6 +734,17 @@ static int parse_path(const lnode *n, search_items *s)
 			rc = common_path_parser(s, str);
 			if (rc)
 				return rc;
+			term = str;
+
+			// Note that at this point we should be past beginning
+			// and around the path element. The type we search for
+			// is objtype or nametype. Searching for both will
+			// slow us down. So, I'm using what is common to both.
+			str = strstr(term, "type=");
+			if (str) {
+				str += 5;
+				s->filename->cur->key = strdup(str);
+			}
 		}
 	}
 	if (event_object) {
@@ -824,7 +839,6 @@ static int parse_user(const lnode *n, search_items *s)
 	}
 	// optionally get loginuid
 	if (event_loginuid != -2 || event_tauid) {
-		*term = ' ';
 		str = strstr(term, "auid=");
 		if (str == NULL) { // Try the older one
 			str = strstr(term, "loginuid=");
@@ -1390,6 +1404,46 @@ static int parse_daemon1(const lnode *n, search_items *s)
 		*term = saved;
 	}
 
+	// uid - optional
+	if (event_uid != -1) {
+		ptr = term;
+		str = strstr(term, " uid=");
+		if (str) {
+			ptr = str + 5;
+			term = strchr(ptr, ' ');
+			if (term == NULL) 
+				return 7;
+			saved = *term;
+			*term = 0;
+			errno = 0;
+			s->uid = strtoul(ptr, NULL, 10);
+			if (errno)
+				return 8;
+			*term = saved;
+		} else
+			term = ptr;
+	}
+
+	// ses - optional
+	if (event_session_id != -2) {
+		ptr = term;
+		str = strstr(term, "ses=");
+		if (str) {
+			ptr = str + 4;
+			term = strchr(ptr, ' ');
+			if (term == NULL) 
+				return 9;
+			saved = *term;
+			*term = 0;
+			errno = 0;
+			s->session_id = strtoul(ptr, NULL, 10);
+			if (errno)
+				return 10;
+			*term = saved;
+		} else
+			term = ptr;
+	}
+
 	if (event_subject) {
 		// scontext
 		str = strstr(term, "subj=");
@@ -1405,7 +1459,7 @@ static int parse_daemon1(const lnode *n, search_items *s)
 				an.scontext = strdup(str);
 				alist_append(s->avc, &an);
 			} else
-				return 7;
+				return 11;
 			if (term)
 				*term = ' ';
 		}
@@ -1419,7 +1473,7 @@ static int parse_daemon1(const lnode *n, search_items *s)
 			while (isalpha(*term))
 				term++;
 			if (term == ptr)
-				return 9;
+				return 12;
 			saved = *term;
 			*term = 0;
 			if (strncmp(ptr, "failed", 6) == 0)
@@ -1962,6 +2016,9 @@ static int parse_kernel_anom(const lnode *n, search_items *s)
 		}
 	}
 
+	if (n->type == AUDIT_ANOM_PROMISCUOUS)
+		return 0; // Nothing else in the event
+
 	if (event_subject) {
 		// scontext
 		str = strstr(term, "subj=");
@@ -2018,26 +2075,26 @@ static int parse_kernel_anom(const lnode *n, search_items *s)
 		} 
 	}
 
-	if (n->type == AUDIT_SECCOMP) {
-		if (event_exe) {
-			// dont do this search unless needed
-			str = strstr(n->message, "exe=");
-			if (str) {
-				str += 4;
+	if (event_exe) {
+		// dont do this search unless needed
+		str = strstr(term, "exe=");
+		if (str) {
+			str += 4;
 			if (*str == '"') {
-					str++;
-					term = strchr(str, '"');
-					if (term == NULL)
-						return 13;
-					*term = 0;
-					s->exe = strdup(str);
-					*term = '"';
-				} else 
-					s->exe = unescape(str);
-			} else
-				return 14;
-		}
+				str++;
+				term = strchr(str, '"');
+				if (term == NULL)
+					return 13;
+				*term = 0;
+				s->exe = strdup(str);
+				*term = '"';
+			} else 
+				s->exe = unescape(str);
+		} else if (n->type != AUDIT_ANOM_ABEND)
+			return 14;
+	}
 
+	if (n->type == AUDIT_SECCOMP) {
 		// get arch
 		str = strstr(term, "arch=");
 		if (str == NULL) 

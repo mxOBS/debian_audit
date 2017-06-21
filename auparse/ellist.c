@@ -44,15 +44,15 @@ void aup_list_create(event_list_t *l)
 
 static void aup_list_last(event_list_t *l)
 {
-        register rnode* window;
+        register rnode* node;
 	
 	if (l->head == NULL)
 		return;
 
-        window = l->head;
-	while (window->next)
-		window = window->next;
-	l->cur = window;
+        node = l->head;
+	while (node->next)
+		node = node->next;
+	l->cur = node;
 }
 
 rnode *aup_list_next(event_list_t *l)
@@ -200,10 +200,13 @@ static int parse_up_record(rnode* r)
 			// Do some info gathering for use later
 			if (r->nv.cnt == 1 && strcmp(n.name, "node") == 0)
 				offset = 1; // if node, some positions changes
+				// This has to account for seccomp records
 			else if (r->nv.cnt == (1 + offset) &&
 					strcmp(n.name, "type") == 0) {
 				r->type = audit_name_to_msg_type(n.val);
-			} else if (r->nv.cnt == (2 + offset) && 
+				// This has to account for seccomp records
+			} else if ((r->nv.cnt == (2 + offset) ||
+					r->nv.cnt == (11 + offset)) && 
 					strcmp(n.name, "arch")== 0){
 				unsigned int ival;
 				errno = 0;
@@ -212,7 +215,8 @@ static int parse_up_record(rnode* r)
 					r->machine = -2;
 				else
 					r->machine = audit_elf_to_machine(ival);
-			} else if (r->nv.cnt == (3 + offset) &&
+			} else if ((r->nv.cnt == (3 + offset) ||
+					r->nv.cnt == (12 + offset)) &&
 					strcmp(n.name, "syscall") == 0){
 				errno = 0;
 				r->syscall = strtoul(n.val, NULL, 10);
@@ -379,48 +383,48 @@ int aup_list_set_event(event_list_t* l, au_event_t *e)
 
 rnode *aup_list_find_rec(event_list_t *l, int i)
 {
-        register rnode* window;
+        register rnode* node;
                                                                                 
-       	window = l->head;	/* start at the beginning */
-	while (window) {
-		if (window->type == i) {
-			l->cur = window;
-			return window;
+       	node = l->head;	/* start at the beginning */
+	while (node) {
+		if (node->type == i) {
+			l->cur = node;
+			return node;
 		} else
-			window = window->next;
+			node = node->next;
 	}
 	return NULL;
 }
 
 rnode *aup_list_goto_rec(event_list_t *l, int i)
 {
-        register rnode* window;
+        register rnode* node;
                                                                                 
-       	window = l->head;	/* start at the beginning */
-	while (window) {
-		if (window->item == i) {
-			l->cur = window;
-			return window;
+       	node = l->head;	/* start at the beginning */
+	while (node) {
+		if (node->item == i) {
+			l->cur = node;
+			return node;
 		} else
-			window = window->next;
+			node = node->next;
 	}
 	return NULL;
 }
 
 rnode *aup_list_find_rec_range(event_list_t *l, int low, int high)
 {
-        register rnode* window;
+        register rnode* node;
 
 	if (high <= low)
 		return NULL;
 
-       	window = l->head;	/* Start at the beginning */
-	while (window) {
-		if (window->type >= low && window->type <= high) {
-			l->cur = window;
-			return window;
+       	node = l->head;	/* Start at the beginning */
+	while (node) {
+		if (node->type >= low && node->type <= high) {
+			l->cur = node;
+			return node;
 		} else
-			window = window->next;
+			node = node->next;
 	}
 	return NULL;
 }

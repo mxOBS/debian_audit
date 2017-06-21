@@ -1,6 +1,6 @@
 /*
 * expression.c - Expression parsing and handling
-* Copyright (C) 2008,2014 Red Hat Inc., Durham, North Carolina.
+* Copyright (C) 2008,2014,2016 Red Hat Inc., Durham, North Carolina.
 * All Rights Reserved.
 *
 * This library is free software; you can redistribute it and/or
@@ -122,7 +122,7 @@ parser_malloc(struct parsing *p, size_t size)
 	void *res;
 
 	res = malloc(size);
-	if (res != NULL || size == 0)
+	if (res)
 		return res;
 	*p->error = strdup("Out of memory");
 	return NULL;
@@ -325,7 +325,7 @@ lex(struct parsing *p)
 			(((C) >= 'a' && (C) <= 'z')	\
 			 || ((C) >= 'A' && (C) <= 'Z')	\
 			 || ((C) >= '0' && (C) <= '9')	\
-			 || (C) == '_')
+			 || (C) == '_' || (C) == '-')
 		if (IS_UNQUOTED_STRING_CHAR(*p->src)) {
 			size_t len;
 
@@ -947,7 +947,7 @@ eval_interpreted_value(auparse_state_t *au, rnode *record,
 		if (nvlist_find_name(&record->nv, expr->v.p.field.name) == 0)
 			return NULL;
 		*free_it = 0;
-		res = nvlist_interp_cur_val(record);
+		res = nvlist_interp_cur_val(record, au->escape_mode);
 		if (res == NULL)
 			res = nvlist_get_cur_val(&record->nv);
 		return (char *)res;

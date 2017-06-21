@@ -24,7 +24,7 @@ This yes/no keyword determines whether or not to write logs to the disk.
 Normally you want this so the default is yes.
 .TP
 .I log_format
-The log format describes how the information should be stored on disk. There are 2 options: raw and enriched. The nolog option is deprecated. If set to
+The log format describes how the information should be stored on disk. There are 2 options: raw and enriched. If set to
 .IR RAW ,
 the audit records will be stored in a format exactly as the kernel sends it. The
 .IR ENRICHED
@@ -237,7 +237,9 @@ This is a numeric value in the range 1..65535 which, if specified,
 causes auditd to listen on the corresponding TCP port for audit
 records from remote systems. The audit daemon may be linked with
 tcp_wrappers. You may want to control access with an entry in the
-hosts.allow and deny files.
+hosts.allow and deny files. If this is deployed on a systemd based
+OS, then you may need to adjust the 'After' directive. See the note in
+the auditd.service file.
 .TP
 .I tcp_listen_queue
 This is a numeric value which indicates how many pending (requested

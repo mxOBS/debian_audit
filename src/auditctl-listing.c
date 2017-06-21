@@ -427,7 +427,8 @@ static void print_rule(const struct audit_rule_data *r)
 					type = auparse_interp_adjust_type(
 						AUDIT_SYSCALL, name, val);
 					out = auparse_do_interpretation(type,
-								 &id);
+							&id,
+							AUPARSE_ESC_TTY);
 					printf(" -F %s%s%s", name,
 						audit_operator_to_symbol(op),
 								out);
@@ -544,7 +545,9 @@ int audit_print_reply(struct audit_reply *rep, int fd)
 			rep->status->pid, rep->status->rate_limit,
 			rep->status->backlog_limit, rep->status->lost,
 			rep->status->backlog);
-#if HAVE_DECL_AUDIT_VERSION_BACKLOG_WAIT_TIME
+#if HAVE_DECL_AUDIT_VERSION_BACKLOG_WAIT_TIME == 1 || \
+    HAVE_DECL_AUDIT_STATUS_BACKLOG_WAIT_TIME == 1
+
 			printf("backlog_wait_time %u\n",
 				rep->status->backlog_wait_time);
 #endif
