@@ -21,7 +21,7 @@ Build-Depends: debhelper (>= 9),
                libpython3-all-dev <!nopython>,
                swig
 Build-Depends-Indep: golang-go
-Standards-Version: 3.9.8
+Standards-Version: 4.0.0
 Section: libs
 Homepage: https://people.redhat.com/sgrubb/audit/
 Vcs-Git: https://anonscm.debian.org/git/collab-maint/audit.git
