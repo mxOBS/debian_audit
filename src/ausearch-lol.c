@@ -27,6 +27,7 @@
 #include <string.h>
 #include <stdio.h>
 #include "ausearch-common.h"
+#include "auditd-config.h"
 #include "private.h"
 
 #define ARRAY_LIMIT 80
@@ -202,7 +203,8 @@ static void check_events(lol *lo, time_t sec)
 				ready++;
 			} else if (cur->l->e.type == AUDIT_PROCTITLE ||
 				    cur->l->e.type < AUDIT_FIRST_EVENT ||
-				    cur->l->e.type >= AUDIT_FIRST_ANOM_MSG) {
+				    cur->l->e.type >= AUDIT_FIRST_ANOM_MSG ||
+				    cur->l->e.type == AUDIT_KERNEL) {
 				// If known to be 1 record event, we are done
 				cur->status = L_COMPLETE;
 				ready++;
@@ -215,7 +217,7 @@ static void check_events(lol *lo, time_t sec)
 // or creates a new one if its a new event
 int lol_add_record(lol *lo, char *buff)
 {
-	int i;
+	int i, fmt;
 	lnode n;
 	event e;
 	char *ptr;
@@ -229,22 +231,33 @@ int lol_add_record(lol *lo, char *buff)
 	n.message = strdup(buff);
 	ptr = strchr(n.message, AUDIT_INTERP_SEPARATOR);
 	if (ptr) {
-		n.interp = ptr;
 		n.mlen = ptr - n.message;
+		if (n.mlen > MAX_AUDIT_MESSAGE_LENGTH)
+			n.mlen = MAX_AUDIT_MESSAGE_LENGTH;
 		*ptr = 0;
 		n.interp = ptr + 1;
 		// since we are most of the way down the string, scan from there
 		ptr = strrchr(n.interp, 0x0a);
-		if (ptr)
+		if (ptr) {
 			*ptr = 0;
+			n.tlen = ptr - n.message;
+			if (n.tlen > MAX_AUDIT_MESSAGE_LENGTH)
+				n.tlen = MAX_AUDIT_MESSAGE_LENGTH;
+		} else
+			n.tlen = MAX_AUDIT_MESSAGE_LENGTH;
+		fmt = LF_ENRICHED;
 	} else {
 		ptr = strrchr(n.message, 0x0a);
 		if (ptr) {
 			*ptr = 0;
 			n.mlen = ptr - n.message;
+			if (n.mlen > MAX_AUDIT_MESSAGE_LENGTH)
+				n.mlen = MAX_AUDIT_MESSAGE_LENGTH;
 		} else
 			n.mlen = MAX_AUDIT_MESSAGE_LENGTH;
 		n.interp = NULL;
+		n.tlen = n.mlen;
+		fmt = LF_RAW;
 	}
 
 	// Now see where this belongs
@@ -254,6 +267,8 @@ int lol_add_record(lol *lo, char *buff)
 			if (events_are_equal(&l->e, &e)) {
 				free((char *)e.node);
 				list_append(l, &n);
+				if (fmt > l->fmt)
+					l->fmt = fmt;
 				return 1;
 			}
 		}
@@ -266,6 +281,7 @@ int lol_add_record(lol *lo, char *buff)
 	l->e.serial = e.serial;
 	l->e.node = e.node;
 	l->e.type = e.type;
+	l->fmt = fmt;
 	list_append(l, &n);
 	lol_append(lo, l);
 	check_events(lo,  e.sec);

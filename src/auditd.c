@@ -48,6 +48,10 @@
 
 #include "ev.h"
 
+#if EV_CHILD_ENABLE
+#error "LIBEV must not have EV_CHILD_ENABLE set"
+#endif
+
 #define EV_STOP() ev_unloop (ev_default_loop (EVFLAG_AUTO), EVUNLOOP_ALL), stop = 1;
 
 #define DEFAULT_BUF_SZ	448
@@ -69,6 +73,7 @@ static struct auditd_event *cur_event = NULL, *reconfig_ev = NULL;
 static int hup_info_requested = 0;
 static int usr1_info_requested = 0, usr2_info_requested = 0;
 static char subj[SUBJ_LEN];
+static uint32_t session;
 
 /* Local function prototypes */
 int send_audit_event(int type, const char *str);
@@ -171,6 +176,11 @@ static void child_handler(struct ev_loop *loop, struct ev_signal *sig,
 		if (pid == dispatcher_pid())
 			dispatcher_reaped();
 	}
+}
+
+static void child_handler2( int sig )
+{
+	child_handler(NULL, NULL, 0);
 }
 
 static int extract_type(const char *str)
@@ -594,6 +604,7 @@ int main(int argc, char *argv[])
 		set_aumessage_mode(MSG_SYSLOG, DBG_NO);
 		(void) umask( umask( 077 ) | 022 );
 	}
+	session = audit_get_session();
 
 #ifndef DEBUG
 	/* Make sure we can do our job. Containers may not give you
@@ -616,6 +627,11 @@ int main(int argc, char *argv[])
 	sa.sa_handler = SIG_IGN;
 	for (i=1; i<NSIG; i++)
 		sigaction( i, &sa, NULL );
+
+	/* This signal handler gets replaced later. Its here in case
+	 * the dispatcher exits before libev is in control */
+	sa.sa_handler = child_handler2;
+	sigaction(SIGCHLD, &sa, NULL);
 
 	atexit(clean_exit);
 
@@ -695,6 +711,7 @@ int main(int argc, char *argv[])
 
 	/* Setup the reconfig notification pipe */
 	if (socketpair(AF_UNIX, SOCK_STREAM, 0, pipefds)) {
+        	audit_msg(LOG_ERR, "Cannot open reconfig socket");
 		if (pidfile)
 			unlink(pidfile);
 		tell_parent(FAILURE);
@@ -703,6 +720,9 @@ int main(int argc, char *argv[])
 	}
 	fcntl(pipefds[0], F_SETFD, FD_CLOEXEC);
 	fcntl(pipefds[1], F_SETFD, FD_CLOEXEC);
+
+	/* This had to wait until now so the child exec has happened */
+	make_dispatcher_fd_private();
 
 	/* Write message to log that we are alive */
 	{
@@ -722,15 +742,19 @@ int main(int argc, char *argv[])
 		if (getsubj(subj))
 			snprintf(start, sizeof(start),
 				"op=start ver=%s format=%s "
-			    "kernel=%.56s auid=%u pid=%d subj=%s res=success",
+				"kernel=%.56s auid=%u pid=%d "
+				"uid=%u ses=%u subj=%s res=success",
 				VERSION, fmt, ubuf.release,
-				audit_getloginuid(), getpid(), subj);
+				audit_getloginuid(), getpid(),
+				getuid(), session,  subj);
 		else
 			snprintf(start, sizeof(start),
 				"op=start ver=%s format=%s "
-				"kernel=%.56s auid=%u pid=%d res=success",
+				"kernel=%.56s auid=%u pid=%d "
+				"uid=%u ses=%u res=success",
 				VERSION, fmt, ubuf.release,
-				audit_getloginuid(), getpid());
+				audit_getloginuid(), getpid(),
+				getuid(), session);
 		if (send_audit_event(AUDIT_DAEMON_START, start)) {
         		audit_msg(LOG_ERR, "Cannot send start message");
 			if (pidfile)
@@ -755,12 +779,16 @@ int main(int argc, char *argv[])
 		char emsg[DEFAULT_BUF_SZ];
 		if (*subj)
 			snprintf(emsg, sizeof(emsg),
-			"op=set-enable auid=%u pid=%d subj=%s res=failed",
-				audit_getloginuid(), getpid(), subj);
+				"op=set-enable auid=%u pid=%d uid=%u "
+				"ses=%u subj=%s res=failed",
+				audit_getloginuid(), getpid(), getuid(),
+				session, subj);
 		else
 			snprintf(emsg, sizeof(emsg),
-				"op=set-enable auid=%u pid=%d res=failed",
-				audit_getloginuid(), getpid());
+				"op=set-enable auid=%u pid=%d uid=%u "
+				"ses=%u res=failed",
+				audit_getloginuid(), getpid(),
+				getuid(), session);
 		stop = 1;
 		send_audit_event(AUDIT_DAEMON_ABORT, emsg);
 		audit_msg(LOG_ERR,
@@ -781,12 +809,16 @@ int main(int argc, char *argv[])
 		char emsg[DEFAULT_BUF_SZ];
 		if (*subj)
 			snprintf(emsg, sizeof(emsg),
-			"op=set-pid auid=%u pid=%d subj=%s res=failed",
-				audit_getloginuid(), getpid(), subj);
+				"op=set-pid auid=%u pid=%d uid=%u "
+				"ses=%u subj=%s res=failed",
+				audit_getloginuid(), getpid(), getuid(),
+				session, subj);
 		else
 			snprintf(emsg, sizeof(emsg),
-				"op=set-pid auid=%u pid=%d res=failed",
-				audit_getloginuid(), getpid());
+				"op=set-pid auid=%u pid=%d uid=%u "
+				"ses=%u res=failed",
+				audit_getloginuid(), getpid(),
+				getuid(), session);
 		stop = 1;
 		send_audit_event(AUDIT_DAEMON_ABORT, emsg);
 		audit_msg(LOG_ERR, "Unable to set audit pid, exiting");
@@ -830,12 +862,16 @@ int main(int argc, char *argv[])
 		char emsg[DEFAULT_BUF_SZ];
 		if (*subj)
 			snprintf(emsg, sizeof(emsg),
-			"op=network-init auid=%u pid=%d subj=%s res=failed",
-				audit_getloginuid(), getpid(), subj);
+				"op=network-init auid=%u pid=%d uid=%u "
+				"ses=%u subj=%s res=failed",
+				audit_getloginuid(), getpid(),
+				getuid(), session, subj);
 		else
 			snprintf(emsg, sizeof(emsg),
-				"op=network-init auid=%u pid=%d res=failed",
-				audit_getloginuid(), getpid());
+				"op=network-init auid=%u pid=%d uid=%u "
+				"ses=%u res=failed",
+				audit_getloginuid(), getpid(),
+				getuid(), session);
 		stop = 1;
 		send_audit_event(AUDIT_DAEMON_ABORT, emsg);
 		tell_parent(FAILURE);
