@@ -1,4 +1,4 @@
-audit (1:2.7.7-1) UNRELEASED; urgency=medium
+audit (1:2.7.7-1) unstable; urgency=medium
 
   * New upstream release
     - Drop debian/patches/03-fix-segfault-sock.patch, applied upstream
@@ -10,7 +10,7 @@ audit (1:2.7.7-1) UNRELEASED; urgency=medium
     deprecated for years and just produces a confusing warning (Closes:
     #860217, LP: #1646015)
 
- -- Laurent Bigonville <bigon@debian.org>  Wed, 21 Jun 2017 17:22:38 +0200
+ -- Laurent Bigonville <bigon@debian.org>  Wed, 21 Jun 2017 18:30:33 +0200
 
 audit (1:2.6.7-2) unstable; urgency=medium
 
