@@ -6,8 +6,11 @@ audit (1:2.7.7-1) UNRELEASED; urgency=medium
     - debian/libaudit1.symbols, debian/libauparse0.symbols: Update the
       exported symbols list
   * debian/control: Bump Standards-Version to 4.0.0 (no further changes)
+  * debian/rules: Do not pass start/stop options to update-rc.d, this is
+    deprecated for years and just produces a confusing warning (Closes:
+    #860217, LP: #1646015)
 
- -- Laurent Bigonville <bigon@debian.org>  Wed, 21 Jun 2017 16:48:08 +0200
+ -- Laurent Bigonville <bigon@debian.org>  Wed, 21 Jun 2017 17:22:38 +0200
 
 audit (1:2.6.7-2) unstable; urgency=medium
 

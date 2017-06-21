@@ -135,7 +135,7 @@ override_dh_installlogrotate:
 	# auditd has a equivalent built-in feature
 
 override_dh_installinit:
-	dh_installinit --restart-after-upgrade -- start 37 2 3 4 5 . stop 39 0 1 6 .
+	dh_installinit --restart-after-upgrade
 
 override_dh_fixperms-arch:
 	dh_fixperms -a
