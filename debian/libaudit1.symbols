@@ -26,6 +26,7 @@ libaudit.so.1 libaudit1 #MINVER#
  audit_ftype_to_name@Base 1:2.2.1
  audit_get_features@Base 1:2.5.1
  audit_get_reply@Base 1:2.2.1
+ audit_get_session@Base 1:2.7.7
  audit_getloginuid@Base 1:2.2.1
  audit_is_enabled@Base 1:2.2.1
  audit_log_acct_message@Base 1:2.2.1
@@ -54,6 +55,7 @@ libaudit.so.1 libaudit1 #MINVER#
  audit_request_rules_list_data@Base 1:2.2.1
  audit_request_signal_info@Base 1:2.2.1
  audit_request_status@Base 1:2.2.1
+ audit_reset_lost@Base 1:2.7.7
  audit_rule_fieldpair_data@Base 1:2.2.1
  audit_rule_free_data@Base 1:2.2.1
  audit_rule_interfield_comp_data@Base 1:2.2.1

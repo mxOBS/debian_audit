@@ -3,9 +3,11 @@ audit (1:2.7.7-1) UNRELEASED; urgency=medium
   * New upstream release
     - Drop debian/patches/03-fix-segfault-sock.patch, applied upstream
     - Refresh debian/patches/01-no-refusemanualstop.patch
+    - debian/libaudit1.symbols, debian/libauparse0.symbols: Update the
+      exported symbols list
   * debian/control: Bump Standards-Version to 4.0.0 (no further changes)
 
- -- Laurent Bigonville <bigon@debian.org>  Wed, 21 Jun 2017 16:41:58 +0200
+ -- Laurent Bigonville <bigon@debian.org>  Wed, 21 Jun 2017 16:48:08 +0200
 
 audit (1:2.6.7-2) unstable; urgency=medium
 
